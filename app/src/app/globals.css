@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+@theme {
+  --color-salon-50: #fdf2f8;
+  --color-salon-100: #fce7f3;
+  --color-salon-200: #fbcfe8;
+  --color-salon-300: #f9a8d4;
+  --color-salon-400: #f472b6;
+  --color-salon-500: #ec4899;
+  --color-salon-600: #db2777;
+  --color-salon-700: #be185d;
+  --color-salon-800: #9d174d;
+  --color-salon-900: #831843;
+  --color-salon-950: #500724;
+
+  --color-accent-50: #faf5ff;
+  --color-accent-100: #f3e8ff;
+  --color-accent-200: #e9d5ff;
+  --color-accent-300: #d8b4fe;
+  --color-accent-400: #c084fc;
+  --color-accent-500: #a855f7;
+  --color-accent-600: #9333ea;
+  --color-accent-700: #7e22ce;
+  --color-accent-800: #6b21a8;
+  --color-accent-900: #581c87;
+  --color-accent-950: #3b0764;
+}
+
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+}
