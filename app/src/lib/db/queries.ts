@@ -64,11 +64,72 @@ export async function deleteClient(id: string) {
   return true;
 }
 
+// ─── CATEGORIES ─────────────────────────────────────────────────────────────
+
+export async function getCategories(activeOnly = true) {
+  if (USE_MOCK) { await delay(); return activeOnly ? mockData.categories?.filter((c: any) => c.active) || [] : mockData.categories || []; }
+  try {
+    let q = supabase.from('categories').select('*').order('sort_order').order('name');
+    if (activeOnly) q = q.eq('active', true);
+    const { data, error } = await q;
+    if (error) throw error;
+    return data;
+  } catch (e) {
+    console.error('getCategories error:', e);
+    return [];
+  }
+}
+
+export async function createCategory(input: any) {
+  if (USE_MOCK) {
+    await delay();
+    const newCat = { ...input, id: String(Date.now()), created_at: new Date().toISOString(), updated_at: new Date().toISOString(), active: true };
+    if (!mockData.categories) mockData.categories = [];
+    mockData.categories.push(newCat);
+    return newCat;
+  }
+  const { data, error } = await supabase.from('categories').insert(input).select().single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateCategory(id: string, input: any) {
+  if (USE_MOCK) {
+    await delay();
+    if (!mockData.categories) mockData.categories = [];
+    const idx = mockData.categories.findIndex((c: any) => c.id === id);
+    if (idx >= 0) mockData.categories[idx] = { ...mockData.categories[idx], ...input };
+    return mockData.categories[idx];
+  }
+  const { data, error } = await supabase.from('categories').update(input).eq('id', id).select().single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteCategory(id: string) {
+  if (USE_MOCK) {
+    await delay();
+    if (!mockData.categories) mockData.categories = [];
+    mockData.categories = mockData.categories.filter((c: any) => c.id !== id);
+    return true;
+  }
+  const { data: servicesUsing, error: svcErr } = await supabase.from('services').select('id').eq('category_id', id).limit(1);
+  if (svcErr) throw svcErr;
+  if (servicesUsing && servicesUsing.length > 0) throw new Error('No se puede eliminar: hay servicios con esta categoría');
+  const { error } = await supabase.from('categories').delete().eq('id', id);
+  if (error) throw error;
+  return true;
+}
+
+// ─── SERVICES ───────────────────────────────────────────────────────────────
+
 export async function getServices(activeOnly = true) {
   if (USE_MOCK) { await delay(); return activeOnly ? mockData.services.filter(s => s.active) : mockData.services; }
   try {
-    
-    let q = supabase.from('services').select('*').order('category').order('name');
+    let q = supabase.from('services').select(`
+      *,
+      category:categories(*)
+    `).order('category_id').order('name');
     if (activeOnly) q = q.eq('active', true);
     const { data, error } = await q;
     if (error) throw error;
@@ -108,8 +169,14 @@ export async function deleteService(id: string) {
 export async function getStaff(activeOnly = true) {
   if (USE_MOCK) { await delay(); return activeOnly ? mockData.staff.filter(s => s.active) : mockData.staff; }
   try {
-    
-    let q = supabase.from('staff').select('*').order('name');
+    let q = supabase.from('staff').select(`
+      *,
+      role:roles(name, color),
+      staff_specialties(
+        *,
+        category:categories(*)
+      )
+    `).order('name');
     if (activeOnly) q = q.eq('active', true);
     const { data, error } = await q;
     if (error) throw error;
@@ -122,6 +189,24 @@ export async function getStaff(activeOnly = true) {
   } catch (e) {
     console.error('getStaff error:', e);
     return [];
+  }
+}
+
+export async function updateStaffSpecialties(staffId: string, categoryIds: string[]) {
+  if (USE_MOCK) {
+    await delay();
+    return true;
+  }
+  try {
+    await supabase.from('staff_specialties').delete().eq('staff_id', staffId);
+    if (categoryIds.length > 0) {
+      const rows = categoryIds.map(cid => ({ staff_id: staffId, category_id: cid }));
+      await supabase.from('staff_specialties').insert(rows);
+    }
+    return true;
+  } catch (e) {
+    console.error('updateStaffSpecialties error:', e);
+    throw e;
   }
 }
 
@@ -143,8 +228,65 @@ export async function updateStaff(id: string, input: any) {
 
 export async function deleteStaff(id: string) {
   if (USE_MOCK) { await delay(); mockData.staff = mockData.staff.filter(s => s.id !== id); return true; }
-  
   const { error } = await supabase.from('staff').delete().eq('id', id);
+  if (error) throw error;
+  return true;
+}
+
+// ─── ROLES ──────────────────────────────────────────────────────────────────
+
+export async function getRoles(activeOnly = true) {
+  if (USE_MOCK) { await delay(); return activeOnly ? mockData.roles?.filter((r: any) => r.active) || [] : mockData.roles || []; }
+  try {
+    let q = supabase.from('roles').select('*').order('name');
+    if (activeOnly) q = q.eq('active', true);
+    const { data, error } = await q;
+    if (error) throw error;
+    return data;
+  } catch (e) {
+    console.error('getRoles error:', e);
+    return [];
+  }
+}
+
+export async function createRole(input: any) {
+  if (USE_MOCK) {
+    await delay();
+    const newR = { ...input, id: String(Date.now()), created_at: new Date().toISOString(), updated_at: new Date().toISOString(), active: true };
+    if (!mockData.roles) mockData.roles = [];
+    mockData.roles.push(newR);
+    return newR;
+  }
+  const { data, error } = await supabase.from('roles').insert(input).select().single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateRole(id: string, input: any) {
+  if (USE_MOCK) {
+    await delay();
+    if (!mockData.roles) mockData.roles = [];
+    const idx = mockData.roles.findIndex((r: any) => r.id === id);
+    if (idx >= 0) mockData.roles[idx] = { ...mockData.roles[idx], ...input };
+    return mockData.roles[idx];
+  }
+  const { data, error } = await supabase.from('roles').update(input).eq('id', id).select().single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteRole(id: string) {
+  if (USE_MOCK) {
+    await delay();
+    if (!mockData.roles) mockData.roles = [];
+    mockData.roles = mockData.roles.filter((r: any) => r.id !== id);
+    return true;
+  }
+  // Check if any staff uses this role
+  const { data: staffUsing, error: staffErr } = await supabase.from('staff').select('id').eq('role_id', id).limit(1);
+  if (staffErr) throw staffErr;
+  if (staffUsing && staffUsing.length > 0) throw new Error('No se puede eliminar: hay staff asignado a este rol');
+  const { error } = await supabase.from('roles').delete().eq('id', id);
   if (error) throw error;
   return true;
 }
@@ -156,7 +298,7 @@ export async function getAppointments(filters?: any) {
     let q = supabase.from('appointments').select(`
       *,
       client:clients(name, phone, instagram),
-      artist:staff(name, photo_url, role)
+      artist:staff(name, photo_url, role:roles(name, color))
     `).order('start_time', { ascending: true });
     if (filters?.dateFrom) q = q.gte('start_time', filters.dateFrom);
     if (filters?.dateTo) {
@@ -180,17 +322,49 @@ export async function getAppointments(filters?: any) {
 
     if (filtered && filtered.length > 0) {
       const apptIds = filtered.map(a => a.id);
-      const { data: svcData } = await supabase
-        .from('appointment_services')
-        .select('appointment_id, service_id, service:services(name, price, duration_min, category)')
-        .in('appointment_id', apptIds);
-      if (svcData) {
-        filtered.forEach((appt: any) => {
-          appt.appointment_services = svcData
-            .filter(s => s.appointment_id === appt.id)
-            .map(s => ({ service_id: s.service_id, service: s.service }));
-        });
-      }
+       const { data: svcData } = await supabase
+         .from('appointment_services')
+         .select('appointment_id, service_id, artist_id, service:services(name, price, duration_min, category_id, category:categories(*)), artist:staff(name, photo_url)')
+         .in('appointment_id', apptIds);
+       
+       let commissionMap = new Map<string, any[]>();
+       try {
+         const { data: commData } = await supabase
+           .from('commission_details')
+           .select('*')
+           .in('appointment_id', apptIds);
+         if (commData) {
+           for (const cd of commData) {
+             const existing = commissionMap.get(cd.appointment_id) || [];
+             existing.push(cd);
+             commissionMap.set(cd.appointment_id, existing);
+           }
+         }
+       } catch (e) {
+         console.log('commission details view may not exist yet', e);
+       }
+       
+       if (svcData) {
+         filtered.forEach((appt: any) => {
+           const apptServices = svcData
+             .filter(s => s.appointment_id === appt.id);
+           
+           appt.appointment_services = apptServices.map(s => {
+             const svc: any = { 
+               service_id: s.service_id, 
+               artist_id: s.artist_id || null,
+               service: s.service 
+             };
+             if (s.artist) svc.artist = s.artist;
+             
+             const comms = commissionMap.get(appt.id) || [];
+             const cd = comms.find((c: any) => c.appointment_service_id === s.service_id);
+             if (cd) svc.commission_detail = cd;
+             
+             return svc;
+           });
+         });
+       }
     }
     return filtered;
   } catch (e) {
@@ -202,11 +376,17 @@ export async function getAppointments(filters?: any) {
 export async function createAppointment(input: any) {
   if (USE_MOCK) { await delay(); const newAppt = { ...input, id: String(Date.now()), created_at: new Date().toISOString(), overlap_detected: input.overlap_detected || false }; mockData.appointments.push(newAppt); return newAppt; }
   
-  const { serviceIds, ...apptData } = input;
+  const { serviceIds, services, ...apptData } = input;
   const { data, error } = await supabase.from('appointments').insert(apptData).select().single();
   if (error) throw error;
-  if (serviceIds && serviceIds.length > 0) {
-    const svcRows = serviceIds.map((sid: string) => ({ appointment_id: data.id, service_id: sid }));
+  
+  const serviceInputs = services || (serviceIds ? serviceIds.map((sid: string) => ({ service_id: sid })) : []);
+  if (serviceInputs && serviceInputs.length > 0) {
+    const svcRows = serviceInputs.map((si: any) => ({ 
+      appointment_id: data.id, 
+      service_id: si.service_id,
+      artist_id: si.artist_id || null,
+    }));
     await supabase.from('appointment_services').insert(svcRows);
   }
   return data;
@@ -215,14 +395,20 @@ export async function createAppointment(input: any) {
 export async function updateAppointment(id: string, input: any) {
   if (USE_MOCK) { await delay(); const idx = mockData.appointments.findIndex(a => a.id === id); if (idx >= 0) mockData.appointments[idx] = { ...mockData.appointments[idx], ...input }; return mockData.appointments[idx]; }
   
-  const { serviceIds, ...rest } = input;
+  const { serviceIds, services, ...rest } = input;
   const { data, error } = await supabase.from('appointments').update(rest).eq('id', id).select().single();
   if (error) throw error;
   
-  if (serviceIds !== undefined) {
+  const hasServices = services !== undefined || serviceIds !== undefined;
+  if (hasServices) {
     await supabase.from('appointment_services').delete().eq('appointment_id', id);
-    if (serviceIds.length > 0) {
-      const svcRows = serviceIds.map((sid: string) => ({ appointment_id: id, service_id: sid }));
+    const serviceInputs = services || (serviceIds ? serviceIds.map((sid: string) => ({ service_id: sid })) : []);
+    if (serviceInputs.length > 0) {
+      const svcRows = serviceInputs.map((si: any) => ({ 
+        appointment_id: id, 
+        service_id: si.service_id,
+        artist_id: si.artist_id || null,
+      }));
       await supabase.from('appointment_services').insert(svcRows);
     }
   }
@@ -307,7 +493,7 @@ export async function getDashboardMetrics() {
       supabase.from('appointments').select(`
         *,
         client:clients(name),
-        artist:staff(name)
+        artist:staff(name, role:roles(name))
       `).gte('start_time', todayStart).lt('start_time', todayEnd).in('status', ['programada', 'en_curso']).order('start_time'),
       supabase.from('payments').select('amount').eq('type', 'ingreso').gte('date', firstOfMonth).lte('date', endOfMonth),
       supabase.from('payments').select('amount').eq('type', 'egreso').gte('date', firstOfMonth).lte('date', endOfMonth),
@@ -359,6 +545,172 @@ export async function getAllClientsForSelect() {
     return data;
   } catch (e) {
     console.error('getAllClientsForSelect error:', e);
+    return [];
+  }
+}
+
+// ─── COMMISSION OVERRIDES ───────────────────────────────────────────────────
+
+export async function getCommissionOverrides(staffId: string) {
+  if (USE_MOCK) {
+    await delay();
+    return mockData.commissionOverrides?.filter((o: any) => o.staff_id === staffId) || [];
+  }
+  try {
+    const { data, error } = await supabase
+      .from('staff_commission_overrides')
+      .select('*, service:services(name, price)')
+      .eq('staff_id', staffId);
+    if (error) throw error;
+    return data || [];
+  } catch (e) {
+    console.error('getCommissionOverrides error:', e);
+    return [];
+  }
+}
+
+export async function upsertCommissionOverride(input: {
+  staff_id: string;
+  service_id: string;
+  founder_fixed_amount: number;
+}) {
+  if (USE_MOCK) {
+    await delay();
+    if (!mockData.commissionOverrides) mockData.commissionOverrides = [];
+    const existingIdx = mockData.commissionOverrides.findIndex(
+      (o: any) => o.staff_id === input.staff_id && o.service_id === input.service_id
+    );
+    const now = new Date().toISOString();
+    if (existingIdx >= 0) {
+      mockData.commissionOverrides[existingIdx] = {
+        ...mockData.commissionOverrides[existingIdx],
+        ...input,
+        updated_at: now,
+      } as any;
+    } else {
+      mockData.commissionOverrides.push({
+        ...input,
+        id: String(Date.now()),
+        created_at: now,
+        updated_at: now,
+      } as any);
+    }
+    return true;
+  }
+  try {
+    const { data, error } = await supabase
+      .from('staff_commission_overrides')
+      .upsert(input, { onConflict: 'staff_id, service_id' })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  } catch (e) {
+    console.error('upsertCommissionOverride error:', e);
+    throw e;
+  }
+}
+
+export async function deleteCommissionOverride(staffId: string, serviceId: string) {
+  if (USE_MOCK) {
+    await delay();
+    if (!mockData.commissionOverrides) return true;
+    mockData.commissionOverrides = mockData.commissionOverrides.filter(
+      (o: any) => !(o.staff_id === staffId && o.service_id === serviceId)
+    );
+    return true;
+  }
+  try {
+    const { error } = await supabase
+      .from('staff_commission_overrides')
+      .delete()
+      .eq('staff_id', staffId)
+      .eq('service_id', serviceId);
+    if (error) throw error;
+    return true;
+  } catch (e) {
+    console.error('deleteCommissionOverride error:', e);
+    throw e;
+  }
+}
+
+// ─── COMMISSION REPORT ──────────────────────────────────────────────────────
+
+export async function getCommissionReport(dateFrom: string, dateTo: string) {
+  if (USE_MOCK) {
+    await delay();
+    return [
+      {
+        artist_id: 'staff-1',
+        artist_name: 'Valentina Ríos',
+        total_services: 1,
+        total_service_revenue: 70,
+        total_artist_commission: 49,
+        total_founder_share: 21,
+      },
+      {
+        artist_id: 'staff-founder',
+        artist_name: 'Sofía Castillo',
+        total_services: 1,
+        total_service_revenue: 120,
+        total_artist_commission: 120,
+        total_founder_share: 0,
+      },
+    ];
+  }
+  try {
+    const endOfTo = new Date(dateTo);
+    endOfTo.setHours(23, 59, 59, 999);
+    
+    const { data: apptIdsData, error: apptErr } = await supabase
+      .from('appointments')
+      .select('id')
+      .gte('start_time', dateFrom)
+      .lte('start_time', endOfTo.toISOString())
+      .eq('status', 'completada');
+    
+    if (apptErr) throw apptErr;
+    if (!apptIdsData || apptIdsData.length === 0) return [];
+    
+    const apptIds = apptIdsData.map(a => a.id);
+    
+    const { data: details, error: detErr } = await supabase
+      .from('commission_details')
+      .select('*')
+      .in('appointment_id', apptIds);
+    
+    if (detErr) throw detErr;
+    if (!details) return [];
+    
+    const map = new Map<string, {
+      artist_id: string | null;
+      artist_name: string | null;
+      total_services: number;
+      total_service_revenue: number;
+      total_artist_commission: number;
+      total_founder_share: number;
+    }>();
+    
+    for (const d of details) {
+      const key = d.artist_id || 'NO_ARTIST';
+      const existing = map.get(key) || {
+        artist_id: d.artist_id,
+        artist_name: d.artist_name || (d.artist_id ? null : 'Sin artista'),
+        total_services: 0,
+        total_service_revenue: 0,
+        total_artist_commission: 0,
+        total_founder_share: 0,
+      };
+      existing.total_services += 1;
+      existing.total_service_revenue += Number(d.service_price) || 0;
+      existing.total_artist_commission += Number(d.artist_commission) || 0;
+      existing.total_founder_share += Number(d.founder_share) || 0;
+      map.set(key, existing);
+    }
+    
+    return Array.from(map.values());
+  } catch (e) {
+    console.error('getCommissionReport error:', e);
     return [];
   }
 }

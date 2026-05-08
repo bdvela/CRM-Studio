@@ -2,11 +2,32 @@
 CREATE TYPE client_status AS ENUM ('prospecto', 'activa', 'inactiva', 'vip');
 CREATE TYPE appointment_status AS ENUM ('programada', 'en_curso', 'completada', 'cancelada', 'no_show');
 CREATE TYPE service_category AS ENUM ('sistema_unas', 'pedicura', 'makeup', 'pestanas', 'cejas');
-CREATE TYPE staff_role AS ENUM ('nail_artist', 'lashista', 'pedicurista', 'maquillista', 'otro');
 CREATE TYPE payment_type AS ENUM ('ingreso', 'egreso');
 CREATE TYPE payment_category AS ENUM ('servicio', 'insumo', 'alquiler', 'marketing', 'comisiones', 'otro');
 CREATE TYPE payment_method AS ENUM ('efectivo', 'tarjeta', 'transferencia', 'yape_plin');
 CREATE TYPE payment_kind AS ENUM ('reserva', 'pago_completo', 'pago_final');
+
+-- ─── ROLES ──────────────────────────────────────────────────────────────────
+CREATE TABLE roles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL UNIQUE,
+  description TEXT,
+  color TEXT DEFAULT '#6B7280',
+  active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_roles_active ON roles(active) WHERE active = TRUE;
+
+-- Seed roles
+INSERT INTO roles (name, description, color) VALUES
+  ('Nail Artist', 'Sistema de uñas, manicure, pedicure', '#8B5CF6'),
+  ('Lashista', 'Extensiones de pestañas', '#EC4899'),
+  ('Pedicurista', 'Pedicure profesional', '#3B82F6'),
+  ('Maquillista', 'Maquillaje profesional', '#EF4444'),
+  ('Dueña', 'Owner/CEO del salón', '#F59E0B')
+ON CONFLICT (name) DO NOTHING;
 
 -- ─── CLIENTS ────────────────────────────────────────────────────────────────
 CREATE TABLE clients (
@@ -48,7 +69,7 @@ CREATE TABLE staff (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   phone TEXT,
-  role staff_role NOT NULL DEFAULT 'nail_artist',
+  role_id UUID REFERENCES roles(id) ON DELETE SET NULL NOT NULL,
   specialties service_category[],
   commission_pct NUMERIC(5, 2) DEFAULT 0,
   schedule TEXT,
@@ -59,7 +80,7 @@ CREATE TABLE staff (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_staff_role ON staff(role);
+CREATE INDEX idx_staff_role ON staff(role_id);
 CREATE INDEX idx_staff_active ON staff(active) WHERE active = TRUE;
 
 -- ─── APPOINTMENTS ───────────────────────────────────────────────────────────
@@ -131,6 +152,7 @@ $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER trg_clients_updated BEFORE UPDATE ON clients FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER trg_services_updated BEFORE UPDATE ON services FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE TRIGGER trg_roles_updated BEFORE UPDATE ON roles FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER trg_staff_updated BEFORE UPDATE ON staff FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER trg_appts_updated BEFORE UPDATE ON appointments FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER trg_payments_updated BEFORE UPDATE ON payments FOR EACH ROW EXECUTE FUNCTION update_updated_at();

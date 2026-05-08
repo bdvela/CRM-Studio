@@ -1,27 +1,9 @@
 export type ClientStatus = 'prospecto' | 'activa' | 'inactiva' | 'vip';
 export type AppointmentStatus = 'programada' | 'en_curso' | 'completada' | 'cancelada' | 'no_show';
-export type ServiceCategory = 'sistema_unas' | 'pedicura' | 'makeup' | 'pestanas' | 'cejas';
-export type StaffRole = 'nail_artist' | 'lashista' | 'pedicurista' | 'maquillista' | 'otro';
 export type PaymentType = 'ingreso' | 'egreso';
 export type PaymentCategory = 'servicio' | 'insumo' | 'alquiler' | 'marketing' | 'comisiones' | 'otro';
 export type PaymentMethod = 'efectivo' | 'tarjeta' | 'transferencia' | 'yape_plin';
 export type PaymentKind = 'reserva' | 'pago_completo' | 'pago_final';
-
-export const SERVICE_CATEGORY_LABELS: Record<ServiceCategory, string> = {
-  sistema_unas: 'Sistema de uñas',
-  pedicura: 'Pedicura',
-  makeup: 'Makeup',
-  pestanas: 'Pestañas',
-  cejas: 'Cejas',
-};
-
-export const STAFF_ROLE_LABELS: Record<StaffRole, string> = {
-  nail_artist: 'Nail Artist',
-  lashista: 'Lashista',
-  pedicurista: 'Pedicurista',
-  maquillista: 'Maquillista',
-  otro: 'Otro',
-};
 
 export const APPOINTMENT_STATUS_LABELS: Record<AppointmentStatus, string> = {
   programada: 'Programada',
@@ -43,6 +25,33 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   transferencia: 'Transferencia',
   yape_plin: 'Yape/Plin',
 };
+
+export interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  color: string;
+  icon: string;
+  active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export type CategoryInsert = Omit<Category, 'id' | 'created_at' | 'updated_at'>;
+
+export interface Role {
+  id: string;
+  name: string;
+  description: string | null;
+  color: string;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type RoleInsert = Omit<Role, 'id' | 'created_at' | 'updated_at'>;
 
 export interface Client {
   id: string;
@@ -67,7 +76,8 @@ export type ClientInsert = Omit<Client, 'id' | 'created_at' | 'updated_at' | 'cl
 export interface Service {
   id: string;
   name: string;
-  category: ServiceCategory;
+  category_id: string;
+  category?: Category;
   duration_min: number;
   price: number;
   description: string | null;
@@ -77,29 +87,80 @@ export interface Service {
   updated_at: string;
 }
 
-export type ServiceInsert = Omit<Service, 'id' | 'created_at' | 'updated_at'>;
+export type ServiceInsert = Omit<Service, 'id' | 'created_at' | 'updated_at' | 'category'>;
 
-export interface StaffMember {
+export interface StaffSpecialty {
   id: string;
-  name: string;
-  phone: string | null;
-  role: StaffRole;
-  specialties: ServiceCategory[] | null;
-  commission_pct: number;
-  schedule: string | null;
-  photo_url: string | null;
-  active: boolean;
-  last_commission_paid: string | null;
+  staff_id: string;
+  category_id: string;
+  category?: Category;
   created_at: string;
-  updated_at: string;
-  staff_stats?: {
-    total_appointments: number;
-    total_revenue: number;
-    last_appointment: string | null;
-  };
 }
 
-export type StaffMemberInsert = Omit<StaffMember, 'id' | 'created_at' | 'updated_at' | 'staff_stats'>;
+export interface CommissionOverride {
+  id: string;
+  staff_id: string;
+  service_id: string;
+  founder_fixed_amount: number;
+  created_at: string;
+  updated_at: string;
+  service?: { name: string; price: number };
+}
+
+export type CommissionOverrideInsert = Omit<CommissionOverride, 'id' | 'created_at' | 'updated_at' | 'service'>;
+
+export interface CommissionDetail {
+  appointment_service_id: string;
+  appointment_id: string;
+  service_id: string;
+  artist_id: string | null;
+  service_price: number;
+  service_name: string;
+  artist_name: string | null;
+  artist_commission_pct: number | null;
+  override_founder_fixed_amount: number | null;
+  artist_role_name: string | null;
+  artist_commission: number;
+  founder_share: number;
+}
+
+export interface CommissionReportRow {
+  artist_id: string | null;
+  artist_name: string | null;
+  total_services: number;
+  total_service_revenue: number;
+  total_artist_commission: number;
+  total_founder_share: number;
+}
+
+export interface AppointmentServiceInput {
+  service_id: string;
+  artist_id?: string | null;
+}
+
+ export interface StaffMember {
+   id: string;
+   name: string;
+   phone: string | null;
+   role_id: string;
+   role?: { name: string; color: string };
+   staff_specialties?: StaffSpecialty[];
+   commission_pct: number;
+   schedule: string | null;
+   photo_url: string | null;
+   active: boolean;
+   last_commission_paid: string | null;
+   birthday_date: string | null;
+   created_at: string;
+   updated_at: string;
+   staff_stats?: {
+     total_appointments: number;
+     total_revenue: number;
+     last_appointment: string | null;
+   };
+ }
+
+export type StaffMemberInsert = Omit<StaffMember, 'id' | 'created_at' | 'updated_at' | 'staff_stats' | 'role' | 'staff_specialties'>;
 
 export interface Appointment {
   id: string;
@@ -119,7 +180,11 @@ export interface Appointment {
   client?: { name: string; phone: string | null };
   artist?: { name: string; photo_url: string | null };
   appointment_services?: Array<{
-    service: { name: string; price: number; duration_min: number; category: ServiceCategory };
+    service_id: string;
+    artist_id: string | null;
+    service: { name: string; price: number; duration_min: number; category_id: string; category?: Category };
+    artist?: { name: string; photo_url: string | null };
+    commission_detail?: CommissionDetail;
   }>;
   appointment_balance?: {
     total_price: number;
@@ -151,3 +216,19 @@ export interface Payment {
 }
 
 export type PaymentInsert = Omit<Payment, 'id' | 'created_at' | 'updated_at'>;
+
+export function getCategoryName(service: Service | null | undefined): string {
+  return service?.category?.name || 'Sin categoría';
+}
+
+export function getCategoryColor(service: Service | null | undefined): string {
+  return service?.category?.color || '#6B7280';
+}
+
+export function getCategoryIcon(service: Service | null | undefined): string {
+  return service?.category?.icon || '📋';
+}
+
+export function getStaffSpecialtyNames(staff: StaffMember | null | undefined): string[] {
+  return staff?.staff_specialties?.map(s => s.category?.name || '').filter(Boolean) || [];
+}

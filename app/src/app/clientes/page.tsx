@@ -11,7 +11,8 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Modal } from '@/components/ui/modal';
 import { Textarea } from '@/components/ui/textarea';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { FlagPeru } from '@/components/ui/FlagPeru';
+import { formatCurrency, formatDate, normalizePeruPhone, formatPeruPhoneForInput } from '@/lib/utils';
 import { Users, Plus, Search, Phone, Mail, Instagram, Eye, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -56,8 +57,10 @@ export default function ClientesPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.name.trim()) { toast.error('El nombre es obligatorio'); return; }
+    const normalizedPhone = normalizePeruPhone(form.phone);
+    const formToSave = { ...form, phone: normalizedPhone };
     try {
-      await createClient(form);
+      await createClient(formToSave);
       toast.success('Clienta creada');
       setShowModal(false);
       setForm({ name: '', phone: '', email: '', instagram: '', status: 'prospecto', notes: '', photo_url: null });
@@ -182,7 +185,7 @@ export default function ClientesPage() {
       <Modal open={showModal} onClose={() => setShowModal(false)} title="Nueva Clienta">
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input label="Nombre *" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Nombre completo" />
-          <Input label="Teléfono" value={form.phone || ''} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+51 ..." />
+          <Input label="Teléfono" leftPrefix={<FlagPeru className="w-5 h-5" />} value={form.phone || ''} onChange={(e) => setForm({ ...form, phone: formatPeruPhoneForInput(e.target.value) })} placeholder="987 654 321" maxLength={11} />
           <Input label="Email" type="email" value={form.email || ''} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="email@ejemplo.com" />
           <Input label="Instagram" value={form.instagram || ''} onChange={(e) => setForm({ ...form, instagram: e.target.value })} placeholder="@usuario" />
           <Select label="Estado" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as ClientInsert['status'] })} options={[

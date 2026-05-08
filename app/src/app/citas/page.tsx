@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { getAppointments, getStaff, getServices } from '@/lib/db/queries';
 import { createAppointment, updateAppointment, checkOverlap } from '@/lib/db/queries';
 import { ClientCombobox } from '@/components/citas/ClientCombobox';
-import type { AppointmentInsert, AppointmentStatus, ServiceCategory, PaymentKind } from '@/types/database';
+import type { AppointmentInsert, AppointmentStatus, PaymentKind } from '@/types/database';
 import { Header } from '@/components/layout/shell';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,8 +17,8 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs } from '@/components/ui/tabs';
 import { DateTimePicker } from '@/components/ui/DateTimePicker';
 import { CalendarView } from '@/components/citas/CalendarView';
-import { formatCurrency, formatTime, formatDate, startOfToday, endOfToday, startOfWeek, cn } from '@/lib/utils';
-import { SERVICE_CATEGORY_LABELS, APPOINTMENT_STATUS_LABELS } from '@/types/database';
+import { formatCurrency, formatTime, formatDate, startOfToday, endOfToday, startOfWeek, cn, calculateServiceCommission } from '@/lib/utils';
+import { APPOINTMENT_STATUS_LABELS } from '@/types/database';
 import { CalendarDays, Plus, Clock, User, DollarSign, AlertTriangle, Check, Pencil, XCircle, X, MapPin, Calendar as CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -60,6 +60,7 @@ export default function CitasPage() {
   const [filterArtist, setFilterArtist] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [serviceArtists, setServiceArtists] = useState<Record<string, string>>({});
   const [overlapWarning, setOverlapWarning] = useState<string | null>(null);
   const [pendingDate, setPendingDate] = useState<Date | null>(null);
   const [showDetail, setShowDetail] = useState(false);
@@ -69,7 +70,6 @@ export default function CitasPage() {
   const [form, setForm] = useState({
     title: '',
     client_id: '',
-    artist_id: '',
     start_time: '',
     status: 'programada' as AppointmentInsert['status'],
     notes: '',
@@ -139,10 +139,11 @@ export default function CitasPage() {
     .reduce((sum, s) => sum + Number(s.duration_min), 0);
 
   async function checkForOverlap() {
-    if (!form.artist_id || !form.start_time || totalDuration === 0) return;
+    const firstSvcArtistId = selectedServices.length > 0 ? serviceArtists[selectedServices[0]] : null;
+    if (!firstSvcArtistId || !form.start_time || totalDuration === 0) return;
     const start = new Date(form.start_time);
     const end = new Date(start.getTime() + totalDuration * 60000);
-    const overlaps = await checkOverlap(form.artist_id, start.toISOString(), end.toISOString());
+    const overlaps = await checkOverlap(firstSvcArtistId, start.toISOString(), end.toISOString());
     if (overlaps.length > 0) {
       setOverlapWarning(`⚠️ Conflicto con: ${overlaps[0].title}`);
     } else {
@@ -160,10 +161,17 @@ export default function CitasPage() {
     const startTime = new Date(form.start_time);
     const endTime = new Date(startTime.getTime() + totalDuration * 60000);
 
-    const apptData: AppointmentInsert & { serviceIds?: string[] } = {
+    const services = selectedServices.map(sid => ({
+      service_id: sid,
+      artist_id: serviceArtists[sid] || null,
+    }));
+
+    const firstArtistId = services.find(s => s.artist_id)?.artist_id || null;
+
+    const apptData: AppointmentInsert & { services?: any[]; serviceIds?: string[] } = {
       title: form.title || 'Cita',
       client_id: form.client_id || null,
-      artist_id: form.artist_id || null,
+      artist_id: firstArtistId,
       start_time: startTime.toISOString(),
       end_time: endTime.toISOString(),
       status: form.status,
@@ -172,7 +180,7 @@ export default function CitasPage() {
       notes: form.notes || null,
       color: form.color || null,
       overlap_detected: !!overlapWarning,
-      serviceIds: selectedServices,
+      services,
     };
 
     try {
@@ -196,15 +204,23 @@ export default function CitasPage() {
     setForm({
       title: appt.title,
       client_id: appt.client_id || '',
-      artist_id: appt.artist_id || '',
       start_time: toLocalISO(appt.start_time),
       status: appt.status,
       notes: appt.notes || '',
       color: appt.color || '',
     });
-    // Pre-select services
-    const svcIds = appt.appointment_services?.map((as: any) => as.service_id) || [];
+    const svcIds: string[] = [];
+    const svcArtistMap: Record<string, string> = {};
+    (appt.appointment_services || []).forEach((as: any) => {
+      if (as.service_id) {
+        svcIds.push(as.service_id);
+        if (as.artist_id) {
+          svcArtistMap[as.service_id] = as.artist_id;
+        }
+      }
+    });
     setSelectedServices(svcIds);
+    setServiceArtists(svcArtistMap);
     setShowModal(true);
   }
 
@@ -213,13 +229,13 @@ export default function CitasPage() {
     setForm({
       title: '',
       client_id: '',
-      artist_id: '',
       start_time: '',
       status: 'programada',
       notes: '',
       color: '',
     });
     setSelectedServices([]);
+    setServiceArtists({});
     setOverlapWarning(null);
     setShowModal(true);
   }
@@ -230,13 +246,13 @@ export default function CitasPage() {
     setForm({
       title: '',
       client_id: '',
-      artist_id: '',
       start_time: timeStr,
       status: 'programada',
       notes: '',
       color: '',
     });
     setSelectedServices([]);
+    setServiceArtists({});
     setOverlapWarning(null);
     setShowModal(true);
   }
@@ -545,15 +561,73 @@ export default function CitasPage() {
                 </div>
               </div>
 
-              {selectedAppt.appointment_services?.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {selectedAppt.appointment_services.map((as: any, i: number) => (
-                    <span key={i} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-lg">
-                      {SERVICE_EMOJIS[as.service?.category] || ''} {as.service?.name}
-                    </span>
-                  ))}
-                </div>
-              )}
+               {selectedAppt.appointment_services?.length > 0 && (
+                 <div className="space-y-2.5">
+                   {selectedAppt.appointment_services.map((as: any, i: number) => {
+                     const cd = as.commission_detail;
+                     return (
+                       <div key={i} className="p-3 bg-gray-50 rounded-xl space-y-1.5">
+                         <div className="flex items-center justify-between">
+                           <span className="text-sm font-medium text-gray-900">
+                             {SERVICE_EMOJIS[as.service?.category] || '📋'} {as.service?.name}
+                           </span>
+                           <span className="text-sm font-semibold">{formatCurrency(Number(as.service?.price) || 0)}</span>
+                         </div>
+                         {as.artist?.name && (
+                           <p className="text-xs text-gray-400">
+                             Realizado por: {as.artist.name}
+                           </p>
+                         )}
+                         {cd && (
+                           <div className="pt-2 mt-1 border-t border-gray-200 space-y-1">
+                             <div className="flex items-center justify-between text-xs">
+                               <span className="text-emerald-600 font-medium">Para la artista:</span>
+                               <span className="text-emerald-600 font-semibold">{formatCurrency(cd.artist_commission)}</span>
+                             </div>
+                             <div className="flex items-center justify-between text-xs">
+                               <span className="text-salon-600 font-medium">Para Founder:</span>
+                               <span className="text-salon-600 font-semibold">{formatCurrency(cd.founder_share)}</span>
+                             </div>
+                             {cd.override_founder_fixed_amount !== null && cd.override_founder_fixed_amount !== undefined && (
+                               <p className="text-[10px] text-gray-400 pt-0.5">
+                                 Excepción: Founder recibe {formatCurrency(cd.override_founder_fixed_amount)} fijo
+                               </p>
+                             )}
+                             {cd.artist_commission_pct !== null && cd.artist_commission_pct !== undefined && cd.override_founder_fixed_amount === null && (
+                               <p className="text-[10px] text-gray-400 pt-0.5">
+                                 Comisión general: {cd.artist_commission_pct}%
+                               </p>
+                             )}
+                           </div>
+                         )}
+                       </div>
+                     );
+                   })}
+                   {selectedAppt.appointment_services.some((as: any) => as.commission_detail) && (() => {
+                     const totalArtistComm = selectedAppt.appointment_services.reduce(
+                       (sum: number, as: any) => sum + Number(as.commission_detail?.artist_commission || 0), 
+                       0
+                     );
+                     const totalFounder = selectedAppt.appointment_services.reduce(
+                       (sum: number, as: any) => sum + Number(as.commission_detail?.founder_share || 0), 
+                       0
+                     );
+                     if (totalArtistComm === 0 && totalFounder === 0) return null;
+                     return (
+                       <div className="pt-3 mt-1 border-t border-gray-200 space-y-2">
+                         <div className="flex items-center justify-between text-sm">
+                           <span className="text-gray-600 font-medium">Total Artistas:</span>
+                           <span className="text-emerald-600 font-semibold">{formatCurrency(totalArtistComm)}</span>
+                         </div>
+                         <div className="flex items-center justify-between text-sm">
+                           <span className="text-gray-600 font-medium">Total Founder:</span>
+                           <span className="text-salon-600 font-semibold">{formatCurrency(totalFounder)}</span>
+                         </div>
+                       </div>
+                     );
+                   })()}
+                 </div>
+               )}
 
               {selectedAppt.notes && (
                 <p className="text-xs text-gray-400 bg-gray-50 rounded-xl p-3">{selectedAppt.notes}</p>
@@ -585,34 +659,56 @@ export default function CitasPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input label="Título" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Ej: Manicure + Pedicure" />
           <ClientCombobox value={form.client_id} onChange={(id) => setForm({ ...form, client_id: id })} />
-          <Select label="Artista" value={form.artist_id} onChange={(e) => { setForm({ ...form, artist_id: e.target.value }); checkForOverlap(); }} options={[
-            { value: '', label: 'Seleccionar...' },
-            ...staff.map((s: any) => ({ value: s.id, label: s.name }))
-          ]} />
           <DateTimePicker value={form.start_time} onChange={(v) => { setForm({ ...form, start_time: v }); checkForOverlap(); }} />
 
           {/* Service Selection */}
           <div className="space-y-2">
             <label className="block text-sm font-medium text-gray-700">Servicios</label>
-            <div className="space-y-1.5 max-h-40 overflow-y-auto">
-              {services.map((svc: any) => (
-                <label key={svc.id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={selectedServices.includes(svc.id)}
-                    onChange={(e) => {
-                      setSelectedServices(e.target.checked
-                        ? [...selectedServices, svc.id]
-                        : selectedServices.filter(id => id !== svc.id)
-                      );
-                    }}
-                    className="rounded border-gray-300 text-salon-600 focus:ring-salon-500"
-                  />
-                  <span className="text-sm flex-1">{svc.name}</span>
-                  <span className="text-xs text-gray-400">{svc.duration_min} min</span>
-                  <span className="text-sm font-medium">{formatCurrency(Number(svc.price))}</span>
-                </label>
-              ))}
+            <div className="space-y-1.5 max-h-52 overflow-y-auto">
+              {services.map((svc: any) => {
+                const isSelected = selectedServices.includes(svc.id);
+                return (
+                  <div key={svc.id} className={cn(
+                    "flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors",
+                    isSelected ? "bg-salon-50 border border-salon-200" : "hover:bg-gray-50"
+                  )}>
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={(e) => {
+                        setSelectedServices(e.target.checked
+                          ? [...selectedServices, svc.id]
+                          : selectedServices.filter(id => id !== svc.id)
+                        );
+                        if (!e.target.checked) {
+                          const newMap = { ...serviceArtists };
+                          delete newMap[svc.id];
+                          setServiceArtists(newMap);
+                        }
+                      }}
+                      className="rounded border-gray-300 text-salon-600 focus:ring-salon-500"
+                    />
+                    <span className="text-sm flex-1 min-w-0 truncate">{svc.name}</span>
+                    <span className="text-xs text-gray-400 hidden sm:inline">{svc.duration_min} min</span>
+                    <span className="text-sm font-medium text-gray-700">{formatCurrency(Number(svc.price))}</span>
+                    {isSelected && (
+                      <select
+                        value={serviceArtists[svc.id] || ''}
+                        onChange={(e) => {
+                          setServiceArtists({ ...serviceArtists, [svc.id]: e.target.value || '' });
+                          checkForOverlap();
+                        }}
+                        className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white focus:ring-2 focus:ring-salon-500 focus:border-transparent max-w-32"
+                      >
+                        <option value="">Sin artista</option>
+                        {staff.filter((s: any) => s.active).map((s: any) => (
+                          <option key={s.id} value={s.id}>{s.name}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 

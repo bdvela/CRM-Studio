@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { getClients, createClient } from '@/lib/db/queries';
-import { cn } from '@/lib/utils';
+import { cn, normalizePeruPhone } from '@/lib/utils';
 import { Search, Plus, Check, X, Loader2, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -91,9 +91,9 @@ export function ClientCombobox({ value, onChange }: ClientComboboxProps) {
     }
     setIsCreating(true);
     try {
-      const newClient = await createClient({
+       const newClient = await createClient({
         name: formName.trim(),
-        phone: formPhone.trim() || null,
+        phone: normalizePeruPhone(formPhone),
         email: formEmail.trim() || null,
         instagram: formInstagram.trim() || null,
         status: 'prospecto',

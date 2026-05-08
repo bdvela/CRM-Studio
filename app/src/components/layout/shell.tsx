@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import {
   LayoutDashboard, Users, Palette, UserRound,
   CalendarDays, DollarSign, ChevronLeft, ChevronRight,
+  TrendingUp,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -15,6 +16,7 @@ const navItems = [
   { href: '/servicios', label: 'Servicios', icon: Palette },
   { href: '/staff', label: 'Staff', icon: UserRound },
   { href: '/pagos', label: 'Pagos', icon: DollarSign },
+  { href: '/reportes/comisiones', label: 'Comisiones', icon: TrendingUp },
 ];
 
 export function Sidebar() {
@@ -34,7 +36,7 @@ export function Sidebar() {
         </div>
         {!collapsed && (
           <div className="overflow-hidden">
-            <h1 className="text-base font-bold text-gray-900 leading-tight">Salón CRM</h1>
+            <h1 className="text-base font-bold text-gray-900 leading-tight">Ara Zevallos Studio</h1>
             <p className="text-xs text-gray-400">Gestión integral</p>
           </div>
         )}

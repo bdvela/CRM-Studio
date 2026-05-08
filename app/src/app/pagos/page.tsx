@@ -12,7 +12,7 @@ import { Select } from '@/components/ui/select';
 import { Modal } from '@/components/ui/modal';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import {
-  PAYMENT_KIND_LABELS, PAYMENT_METHOD_LABELS, STAFF_ROLE_LABELS,
+  PAYMENT_KIND_LABELS, PAYMENT_METHOD_LABELS,
 } from '@/types/database';
 import { DollarSign, Plus, Search, TrendingUp, TrendingDown, Receipt } from 'lucide-react';
 import { toast } from 'sonner';

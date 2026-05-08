@@ -1,7 +1,7 @@
 {
   "name": "CRM Salón de Belleza",
-  "short_name": "Salón CRM",
-  "description": "Gestión integral para salón de belleza",
+  "short_name": "Ara Zevallos Studio",
+  "description": "Gestión integral para studio de belleza",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#faf5ff",

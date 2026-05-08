@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getServices, createService, updateService, deleteService } from '@/lib/db/queries';
-import type { Service, ServiceInsert, ServiceCategory } from '@/types/database';
+import { getServices, createService, updateService, deleteService, getCategories } from '@/lib/db/queries';
+import type { Service, ServiceInsert, Category } from '@/types/database';
 import { Header } from '@/components/layout/shell';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,32 +12,29 @@ import { Select } from '@/components/ui/select';
 import { Modal } from '@/components/ui/modal';
 import { Textarea } from '@/components/ui/textarea';
 import { formatCurrency } from '@/lib/utils';
-import { SERVICE_CATEGORY_LABELS } from '@/types/database';
+import { getCategoryName, getCategoryColor, getCategoryIcon } from '@/types/database';
 import { Palette, Plus, Search, Clock, DollarSign, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-const categoryColors: Record<string, 'purple' | 'info' | 'pink' | 'warning' | 'success'> = {
-  sistema_unas: 'purple',
-  pedicura: 'info',
-  makeup: 'pink',
-  pestanas: 'warning',
-  cejas: 'success',
-};
-
 export default function ServiciosPage() {
   const [services, setServices] = useState<Service[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [search, setSearch] = useState('');
   const [form, setForm] = useState<ServiceInsert>({
-    name: '', category: 'sistema_unas', duration_min: 30, price: 0, description: '', image_url: null, active: true,
+    name: '', category_id: '', duration_min: 30, price: 0, description: '', image_url: null, active: true,
   });
 
   async function load() {
     try {
-      const data = await getServices(true);
-      setServices(data as Service[]);
+      const [servicesData, categoriesData] = await Promise.all([
+        getServices(true),
+        getCategories(true),
+      ]);
+      setServices(servicesData as Service[]);
+      setCategories(categoriesData as Category[]);
     } catch (e) {
       console.error(e);
     } finally {
@@ -53,6 +50,10 @@ export default function ServiciosPage() {
       toast.error('Nombre y precio son obligatorios');
       return;
     }
+    if (!form.category_id) {
+      toast.error('Selecciona una categoría');
+      return;
+    }
     try {
       if (editingService) {
         await updateService(editingService.id, form);
@@ -63,7 +64,8 @@ export default function ServiciosPage() {
       }
       setShowModal(false);
       setEditingService(null);
-      setForm({ name: '', category: 'sistema_unas', duration_min: 30, price: 0, description: '', image_url: null, active: true });
+      const defaultCat = categories[0];
+      setForm({ name: '', category_id: defaultCat?.id || '', duration_min: 30, price: 0, description: '', image_url: null, active: true });
       load();
     } catch (e) {
       toast.error(editingService ? 'Error al actualizar' : 'Error al crear');
@@ -74,7 +76,7 @@ export default function ServiciosPage() {
     setEditingService(svc);
     setForm({
       name: svc.name,
-      category: svc.category,
+      category_id: svc.category_id,
       duration_min: svc.duration_min,
       price: Number(svc.price),
       description: svc.description || '',
@@ -86,7 +88,8 @@ export default function ServiciosPage() {
 
   function openNew() {
     setEditingService(null);
-    setForm({ name: '', category: 'sistema_unas', duration_min: 30, price: 0, description: '', image_url: null, active: true });
+    const defaultCat = categories.find(c => c.active) || categories[0];
+    setForm({ name: '', category_id: defaultCat?.id || '', duration_min: 30, price: 0, description: '', image_url: null, active: true });
     setShowModal(true);
   }
 
@@ -103,11 +106,11 @@ export default function ServiciosPage() {
 
   const filtered = services.filter((s) =>
     s.name.toLowerCase().includes(search.toLowerCase()) ||
-    SERVICE_CATEGORY_LABELS[s.category].toLowerCase().includes(search.toLowerCase())
+    getCategoryName(s).toLowerCase().includes(search.toLowerCase())
   );
 
   const grouped = filtered.reduce((acc, svc) => {
-    const cat = SERVICE_CATEGORY_LABELS[svc.category];
+    const cat = getCategoryName(svc);
     if (!acc[cat]) acc[cat] = [];
     acc[cat].push(svc);
     return acc;
@@ -154,7 +157,7 @@ export default function ServiciosPage() {
           Object.entries(grouped).map(([category, svcs]) => (
             <div key={category} className="space-y-3">
               <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-2">
-                <Badge variant={categoryColors[category]}>{category}</Badge>
+                <Badge variant="custom" color={svcs[0]?.category?.color || '#6B7280'}>{category}</Badge>
                 <span className="text-xs text-gray-400">({svcs.length})</span>
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -201,8 +204,8 @@ export default function ServiciosPage() {
       <Modal open={showModal} onClose={() => { setShowModal(false); setEditingService(null); }} title={editingService ? 'Editar Servicio' : 'Nuevo Servicio'}>
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input label="Nombre *" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ej: Manicure semipermanente" />
-          <Select label="Categoría" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value as ServiceCategory })} options={
-            Object.entries(SERVICE_CATEGORY_LABELS).map(([v, l]) => ({ value: v, label: l }))
+          <Select label="Categoría" value={form.category_id} onChange={(e) => setForm({ ...form, category_id: e.target.value })} options={
+            categories.filter(c => c.active).map(c => ({ value: c.id, label: `${c.icon || ''} ${c.name}` }))
           } />
           <div className="grid grid-cols-2 gap-3">
             <Input label="Duración (min) *" type="number" value={form.duration_min} onChange={(e) => setForm({ ...form, duration_min: parseInt(e.target.value) || 0 })} />
