@@ -13,15 +13,15 @@ export function Textarea({ label, error, className, id, ...props }: TextareaProp
           {label}
         </label>
       )}
-      <textarea
-        id={id}
-        className={cn(
-          'w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm',
-          'focus:outline-none focus:ring-2 focus:ring-salon-500 focus:border-transparent',
-          'resize-none',
-          error && 'border-red-500 focus:ring-red-500',
-          className
-        )}
+       <textarea
+         id={id}
+         className={cn(
+           'w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-base',
+           'focus:outline-none focus:ring-2 focus:ring-salon-500 focus:border-transparent',
+           'resize-none',
+           error && 'border-red-500 focus:ring-red-500',
+           className
+         )}
         rows={3}
         {...props}
       />

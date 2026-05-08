@@ -119,12 +119,12 @@ export default function ClientDetailPage() {
                 <Input label="Teléfono" value={editForm.phone || ''} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} />
                 <Input label="Email" value={editForm.email || ''} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
                 <Input label="Instagram" value={editForm.instagram || ''} onChange={(e) => setEditForm({ ...editForm, instagram: e.target.value })} />
-                <Select label="Estado" value={editForm.status} onChange={(e) => setEditForm({ ...editForm, status: e.target.value as ClientInsert['status'] })} options={[
-                  { value: 'prospecto', label: 'Prospecto' },
-                  { value: 'activa', label: 'Activa' },
-                  { value: 'inactiva', label: 'Inactiva' },
-                  { value: 'vip', label: 'VIP' },
-                ]} />
+                 <Select label="Estado" value={editForm.status} onChange={(value) => setEditForm({ ...editForm, status: value as ClientInsert['status'] })} options={[
+                   { value: 'prospecto', label: 'Prospecto' },
+                   { value: 'activa', label: 'Activa' },
+                   { value: 'inactiva', label: 'Inactiva' },
+                   { value: 'vip', label: 'VIP' },
+                 ]} />
                 <Textarea label="Notas" value={editForm.notes || ''} onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} />
               </div>
             )}

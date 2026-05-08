@@ -23,6 +23,7 @@ import { CalendarDays, Plus, Clock, User, DollarSign, AlertTriangle, Check, Penc
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { useConfirm } from '@/context/confirm-context';
 
 type ListFilter = 'list' | 'day' | 'week';
 type ViewMode = 'list' | 'calendar';
@@ -49,10 +50,12 @@ function toLocalISO(dateStr: string): string {
 
 export default function CitasPage() {
   const router = useRouter();
+  const { confirm } = useConfirm();
   const [appointments, setAppointments] = useState<any[]>([]);
   const [staff, setStaff] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingAppt, setEditingAppt] = useState<any>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -153,37 +156,39 @@ export default function CitasPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (submitting) return;
     if (!form.start_time) {
       toast.error('Completa los campos obligatorios');
       return;
     }
 
-    const startTime = new Date(form.start_time);
-    const endTime = new Date(startTime.getTime() + totalDuration * 60000);
-
-    const services = selectedServices.map(sid => ({
-      service_id: sid,
-      artist_id: serviceArtists[sid] || null,
-    }));
-
-    const firstArtistId = services.find(s => s.artist_id)?.artist_id || null;
-
-    const apptData: AppointmentInsert & { services?: any[]; serviceIds?: string[] } = {
-      title: form.title || 'Cita',
-      client_id: form.client_id || null,
-      artist_id: firstArtistId,
-      start_time: startTime.toISOString(),
-      end_time: endTime.toISOString(),
-      status: form.status,
-      total_price: totalPrice,
-      total_duration_min: totalDuration,
-      notes: form.notes || null,
-      color: form.color || null,
-      overlap_detected: !!overlapWarning,
-      services,
-    };
-
+    setSubmitting(true);
     try {
+      const startTime = new Date(form.start_time);
+      const endTime = new Date(startTime.getTime() + totalDuration * 60000);
+
+      const services = selectedServices.map(sid => ({
+        service_id: sid,
+        artist_id: serviceArtists[sid] || null,
+      }));
+
+      const firstArtistId = services.find(s => s.artist_id)?.artist_id || null;
+
+      const apptData: AppointmentInsert & { services?: any[]; serviceIds?: string[] } = {
+        title: form.title || 'Cita',
+        client_id: form.client_id || '',
+        artist_id: firstArtistId,
+        start_time: startTime.toISOString(),
+        end_time: endTime.toISOString(),
+        status: form.status,
+        total_price: totalPrice,
+        total_duration_min: totalDuration,
+        notes: form.notes || null,
+        color: form.color || null,
+        overlap_detected: !!overlapWarning,
+        services,
+      };
+
       if (editingAppt) {
         await updateAppointment(editingAppt.id, apptData);
         toast.success('Cita actualizada');
@@ -196,10 +201,12 @@ export default function CitasPage() {
       load();
     } catch (e: any) {
       toast.error('Error: ' + (e.message || 'No se pudo guardar'));
+    } finally {
+      setSubmitting(false);
     }
-  }
+   }
 
-  function openEdit(appt: any) {
+   function openEdit(appt: any) {
     setEditingAppt(appt);
     setForm({
       title: appt.title,
@@ -258,7 +265,15 @@ export default function CitasPage() {
   }
 
   async function cancelAppt(appt: any) {
-    if (!confirm(`¿Cancelar la cita "${appt.title}"?`)) return;
+    const confirmed = await confirm({
+      title: 'Cancelar cita',
+      message: `¿Cancelar la cita "${appt.title}"?`,
+      confirmText: 'Cancelar cita',
+      cancelText: 'No cancelar',
+      variant: 'warning',
+    });
+    
+    if (!confirmed) return;
     try {
       await updateAppointment(appt.id, { status: 'cancelada' });
       toast.success('Cita cancelada');
@@ -718,8 +733,8 @@ export default function CitasPage() {
               <div className="flex items-center gap-1.5 text-sm text-salon-700">
                 <Clock className="w-4 h-4" /> {totalDuration} min
               </div>
-              <div className="flex items-center gap-1.5 text-sm font-semibold text-salon-700">
-                <DollarSign className="w-4 h-4" /> {formatCurrency(totalPrice)}
+              <div className="text-sm font-semibold text-salon-700">
+                {formatCurrency(totalPrice)}
               </div>
             </div>
           )}
@@ -731,7 +746,7 @@ export default function CitasPage() {
             </div>
           )}
 
-          <Select label="Estado" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as AppointmentInsert['status'] })} options={Object.entries(APPOINTMENT_STATUS_LABELS).map(([v, l]) => ({ value: v, label: l }))} />
+           <Select label="Estado" value={form.status} onChange={(value) => setForm({ ...form, status: value as AppointmentInsert['status'] })} options={Object.entries(APPOINTMENT_STATUS_LABELS).map(([v, l]) => ({ value: v, label: l }))} />
 
           {/* Color picker */}
           <div className="space-y-2">
@@ -768,12 +783,13 @@ export default function CitasPage() {
 
           <Textarea label="Notas" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Notas especiales..." />
 
-          <div className="flex gap-3 pt-2">
-            <Button type="button" variant="outline" className="flex-1" onClick={() => { setShowModal(false); setEditingAppt(null); }}>Cancelar</Button>
-            <Button type="submit" className="flex-1" disabled={!form.start_time}>
-              <Check className="w-4 h-4 mr-1" /> {editingAppt ? 'Actualizar' : 'Crear cita'}
-            </Button>
-          </div>
+           <div className="flex gap-3 pt-2">
+             <Button type="button" variant="outline" className="flex-1" onClick={() => { setShowModal(false); setEditingAppt(null); }}>Cancelar</Button>
+             <Button type="submit" className="flex-1" disabled={!form.start_time} loading={submitting}>
+               {!submitting && <Check className="w-4 h-4 mr-1" />}
+               {submitting ? 'Guardando...' : (editingAppt ? 'Actualizar' : 'Crear cita')}
+             </Button>
+           </div>
         </form>
       </Modal>
     </>

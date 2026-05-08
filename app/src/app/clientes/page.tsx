@@ -16,6 +16,7 @@ import { formatCurrency, formatDate, normalizePeruPhone, formatPeruPhoneForInput
 import { Users, Plus, Search, Phone, Mail, Instagram, Eye, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { useConfirm } from '@/context/confirm-context';
 
 const statusBadge: Record<string, 'success' | 'warning' | 'danger' | 'purple'> = {
   prospecto: 'warning',
@@ -33,8 +34,10 @@ const statusLabels: Record<string, string> = {
 
 export default function ClientesPage() {
   const router = useRouter();
+  const { confirm } = useConfirm();
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [search, setSearch] = useState('');
   const [form, setForm] = useState<ClientInsert>({
@@ -56,9 +59,12 @@ export default function ClientesPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (submitting) return;
     if (!form.name.trim()) { toast.error('El nombre es obligatorio'); return; }
     const normalizedPhone = normalizePeruPhone(form.phone);
     const formToSave = { ...form, phone: normalizedPhone };
+    
+    setSubmitting(true);
     try {
       await createClient(formToSave);
       toast.success('Clienta creada');
@@ -67,11 +73,21 @@ export default function ClientesPage() {
       load();
     } catch (e) {
       toast.error('Error al crear');
+    } finally {
+      setSubmitting(false);
     }
   }
 
   async function deactivateClient(client: Client) {
-    if (!confirm(`¿Eliminar a ${client.name}? Esta acción no se puede deshacer.`)) return;
+    const confirmed = await confirm({
+      title: 'Eliminar clienta',
+      message: `¿Eliminar a ${client.name}? Esta acción no se puede deshacer.`,
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      variant: 'danger',
+    });
+    
+    if (!confirmed) return;
     try {
       await deleteClient(client.id);
       toast.success('Clienta eliminada');
@@ -188,17 +204,19 @@ export default function ClientesPage() {
           <Input label="Teléfono" leftPrefix={<FlagPeru className="w-5 h-5" />} value={form.phone || ''} onChange={(e) => setForm({ ...form, phone: formatPeruPhoneForInput(e.target.value) })} placeholder="987 654 321" maxLength={11} />
           <Input label="Email" type="email" value={form.email || ''} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="email@ejemplo.com" />
           <Input label="Instagram" value={form.instagram || ''} onChange={(e) => setForm({ ...form, instagram: e.target.value })} placeholder="@usuario" />
-          <Select label="Estado" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as ClientInsert['status'] })} options={[
-            { value: 'prospecto', label: 'Prospecto' },
-            { value: 'activa', label: 'Activa' },
-            { value: 'inactiva', label: 'Inactiva' },
-            { value: 'vip', label: 'VIP' },
-          ]} />
+           <Select label="Estado" value={form.status} onChange={(value) => setForm({ ...form, status: value as ClientInsert['status'] })} options={[
+             { value: 'prospecto', label: 'Prospecto' },
+             { value: 'activa', label: 'Activa' },
+             { value: 'inactiva', label: 'Inactiva' },
+             { value: 'vip', label: 'VIP' },
+           ]} />
           <Textarea label="Notas" value={form.notes || ''} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Preferencias, alergias, etc." />
-          <div className="flex gap-3 pt-2">
-            <Button type="button" variant="outline" className="flex-1" onClick={() => setShowModal(false)}>Cancelar</Button>
-            <Button type="submit" className="flex-1">Crear</Button>
-          </div>
+           <div className="flex gap-3 pt-2">
+             <Button type="button" variant="outline" className="flex-1" onClick={() => setShowModal(false)}>Cancelar</Button>
+             <Button type="submit" className="flex-1" loading={submitting}>
+               {submitting ? 'Guardando...' : 'Crear'}
+             </Button>
+           </div>
         </form>
       </Modal>
     </>

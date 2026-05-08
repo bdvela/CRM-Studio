@@ -1,15 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { 
   getStaff, 
   createStaff, 
   updateStaff, 
   deleteStaff, 
   getRoles, 
-  createRole, 
-  updateRole, 
-  deleteRole, 
   getCategories, 
   updateStaffSpecialties,
   getServices,
@@ -30,6 +27,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs } from '@/components/ui/tabs';
 import { FlagPeru } from '@/components/ui/FlagPeru';
 import { DatePicker } from '@/components/ui/DatePicker';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useConfirm } from '@/context/confirm-context';
 import { 
   formatCurrency, 
   normalizePeruPhone, 
@@ -44,7 +44,6 @@ import {
   DollarSign, 
   Pencil, 
   Trash2, 
-  Layers, 
   Settings, 
   X, 
   Check,
@@ -69,18 +68,18 @@ import { toast } from 'sonner';
    return isOwnerRoleName(member.role?.name);
  }
 
- export default function StaffPage() {
-  const [members, setMembers] = useState<StaffMember[]>([]);
-  const [roles, setRoles] = useState<Role[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [services, setServices] = useState<Service[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'staff' | 'roles'>('staff');
+  export default function StaffPage() {
+   const { confirm } = useConfirm();
+   const [members, setMembers] = useState<StaffMember[]>([]);
+   const [roles, setRoles] = useState<Role[]>([]);
+   const [categories, setCategories] = useState<Category[]>([]);
+   const [services, setServices] = useState<Service[]>([]);
+   const [loading, setLoading] = useState(true);
+   const [submitting, setSubmitting] = useState(false);
+   const [deletingId, setDeletingId] = useState<string | null>(null);
   
   const [showModal, setShowModal] = useState(false);
-  const [showRoleModal, setShowRoleModal] = useState(false);
   const [editingMember, setEditingMember] = useState<StaffMember | null>(null);
-  const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [search, setSearch] = useState('');
   
   const [activeStaffTab, setActiveStaffTab] = useState<StaffModalTab>('basicos');
@@ -97,11 +96,27 @@ import { toast } from 'sonner';
     birthday_date: null,
   });
   
-  const [specialtySelections, setSpecialtySelections] = useState<string[]>([]);
-  const [roleForm, setRoleForm] = useState({ name: '', description: '', color: '#6B7280' });
-  
-  const [overrides, setOverrides] = useState<Record<string, number | null>>({});
-  const [showOverrides, setShowOverrides] = useState(false);
+    const [specialtySelections, setSpecialtySelections] = useState<string[]>([]);
+    
+    const [overrides, setOverrides] = useState<Record<string, number | null>>({});
+    const [showOverrides, setShowOverrides] = useState(false);
+    const [overrideSearch, setOverrideSearch] = useState('');
+    const [overrideDropdownOpen, setOverrideDropdownOpen] = useState(false);
+    const overrideDropdownRef = useRef<HTMLDivElement>(null);
+
+    const [initialForm, setInitialForm] = useState<any>(null);
+    const [initialSpecialties, setInitialSpecialties] = useState<string[]>([]);
+    const [initialOverrides, setInitialOverrides] = useState<Record<string, number | null>>({});
+
+   useEffect(() => {
+     function handleClickOutside(e: MouseEvent) {
+       if (overrideDropdownRef.current && !overrideDropdownRef.current.contains(e.target as Node)) {
+         setOverrideDropdownOpen(false);
+       }
+     }
+     document.addEventListener('mousedown', handleClickOutside);
+     return () => document.removeEventListener('mousedown', handleClickOutside);
+   }, []);
 
   async function load() {
     try {
@@ -122,15 +137,17 @@ import { toast } from 'sonner';
     }
   }
 
-  useEffect(() => { load(); }, [activeTab]);
+  useEffect(() => { load(); }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (submitting) return;
     if (!form.name.trim()) { toast.error('El nombre es obligatorio'); return; }
     if (!form.role_id) { toast.error('Selecciona un rol'); return; }
     const normalizedPhone = normalizePeruPhone(form.phone);
     const formToSave = { ...form, phone: normalizedPhone };
     
+    setSubmitting(true);
      try {
        let staffId: string;
        
@@ -162,7 +179,7 @@ import { toast } from 'sonner';
             await updateStaffSpecialties(staffId, specialtySelections);
           }
         }
-      
+     
       for (const [serviceId, fixedAmount] of Object.entries(overrides)) {
         if (fixedAmount !== null && fixedAmount >= 0) {
           await upsertCommissionOverride({
@@ -184,6 +201,8 @@ import { toast } from 'sonner';
     } catch (e) {
       console.error(e);
       toast.error(editingMember ? 'Error al actualizar' : 'Error al crear');
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -206,110 +225,98 @@ import { toast } from 'sonner';
      setActiveStaffTab('basicos');
    }
 
-   async function openEdit(member: StaffMember) {
-     setEditingMember(member);
-     setForm({
-       name: member.name,
-       phone: formatPeruPhoneForInput(member.phone),
-       role_id: member.role_id,
-       commission_pct: member.commission_pct,
-       schedule: member.schedule || '',
-       photo_url: member.photo_url,
-       active: member.active,
-       last_commission_paid: member.last_commission_paid,
-       birthday_date: (member as any).birthday_date || null,
-     });
-     
-     const currentSpecIds = member.staff_specialties?.map(s => s.category_id) || [];
-     setSpecialtySelections(currentSpecIds);
-     
-     const overridesData = await getCommissionOverrides(member.id);
-     const map: Record<string, number | null> = {};
-     overridesData.forEach((o: any) => {
-       if (o.service_id) {
-         map[o.service_id] = o.founder_fixed_amount;
-       }
-     });
-     setOverrides(map);
-     setShowOverrides(false);
-     setActiveStaffTab('basicos');
-     
-     setShowModal(true);
-   }
+    async function openEdit(member: StaffMember) {
+      setEditingMember(member);
+      
+      const newForm = {
+        name: member.name,
+        phone: formatPeruPhoneForInput(member.phone),
+        role_id: member.role_id,
+        commission_pct: member.commission_pct,
+        schedule: member.schedule || '',
+        photo_url: member.photo_url,
+        active: member.active,
+        last_commission_paid: member.last_commission_paid,
+        birthday_date: (member as any).birthday_date || null,
+      };
+      
+      setForm(newForm);
+      
+      const currentSpecIds = member.staff_specialties?.map(s => s.category_id) || [];
+      setSpecialtySelections(currentSpecIds);
+      
+      const overridesData = await getCommissionOverrides(member.id);
+      const map: Record<string, number | null> = {};
+      overridesData.forEach((o: any) => {
+        if (o.service_id) {
+          map[o.service_id] = o.founder_fixed_amount;
+        }
+      });
+      setOverrides(map);
+      
+      // Guardar estado inicial para comparar cambios
+      setInitialForm({ ...newForm });
+      setInitialSpecialties([...currentSpecIds]);
+      setInitialOverrides({ ...map });
+      
+      setShowOverrides(false);
+      setActiveStaffTab('basicos');
+      
+      setShowModal(true);
+    }
 
-   function openNew() {
-     setEditingMember(null);
-     resetStaffForm();
-     setShowModal(true);
-   }
+    function openNew() {
+      setEditingMember(null);
+      resetStaffForm();
+      
+      // Guardar estado inicial para nuevo miembro
+      const activeRoles = roles.filter(r => r.active && !isOwnerRoleName(r.name));
+      const defaultForm = { 
+        name: '', 
+        phone: '', 
+        role_id: activeRoles[0]?.id || '', 
+        commission_pct: 0, 
+        schedule: '', 
+        photo_url: null, 
+        active: true, 
+        last_commission_paid: null,
+        birthday_date: null,
+      };
+      setInitialForm({ ...defaultForm });
+      setInitialSpecialties([]);
+      setInitialOverrides({});
+      
+      setShowModal(true);
+    }
 
    async function handleDelete(member: StaffMember) {
      if (isOwnerMember(member)) {
        toast.error('No se puede eliminar a la Dueña');
        return;
      }
-     if (!confirm(`¿Eliminar a ${member.name}? Esta acción no se puede deshacer.`)) return;
+     if (deletingId) return;
+     
+     const confirmed = await confirm({
+       title: 'Eliminar miembro',
+       message: `¿Eliminar a ${member.name}? Esta acción no se puede deshacer.`,
+       confirmText: 'Eliminar',
+       cancelText: 'Cancelar',
+       variant: 'danger',
+     });
+     
+     if (!confirmed) return;
+     
+     setDeletingId(member.id);
      try {
        await deleteStaff(member.id);
        toast.success('Staff eliminado');
        load();
      } catch (e) {
        toast.error('Error al eliminar');
+     } finally {
+       setDeletingId(null);
      }
    }
-
-  async function handleRoleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!roleForm.name.trim()) { toast.error('El nombre es obligatorio'); return; }
-    try {
-      if (editingRole) {
-        await updateRole(editingRole.id, roleForm);
-        toast.success('Rol actualizado');
-      } else {
-        await createRole(roleForm);
-        toast.success('Rol creado');
-      }
-      setShowRoleModal(false);
-      setEditingRole(null);
-      setRoleForm({ name: '', description: '', color: '#6B7280' });
-      load();
-    } catch (e: any) {
-      toast.error(e.message || 'Error');
-    }
-  }
-
-  function openRoleEdit(role: Role) {
-    setEditingRole(role);
-    setRoleForm({ name: role.name, description: role.description || '', color: role.color });
-    setShowRoleModal(true);
-  }
-
-  function openRoleNew() {
-    setEditingRole(null);
-    setRoleForm({ name: '', description: '', color: '#6B7280' });
-    setShowRoleModal(true);
-  }
-
-  async function handleDeleteRole(role: Role) {
-    if (!confirm(`¿Eliminar el rol "${role.name}"? No se puede si hay staff asignado.`)) return;
-    try {
-      await deleteRole(role.id);
-      toast.success('Rol eliminado');
-      load();
-    } catch (e: any) {
-      toast.error(e.message || 'Error al eliminar');
-    }
-  }
-
-  async function toggleRoleActive(role: Role) {
-    try {
-      await updateRole(role.id, { active: !role.active });
-      toast.success(`Rol ${role.active ? 'desactivado' : 'activado'}`);
-      load();
-    } catch (e) {
-      toast.error('Error al actualizar');
-    }
-  }
 
   const filtered = members.filter((m) => {
     const s = search.toLowerCase();
@@ -336,57 +343,50 @@ import { toast } from 'sonner';
     },
   ];
 
-  return (
-    <>
-      <Header title="Staff / Artists" action={
-        <div className="flex items-center gap-2">
-          <div className="flex rounded-lg border border-gray-200 bg-white overflow-hidden">
-            <button
-              type="button"
-              onClick={() => setActiveTab('staff')}
-              className={`px-3 py-1.5 text-sm font-medium transition-colors ${activeTab === 'staff' ? 'bg-salon-500 text-white' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              <UserRound className="w-4 h-4 inline mr-1" /> Equipo
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('roles')}
-              className={`px-3 py-1.5 text-sm font-medium transition-colors ${activeTab === 'roles' ? 'bg-salon-500 text-white' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              <Layers className="w-4 h-4 inline mr-1" /> Roles
-            </button>
-          </div>
-          {activeTab === 'staff' ? (
-            <Button size="sm" onClick={openNew}>
-              <Plus className="w-4 h-4 mr-1" /> Nuevo
-            </Button>
-          ) : (
-            <Button size="sm" onClick={openRoleNew}>
-              <Plus className="w-4 h-4 mr-1" /> Nuevo Rol
-            </Button>
-          )}
-        </div>
-      } />
+   return (
+     <>
+       <Header title="Staff / Artists" action={
+         <Button size="sm" onClick={openNew}>
+           <Plus className="w-4 h-4 mr-1" /> Nuevo
+         </Button>
+       } />
 
       <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-4">
-        {activeTab === 'staff' ? (
-          <>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Buscar por nombre o rol..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-salon-500"
-              />
-            </div>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Buscar por nombre o rol..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-salon-500"
+          />
+        </div>
 
-            {loading ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((i) => <div key={i} className="h-20 rounded-2xl bg-gray-100 animate-pulse" />)}
-              </div>
-            ) : filtered.length === 0 ? (
+             {loading ? (
+               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                 {[1, 2, 3, 4, 5, 6].map((i) => (
+                   <Card key={i}>
+                     <CardContent className="py-5">
+                       <div className="flex items-start gap-4">
+                         <Skeleton className="w-12 h-12 rounded-full flex-shrink-0" />
+                         <div className="flex-1 space-y-2">
+                           <Skeleton className="h-5 w-3/4" />
+                           <Skeleton className="h-4 w-1/2" />
+                         </div>
+                       </div>
+                       <div className="flex flex-wrap gap-1 mt-3">
+                         <Skeleton className="h-5 w-20" />
+                         <Skeleton className="h-5 w-16" />
+                       </div>
+                       <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                         <Skeleton className="h-4 w-24" />
+                       </div>
+                     </CardContent>
+                   </Card>
+                 ))}
+               </div>
+             ) : filtered.length === 0 ? (
               <Card>
                 <CardContent className="py-12 text-center text-gray-400">
                   <UserRound className="w-12 h-12 mx-auto mb-3 opacity-30" />
@@ -394,23 +394,16 @@ import { toast } from 'sonner';
                 </CardContent>
               </Card>
             ) : (
-               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                 {filtered.map((member) => {
-                   const isOwner = isOwnerMember(member);
-                   return (
-                    <Card 
-                      key={member.id} 
-                      onClick={() => openEdit(member)}
-                      className={`relative cursor-pointer transition-all hover:shadow-md ${!member.active ? 'opacity-60' : ''} ${isOwner ? 'ring-2 ring-amber-200' : ''}`}
-                    >
-                       {isOwner && (
-                         <div className="absolute top-3 right-3 z-10">
-                           <div className="px-2 py-1 bg-amber-50 rounded-lg">
-                             <span className="text-[10px] font-medium text-amber-600">Protegido</span>
-                           </div>
-                         </div>
-                       )}
-                     <CardContent className="py-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filtered.map((member) => {
+                    const isOwner = isOwnerMember(member);
+                    return (
+                     <Card 
+                       key={member.id} 
+                       onClick={() => openEdit(member)}
+                       className={`relative cursor-pointer transition-all hover:shadow-md ${!member.active ? 'opacity-60' : ''} ${isOwner ? 'ring-2 ring-amber-200' : ''}`}
+                     >
+                      <CardContent className="py-5">
                        <div className="flex items-start gap-4">
                          <div className="w-12 h-12 rounded-full bg-accent-100 flex items-center justify-center text-accent-600 font-bold text-lg flex-shrink-0">
                            {member.name[0].toUpperCase()}
@@ -439,7 +432,7 @@ import { toast } from 'sonner';
                       {member.staff_stats && (
                         <div className="flex items-center gap-4 mt-3 pt-3 border-t border-gray-100 text-xs text-gray-500">
                           <span>{member.staff_stats.total_appointments} citas</span>
-                          <span className="flex items-center gap-1"><DollarSign className="w-3 h-3" />{formatCurrency(member.staff_stats.total_revenue)}</span>
+                          <span>{formatCurrency(member.staff_stats.total_revenue)}</span>
                         </div>
                       )}
 
@@ -452,51 +445,8 @@ import { toast } from 'sonner';
                   );
                 })}
               </div>
-            )}
-          </>
-        ) : (
-          <>
-            {roles.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center text-gray-400">
-                  <Layers className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                  <p className="text-sm">No hay roles creados</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {roles.map((role) => (
-                  <Card key={role.id} className={!role.active ? 'opacity-60' : ''}>
-                    <div className="absolute top-3 right-3 flex items-center gap-1 z-10">
-                      <button type="button" onClick={() => toggleRoleActive(role)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors" title={role.active ? 'Desactivar' : 'Activar'}>
-                        {role.active ? <span className="text-xs font-medium text-green-600">✓</span> : <span className="text-xs font-medium text-gray-400">✗</span>}
-                      </button>
-                      <button type="button" onClick={() => openRoleEdit(role)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
-                        <Pencil className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600" />
-                      </button>
-                      <button type="button" onClick={() => handleDeleteRole(role)} className="p-1.5 rounded-lg hover:bg-red-50 transition-colors">
-                        <Trash2 className="w-3.5 h-3.5 text-gray-400 hover:text-red-500" />
-                      </button>
-                    </div>
-                    <CardContent className="py-5">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full flex-shrink-0" style={{ backgroundColor: role.color + '20' }}>
-                          <div className="w-full h-full rounded-full flex items-center justify-center text-sm font-bold" style={{ color: role.color }}>{role.name[0]}</div>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold">{role.name}</p>
-                          {role.description && <p className="text-xs text-gray-400 truncate">{role.description}</p>}
-                        </div>
-                      </div>
-                      {!role.active && <div className="mt-3 pt-3 border-t border-gray-100"><Badge variant="danger">Desactivado</Badge></div>}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </>
-        )}
-      </div>
+             )}
+       </div>
 
        {/* Staff Modal with Tabs */}
         <Modal 
@@ -581,21 +531,21 @@ import { toast } from 'sonner';
                       Rol <span className="text-red-500">*</span>
                     </label>
                      <Select 
-                       value={form.role_id} 
-                       onChange={(e) => setForm({ ...form, role_id: e.target.value })} 
-                       disabled={isOwnerMember(editingMember)}
-                       options={
-                         roles
-                           .filter(r => r.active)
-                           .filter(r => {
-                             if (isOwnerMember(editingMember)) {
-                               return true;
-                             }
-                             return !isOwnerRoleName(r.name);
-                           })
-                           .map(r => ({ value: r.id, label: r.name }))
-                       }
-                     />
+                        value={form.role_id} 
+                        onChange={(value) => setForm({ ...form, role_id: value })} 
+                        disabled={isOwnerMember(editingMember)}
+                        options={
+                          roles
+                            .filter(r => r.active)
+                            .filter(r => {
+                              if (isOwnerMember(editingMember)) {
+                                return true;
+                              }
+                              return !isOwnerRoleName(r.name);
+                            })
+                            .map(r => ({ value: r.id, label: r.name }))
+                        }
+                      />
                      {isOwnerMember(editingMember) && (
                        <p className="text-xs text-gray-500 mt-1">
                          El rol de Dueña no se puede cambiar.
@@ -620,33 +570,31 @@ import { toast } from 'sonner';
                    <p className="text-xs text-gray-500">
                      ¿Qué categorías de servicios maneja esta persona?
                    </p>
-                   <div className="space-y-1.5 max-h-64 overflow-y-auto">
-                     {categories.filter(c => c.active).map((cat) => (
-                       <label key={cat.id} className="flex items-center gap-2 p-3 rounded-xl hover:bg-gray-50 cursor-pointer transition-colors">
-                         <input 
-                           type="checkbox" 
-                           checked={specialtySelections.includes(cat.id)}
-                           onChange={(e) => {
-                             setSpecialtySelections(
-                               e.target.checked 
-                                 ? [...specialtySelections, cat.id] 
-                                 : specialtySelections.filter(s => s !== cat.id)
-                             );
-                           }}
-                           className="rounded border-gray-300 text-salon-600 focus:ring-salon-500"
-                         />
-                         <span className="text-sm flex items-center gap-2">
-                           <span className="text-lg">{cat.icon || '📋'}</span>
-                           <span className="font-medium">{cat.name}</span>
-                           {cat.description && (
-                             <span className="text-xs text-gray-400">
-                               — {cat.description}
-                             </span>
-                           )}
-                         </span>
-                       </label>
-                     ))}
-                   </div>
+                    <div className="space-y-1.5 max-h-64 overflow-y-auto">
+                      {categories.filter(c => c.active).map((cat) => (
+                        <div key={cat.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors">
+                          <Checkbox
+                            checked={specialtySelections.includes(cat.id)}
+                            onChange={(checked) => {
+                              setSpecialtySelections(
+                                checked 
+                                  ? [...specialtySelections, cat.id] 
+                                  : specialtySelections.filter(s => s !== cat.id)
+                              );
+                            }}
+                          />
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">{cat.icon || '📋'}</span>
+                            <span className="text-sm font-medium text-gray-900">{cat.name}</span>
+                            {cat.description && (
+                              <span className="text-xs text-gray-400">
+                                — {cat.description}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                  </div>
 
                  <div className="space-y-1">
@@ -715,89 +663,162 @@ import { toast } from 'sonner';
                      </div>
 
                      <div className="border-t border-gray-100 pt-4">
-                       <button
-                         type="button"
-                         onClick={() => setShowOverrides(!showOverrides)}
-                         className="text-sm text-salon-600 hover:text-salon-700 font-medium flex items-center gap-1.5"
-                       >
-                         <Settings className="w-4 h-4" />
-                         {showOverrides ? 'Ocultar excepciones' : 'Configurar excepciones por servicio'}
-                       </button>
+                       <div className="flex items-center justify-between mb-2">
+                         <p className="text-sm font-medium text-gray-700">
+                           Excepciones por servicio
+                         </p>
+                         {Object.keys(overrides).length > 0 && (
+                           <span className="text-xs text-gray-500">
+                             {Object.keys(overrides).length} excepcion(es)
+                           </span>
+                         )}
+                       </div>
 
-                       {showOverrides && (
-                         <div className="mt-3 space-y-2">
-                           <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
-                             <p className="text-sm font-medium text-amber-800">
-                               <strong>¿Qué son las excepciones?</strong>
-                             </p>
-                             <p className="text-xs text-amber-700 mt-1">
-                               Para servicios especiales (ej: pedicura, cejas), puedes definir un <strong>MONTO FIJO</strong> que recibe la Founder en lugar del porcentaje.
-                             </p>
-                             <p className="text-xs text-amber-700 mt-1">
-                               Ejemplo: Pedicura ($50) → Founder recibe $5 fijo → Artista recibe $45.
-                             </p>
+                       <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-3">
+                         <p className="text-xs text-amber-700">
+                           Para servicios especiales, define un <strong>MONTO FIJO</strong> que recibe la Founder en lugar del porcentaje.
+                         </p>
+                         <p className="text-xs text-amber-600 mt-1">
+                            Ejemplo: Pedicura (S/ 50) → Founder recibe S/ 5 fijo → Artista recibe S/ 45.
+                         </p>
+                       </div>
+
+                       {/* Buscar y agregar servicio */}
+                        <div ref={overrideDropdownRef} className="relative mb-4">
+                         <div className="flex items-center gap-2">
+                           <div className="flex-1 relative">
+                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                             <input
+                               type="text"
+                               value={overrideSearch}
+                               onChange={(e) => {
+                                 setOverrideSearch(e.target.value);
+                                 setOverrideDropdownOpen(true);
+                               }}
+                               onFocus={() => setOverrideDropdownOpen(true)}
+                               placeholder="Buscar servicio para agregar excepción..."
+                               className="w-full rounded-xl border border-gray-300 bg-white pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-salon-500 focus:border-transparent"
+                             />
                            </div>
+                         </div>
 
-                           <div className="space-y-2 max-h-72 overflow-y-auto">
-                             {services.map((svc) => {
-                               const fixed = overrides[svc.id];
-                               const isSet = fixed !== null && fixed !== undefined;
-                               
-                               return (
-                                 <div 
-                                   key={svc.id} 
-                                   className={`flex items-center gap-3 p-3 rounded-xl border transition-colors ${
-                                     isSet 
-                                       ? 'bg-emerald-50 border-emerald-200' 
-                                       : 'bg-white border-gray-200 hover:bg-gray-50'
-                                   }`}
+                         {/* Dropdown de resultados */}
+                         {overrideDropdownOpen && (
+                           <div className="absolute z-50 mt-1 w-full bg-white rounded-xl border border-gray-200 shadow-lg max-h-64 overflow-y-auto">
+                             {(() => {
+                               const searchLower = overrideSearch.toLowerCase();
+                               const filtered = services.filter(
+                                 (svc) => 
+                                   svc.name.toLowerCase().includes(searchLower) &&
+                                   !overrides[svc.id]
+                               );
+
+                               if (overrideSearch.trim() && filtered.length === 0) {
+                                 return (
+                                   <div className="p-4 text-center">
+                                     <p className="text-sm text-gray-400">No hay servicios que coincidan</p>
+                                   </div>
+                                 );
+                               }
+
+                               if (filtered.length === 0) {
+                                 return (
+                                   <div className="p-4 text-center">
+                                     <p className="text-sm text-gray-400">
+                                       {services.length - Object.keys(overrides).length} servicio(s) disponibles
+                                     </p>
+                                   </div>
+                                 );
+                               }
+
+                               return filtered.slice(0, 10).map((svc) => (
+                                 <button
+                                   key={svc.id}
+                                   type="button"
+                                   onClick={() => {
+                                     setOverrides({ ...overrides, [svc.id]: 0 });
+                                     setOverrideSearch('');
+                                     setOverrideDropdownOpen(false);
+                                   }}
+                                   className="w-full text-left px-4 py-2.5 hover:bg-gray-50 transition-colors flex items-center justify-between gap-3"
                                  >
-                                   <div className="flex-1 min-w-0">
-                                     <p className="text-sm font-medium truncate">{svc.name}</p>
+                                   <div>
+                                     <p className="text-sm font-medium text-gray-900">{svc.name}</p>
                                      <p className="text-xs text-gray-500">
                                        Precio: {formatCurrency(svc.price)}
-                                       {isSet && (
-                                         <span className="ml-2 text-emerald-600 font-medium">
-                                           → Founder: {formatCurrency(fixed!)}
+                                       {svc.category && (
+                                         <span className="ml-2">
+                                           • {svc.category.name}
                                          </span>
                                        )}
                                      </p>
                                    </div>
-                                   <div className="flex items-center gap-2">
-                                     <Input
-                                       className="w-28 text-center text-sm"
-                                       type="number"
-                                       placeholder="0"
-                                       value={overrides[svc.id] ?? ''}
-                                       onChange={(e) => {
-                                         const val = e.target.value;
-                                         setOverrides({
-                                           ...overrides,
-                                           [svc.id]: val === '' ? null : parseFloat(val)
-                                         });
-                                       }}
-                                     />
-                                     {isSet && (
-                                       <button
-                                         type="button"
-                                         onClick={() => {
-                                           const newOverrides = { ...overrides };
-                                           delete newOverrides[svc.id];
-                                           setOverrides(newOverrides);
-                                         }}
-                                         className="p-1.5 rounded-lg hover:bg-red-50 transition-colors"
-                                         title="Quitar excepción"
-                                       >
-                                         <X className="w-4 h-4 text-gray-400 hover:text-red-500" />
-                                       </button>
-                                     )}
-                                   </div>
-                                 </div>
-                               );
-                             })}
+                                   <Plus className="w-4 h-4 text-gray-400" />
+                                 </button>
+                               ));
+                             })()}
                            </div>
-                         </div>
-                       )}
+                         )}
+                       </div>
+
+                        {/* Lista de excepciones configuradas */}
+                        {Object.keys(overrides).length > 0 ? (
+                          <div className="space-y-2">
+                            {Object.entries(overrides).map(([serviceId, fixedAmount]) => {
+                              const svc = services.find((s) => s.id === serviceId);
+                              if (!svc) return null;
+
+                              return (
+                                <div 
+                                  key={serviceId}
+                                  className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3 rounded-xl border bg-emerald-50 border-emerald-200"
+                                >
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-gray-900 truncate">{svc.name}</p>
+                                    <p className="text-xs text-gray-500">
+                                      Precio: {formatCurrency(svc.price)}
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center justify-between sm:justify-end gap-2">
+                                    <div className="flex items-center gap-1.5 sm:gap-2">
+                                      <span className="text-xs text-emerald-700 font-medium hidden sm:inline">Founder:</span>
+                                      <Input
+                                        className="w-20 sm:w-24 text-center text-sm"
+                                        type="number"
+                                        placeholder="0"
+                                        value={fixedAmount ?? ''}
+                                        onChange={(e) => {
+                                          const val = e.target.value;
+                                          setOverrides({
+                                            ...overrides,
+                                            [serviceId]: val === '' ? null : parseFloat(val)
+                                          });
+                                        }}
+                                      />
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const newOverrides = { ...overrides };
+                                        delete newOverrides[serviceId];
+                                        setOverrides(newOverrides);
+                                      }}
+                                      className="p-1.5 rounded-lg hover:bg-red-50 transition-colors flex-shrink-0"
+                                      title="Quitar excepción"
+                                    >
+                                      <X className="w-4 h-4 text-gray-400 hover:text-red-500" />
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="text-center py-6 border border-dashed border-gray-200 rounded-xl">
+                            <p className="text-sm text-gray-400">No hay excepciones configuradas</p>
+                            <p className="text-xs text-gray-400 mt-1">Usa el buscador de arriba para agregar</p>
+                          </div>
+                        )}
                      </div>
                    </>
                  )}
@@ -860,104 +881,86 @@ import { toast } from 'sonner';
                </div>
              )}
 
-             {/* Botones de acción */}
-             <div className="flex gap-3 pt-6 mt-2 border-t border-gray-100">
-               {editingMember && !isOwnerMember(editingMember) && (
-                 <Button
-                   type="button"
-                   variant="outline"
-                   className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
-                   onClick={async () => {
-                     if (editingMember) {
-                       setShowModal(false);
-                       setEditingMember(null);
-                       resetStaffForm();
-                       await handleDelete(editingMember);
-                     }
-                   }}
-                 >
-                   <Trash2 className="w-4 h-4 mr-1" />
-                   Eliminar
-                 </Button>
-               )}
-               <div className="flex-1" />
-               <Button
-                 type="button"
-                 variant="outline"
-                 onClick={() => { 
-                   setShowModal(false); 
-                   setEditingMember(null);
-                   resetStaffForm();
-                 }}
-               >
-                 Cancelar
-               </Button>
-               <Button type="submit">
-                 <Check className="w-4 h-4 mr-1" />
-                 {editingMember ? 'Actualizar' : 'Crear'}
-               </Button>
-             </div>
+              {/* Botones de acción */}
+               {(() => {
+                 // Función para comparar arrays de strings
+                 const arraysEqual = (a: string[], b: string[]) => {
+                   if (a.length !== b.length) return false;
+                   return a.every((item, index) => item === b[index]);
+                 };
+
+                 // Función para comparar records de overrides
+                 const recordsEqual = (a: Record<string, number | null>, b: Record<string, number | null>) => {
+                   const keysA = Object.keys(a);
+                   const keysB = Object.keys(b);
+                   if (keysA.length !== keysB.length) return false;
+                   return keysA.every((key) => a[key] === b[key]);
+                 };
+
+                 // Comparar estado actual vs inicial
+                 const isEditing = !!editingMember;
+                 const formChanged = JSON.stringify(form) !== JSON.stringify(initialForm);
+                 const specialtiesChanged = !arraysEqual(specialtySelections, initialSpecialties);
+                 const overridesChanged = !recordsEqual(overrides, initialOverrides);
+                 
+                 const hasChanges = !isEditing || formChanged || specialtiesChanged || overridesChanged;
+
+                 return (
+                   <div className="flex flex-wrap gap-2 sm:gap-3 pt-4 sm:pt-6 mt-2 border-t border-gray-100">
+                     {/* Eliminar: último en mobile, primero en sm+ */}
+                      {editingMember && !isOwnerMember(editingMember) && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full sm:w-auto border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 order-last sm:order-none"
+                          loading={deletingId === editingMember.id}
+                          onClick={async () => {
+                            if (editingMember) {
+                              setShowModal(false);
+                              setEditingMember(null);
+                              resetStaffForm();
+                              await handleDelete(editingMember);
+                            }
+                          }}
+                        >
+                          {deletingId !== editingMember.id && <Trash2 className="w-4 h-4 mr-1" />}
+                          {deletingId === editingMember.id ? 'Eliminando...' : 'Eliminar'}
+                        </Button>
+                      )}
+                     
+                     {/* Espacio vacío entre izquierda y derecha (solo sm+) */}
+                     <div className="hidden sm:block flex-1" />
+                     
+                     {/* Cancelar + Actualizar: primero en mobile, después del espacio en sm+ */}
+                     <div className="flex flex-1 sm:flex-none gap-2 order-first sm:order-none">
+                       <Button
+                         type="button"
+                         variant="outline"
+                         className="flex-1"
+                         onClick={() => { 
+                           setShowModal(false); 
+                           setEditingMember(null);
+                           resetStaffForm();
+                         }}
+                       >
+                         Cancelar
+                       </Button>
+                        <Button 
+                          type="submit" 
+                          className="flex-1"
+                          disabled={!hasChanges}
+                          loading={submitting}
+                        >
+                          {!submitting && <Check className="w-4 h-4 mr-1" />}
+                          {submitting ? 'Guardando...' : (editingMember ? 'Actualizar' : 'Crear')}
+                        </Button>
+                     </div>
+                   </div>
+                 );
+               })()}
            </form>
          </div>
-       </Modal>
-
-      {/* Role Modal */}
-      <Modal 
-        open={showRoleModal} 
-        onClose={() => { setShowRoleModal(false); setEditingRole(null); }} 
-        title={editingRole ? 'Editar Rol' : 'Nuevo Rol'}
-      >
-        <form onSubmit={handleRoleSubmit} className="space-y-4">
-          <div className="space-y-1">
-            <label className="block text-sm font-medium text-gray-700">
-              Nombre <span className="text-red-500">*</span>
-            </label>
-            <Input 
-              value={roleForm.name}
-              onChange={(e) => setRoleForm({ ...roleForm, name: e.target.value })}
-              placeholder="Ej: Dueña, CEO"
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="block text-sm font-medium text-gray-700">Descripción</label>
-            <Input 
-              value={roleForm.description}
-              onChange={(e) => setRoleForm({ ...roleForm, description: e.target.value })}
-              placeholder="Descripción breve"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">Color</label>
-            <div className="flex items-center gap-3">
-              <input 
-                type="color" 
-                value={roleForm.color}
-                onChange={(e) => setRoleForm({ ...roleForm, color: e.target.value })}
-                className="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer"
-              />
-              <Input 
-                value={roleForm.color}
-                onChange={(e) => setRoleForm({ ...roleForm, color: e.target.value })}
-                placeholder="#6B7280"
-                className="flex-1"
-              />
-            </div>
-          </div>
-          <div className="flex gap-3 pt-2">
-            <Button 
-              type="button" 
-              variant="outline" 
-              className="flex-1" 
-              onClick={() => { setShowRoleModal(false); setEditingRole(null); }}
-            >
-              Cancelar
-            </Button>
-            <Button type="submit" className="flex-1">
-              {editingRole ? 'Actualizar' : 'Crear'}
-            </Button>
-          </div>
-        </form>
-      </Modal>
+        </Modal>
     </>
   );
 }

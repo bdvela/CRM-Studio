@@ -132,11 +132,11 @@ export function DatePicker({ value, onChange, label, placeholder = 'Seleccionar 
         {/* DÍA */}
         <div className="space-y-1">
           <label className="text-xs text-gray-500 font-medium">Día</label>
-          <select
-            value={day ?? ''}
-            onChange={(e) => handleDayChange(e.target.value ? Number(e.target.value) : null)}
-            className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 bg-white focus:border-salon-500 focus:ring-2 focus:ring-salon-500/20 transition-all cursor-pointer"
-          >
+           <select
+             value={day ?? ''}
+             onChange={(e) => handleDayChange(e.target.value ? Number(e.target.value) : null)}
+             className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-base text-gray-900 bg-white focus:border-salon-500 focus:ring-2 focus:ring-salon-500/20 transition-all cursor-pointer"
+           >
             <option value="">--</option>
             {daysArray.map((d) => (
               <option key={d} value={d}>{String(d).padStart(2, '0')}</option>
@@ -147,11 +147,11 @@ export function DatePicker({ value, onChange, label, placeholder = 'Seleccionar 
         {/* MES */}
         <div className="space-y-1">
           <label className="text-xs text-gray-500 font-medium">Mes</label>
-          <select
-            value={month ?? ''}
-            onChange={(e) => handleMonthChange(e.target.value !== '' ? Number(e.target.value) : null)}
-            className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 bg-white focus:border-salon-500 focus:ring-2 focus:ring-salon-500/20 transition-all cursor-pointer"
-          >
+           <select
+             value={month ?? ''}
+             onChange={(e) => handleMonthChange(e.target.value !== '' ? Number(e.target.value) : null)}
+             className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-base text-gray-900 bg-white focus:border-salon-500 focus:ring-2 focus:ring-salon-500/20 transition-all cursor-pointer"
+           >
             <option value="">--</option>
             {MONTHS.map((m) => (
               <option key={m.value} value={m.value}>{m.label}</option>
@@ -162,11 +162,11 @@ export function DatePicker({ value, onChange, label, placeholder = 'Seleccionar 
         {/* AÑO */}
         <div className="space-y-1">
           <label className="text-xs text-gray-500 font-medium">Año</label>
-          <select
-            value={year ?? ''}
-            onChange={(e) => handleYearChange(e.target.value ? Number(e.target.value) : null)}
-            className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 bg-white focus:border-salon-500 focus:ring-2 focus:ring-salon-500/20 transition-all cursor-pointer"
-          >
+           <select
+             value={year ?? ''}
+             onChange={(e) => handleYearChange(e.target.value ? Number(e.target.value) : null)}
+             className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-base text-gray-900 bg-white focus:border-salon-500 focus:ring-2 focus:ring-salon-500/20 transition-all cursor-pointer"
+           >
             <option value="">--</option>
             {years.map((y) => (
               <option key={y} value={y}>{y}</option>

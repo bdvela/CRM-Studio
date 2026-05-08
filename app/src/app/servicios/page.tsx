@@ -15,11 +15,14 @@ import { formatCurrency } from '@/lib/utils';
 import { getCategoryName, getCategoryColor, getCategoryIcon } from '@/types/database';
 import { Palette, Plus, Search, Clock, DollarSign, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useConfirm } from '@/context/confirm-context';
 
 export default function ServiciosPage() {
+  const { confirm } = useConfirm();
   const [services, setServices] = useState<Service[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [search, setSearch] = useState('');
@@ -44,8 +47,9 @@ export default function ServiciosPage() {
 
   useEffect(() => { load(); }, []);
 
-  async function handleSubmit(e: React.FormEvent) {
+   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (submitting) return;
     if (!form.name.trim() || form.price <= 0) {
       toast.error('Nombre y precio son obligatorios');
       return;
@@ -54,6 +58,8 @@ export default function ServiciosPage() {
       toast.error('Selecciona una categoría');
       return;
     }
+    
+    setSubmitting(true);
     try {
       if (editingService) {
         await updateService(editingService.id, form);
@@ -69,6 +75,8 @@ export default function ServiciosPage() {
       load();
     } catch (e) {
       toast.error(editingService ? 'Error al actualizar' : 'Error al crear');
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -94,7 +102,15 @@ export default function ServiciosPage() {
   }
 
   async function toggleActive(svc: Service) {
-    if (!confirm(`¿Eliminar "${svc.name}"? Esta acción no se puede deshacer.`)) return;
+    const confirmed = await confirm({
+      title: 'Eliminar servicio',
+      message: `¿Eliminar "${svc.name}"? Esta acción no se puede deshacer.`,
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      variant: 'danger',
+    });
+    
+    if (!confirmed) return;
     try {
       await deleteService(svc.id);
       toast.success('Servicio eliminado');
@@ -190,7 +206,7 @@ export default function ServiciosPage() {
                       </div>
                       <div className="flex items-center gap-4 mt-3 text-sm text-gray-500">
                         <span className="flex items-center gap-1"><Clock className="w-4 h-4" />{svc.duration_min} min</span>
-                        <span className="flex items-center gap-1 font-semibold text-salon-600"><DollarSign className="w-4 h-4" />{formatCurrency(svc.price)}</span>
+                        <span className="font-semibold text-salon-600">{formatCurrency(svc.price)}</span>
                       </div>
                     </CardContent>
                   </Card>
@@ -204,18 +220,20 @@ export default function ServiciosPage() {
       <Modal open={showModal} onClose={() => { setShowModal(false); setEditingService(null); }} title={editingService ? 'Editar Servicio' : 'Nuevo Servicio'}>
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input label="Nombre *" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ej: Manicure semipermanente" />
-          <Select label="Categoría" value={form.category_id} onChange={(e) => setForm({ ...form, category_id: e.target.value })} options={
-            categories.filter(c => c.active).map(c => ({ value: c.id, label: `${c.icon || ''} ${c.name}` }))
-          } />
+           <Select label="Categoría" value={form.category_id} onChange={(value) => setForm({ ...form, category_id: value })} options={
+             categories.filter(c => c.active).map(c => ({ value: c.id, label: `${c.icon || ''} ${c.name}` }))
+           } />
           <div className="grid grid-cols-2 gap-3">
             <Input label="Duración (min) *" type="number" value={form.duration_min} onChange={(e) => setForm({ ...form, duration_min: parseInt(e.target.value) || 0 })} />
             <Input label="Precio (S/) *" type="number" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: parseFloat(e.target.value) || 0 })} />
           </div>
           <Textarea label="Descripción" value={form.description || ''} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Descripción del servicio..." />
-          <div className="flex gap-3 pt-2">
-            <Button type="button" variant="outline" className="flex-1" onClick={() => { setShowModal(false); setEditingService(null); }}>Cancelar</Button>
-            <Button type="submit" className="flex-1">{editingService ? 'Actualizar' : 'Crear'}</Button>
-          </div>
+           <div className="flex gap-3 pt-2">
+             <Button type="button" variant="outline" className="flex-1" onClick={() => { setShowModal(false); setEditingService(null); }}>Cancelar</Button>
+             <Button type="submit" className="flex-1" loading={submitting}>
+               {submitting ? 'Guardando...' : (editingService ? 'Actualizar' : 'Crear')}
+             </Button>
+           </div>
         </form>
       </Modal>
     </>

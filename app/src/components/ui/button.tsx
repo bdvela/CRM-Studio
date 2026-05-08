@@ -1,8 +1,10 @@
 import { cn } from '@/lib/utils';
+import { Loader2 } from 'lucide-react';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
   size?: 'sm' | 'md' | 'lg';
+  loading?: boolean;
   children: React.ReactNode;
 }
 
@@ -20,7 +22,15 @@ const sizes = {
   lg: 'px-6 py-3 text-base',
 };
 
-export function Button({ variant = 'primary', size = 'md', className, children, ...props }: ButtonProps) {
+const spinnerSizes = {
+  sm: 'w-4 h-4',
+  md: 'w-5 h-5',
+  lg: 'w-6 h-6',
+};
+
+export function Button({ variant = 'primary', size = 'md', className, children, loading, disabled, ...props }: ButtonProps) {
+  const isDisabled = disabled || loading;
+  
   return (
     <button
       className={cn(
@@ -29,8 +39,12 @@ export function Button({ variant = 'primary', size = 'md', className, children, 
         sizes[size],
         className
       )}
+      disabled={isDisabled}
       {...props}
     >
+      {loading && (
+        <Loader2 className={cn('animate-spin mr-2', spinnerSizes[size])} />
+      )}
       {children}
     </button>
   );

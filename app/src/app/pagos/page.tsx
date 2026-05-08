@@ -27,6 +27,7 @@ export default function PagosPage() {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [filterType, setFilterType] = useState<string>('all');
   const [search, setSearch] = useState('');
@@ -59,10 +60,13 @@ export default function PagosPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (submitting) return;
     if (!form.concept.trim() || form.amount <= 0) {
       toast.error('Concepto y monto son obligatorios');
       return;
     }
+    
+    setSubmitting(true);
     try {
       await createPayment(form);
       toast.success('Pago registrado');
@@ -76,6 +80,8 @@ export default function PagosPage() {
       load();
     } catch (e) {
       toast.error('Error al registrar');
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -212,10 +218,10 @@ export default function PagosPage() {
 
       <Modal open={showModal} onClose={() => setShowModal(false)} title="Registrar Pago">
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Select label="Tipo" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as PaymentType })} options={[
-            { value: 'ingreso', label: 'Ingreso' },
-            { value: 'egreso', label: 'Egreso' },
-          ]} />
+           <Select label="Tipo" value={form.type} onChange={(value) => setForm({ ...form, type: value as PaymentType })} options={[
+             { value: 'ingreso', label: 'Ingreso' },
+             { value: 'egreso', label: 'Egreso' },
+           ]} />
           <Input label="Concepto *" value={form.concept} onChange={(e) => setForm({ ...form, concept: e.target.value })} placeholder="Ej: Pago de María García" />
           <div className="grid grid-cols-2 gap-3">
             <Input label="Monto *" type="number" step="0.01" value={form.amount} onChange={(e) => setForm({ ...form, amount: parseFloat(e.target.value) || 0 })} />
@@ -224,38 +230,39 @@ export default function PagosPage() {
 
           {form.type === 'ingreso' && (
             <>
-              <Select label="Tipo de pago" value={form.payment_kind || ''} onChange={(e) => setForm({ ...form, payment_kind: e.target.value as PaymentKind })} options={[
-                { value: 'reserva', label: 'Reserva (S/10)' },
-                { value: 'pago_completo', label: 'Pago completo (press-on)' },
-                { value: 'pago_final', label: 'Pago final (saldo)' },
-              ]} />
-              <Select label="Método de pago" value={form.payment_method || ''} onChange={(e) => setForm({ ...form, payment_method: e.target.value as PaymentMethod })} options={[
-                { value: '', label: 'Seleccionar...' },
-                { value: 'efectivo', label: 'Efectivo' },
-                { value: 'tarjeta', label: 'Tarjeta' },
-                { value: 'transferencia', label: 'Transferencia' },
-                { value: 'yape_plin', label: 'Yape/Plin' },
-              ]} />
+               <Select label="Tipo de pago" value={form.payment_kind || ''} onChange={(value) => setForm({ ...form, payment_kind: value as PaymentKind })} options={[
+                 { value: 'reserva', label: 'Reserva (S/10)' },
+                 { value: 'pago_completo', label: 'Pago completo (press-on)' },
+                 { value: 'pago_final', label: 'Pago final (saldo)' },
+               ]} />
+               <Select label="Método de pago" value={form.payment_method || ''} onChange={(value) => setForm({ ...form, payment_method: value as PaymentMethod })} options={[
+                 { value: '', label: 'Seleccionar...' },
+                 { value: 'efectivo', label: 'Efectivo' },
+                 { value: 'tarjeta', label: 'Tarjeta' },
+                 { value: 'transferencia', label: 'Transferencia' },
+                 { value: 'yape_plin', label: 'Yape/Plin' },
+               ]} />
             </>
           )}
 
           {form.type === 'egreso' && (
-            <Select label="Categoría" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value as PaymentCategory })} options={[
-              { value: 'servicio', label: 'Servicio' },
-              { value: 'insumo', label: 'Insumo' },
-              { value: 'alquiler', label: 'Alquiler' },
-              { value: 'marketing', label: 'Marketing' },
-              { value: 'comisiones', label: 'Comisiones' },
-              { value: 'otro', label: 'Otro' },
-            ]} />
+             <Select label="Categoría" value={form.category} onChange={(value) => setForm({ ...form, category: value as PaymentCategory })} options={[
+               { value: 'servicio', label: 'Servicio' },
+               { value: 'insumo', label: 'Insumo' },
+               { value: 'alquiler', label: 'Alquiler' },
+               { value: 'marketing', label: 'Marketing' },
+               { value: 'comisiones', label: 'Comisiones' },
+               { value: 'otro', label: 'Otro' },
+             ]} />
           )}
 
-          <div className="flex gap-3 pt-2">
-            <Button type="button" variant="outline" className="flex-1" onClick={() => setShowModal(false)}>Cancelar</Button>
-            <Button type="submit" className="flex-1">
-              <Receipt className="w-4 h-4 mr-1" /> Registrar
-            </Button>
-          </div>
+           <div className="flex gap-3 pt-2">
+             <Button type="button" variant="outline" className="flex-1" onClick={() => setShowModal(false)}>Cancelar</Button>
+             <Button type="submit" className="flex-1" loading={submitting}>
+               {!submitting && <Receipt className="w-4 h-4 mr-1" />}
+               {submitting ? 'Guardando...' : 'Registrar'}
+             </Button>
+           </div>
         </form>
       </Modal>
     </>
