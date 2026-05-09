@@ -223,11 +223,11 @@ export default function ClientesPage() {
 function ClientCard({ client, onClick }: { client: Client; onClick: () => void }) {
   return (
     <Card
-      className="cursor-pointer hover:border-salon-300 hover:shadow-sm transition-all"
+      className="cursor-pointer hover:shadow-md transition-all"
       onClick={onClick}
     >
-      <CardContent className="flex items-center gap-4 py-3.5">
-        <div className="w-11 h-11 rounded-full bg-salon-100 flex items-center justify-center text-salon-600 font-bold flex-shrink-0">
+      <CardContent className="flex items-center gap-4 py-4">
+        <div className="w-12 h-12 rounded-full bg-accent-100 flex items-center justify-center text-accent-600 font-bold flex-shrink-0">
           {client.name[0].toUpperCase()}
         </div>
         <div className="flex-1 min-w-0">
@@ -237,7 +237,7 @@ function ClientCard({ client, onClick }: { client: Client; onClick: () => void }
               {statusLabels[client.status]}
             </Badge>
           </div>
-          <div className="flex items-center gap-3 text-xs text-gray-400 mt-0.5">
+          <div className="flex items-center gap-3 text-xs text-gray-400 mt-1">
             {client.phone && (
               <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{client.phone}</span>
             )}
@@ -249,7 +249,7 @@ function ClientCard({ client, onClick }: { client: Client; onClick: () => void }
         <div className="text-right hidden sm:block">
           {client.client_stats && (
             <>
-              <p className="text-sm font-medium">{formatCurrency(client.client_stats.total_spent)}</p>
+              <p className="text-sm font-semibold">{formatCurrency(client.client_stats.total_spent)}</p>
               <p className="text-xs text-gray-400">{client.client_stats.total_appointments} citas</p>
             </>
           )}
