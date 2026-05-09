@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { getAppointments, getStaff, getServices } from '@/lib/db/queries';
 import { createAppointment, updateAppointment, checkOverlap } from '@/lib/db/queries';
 import { ClientCombobox } from '@/components/citas/ClientCombobox';
-import type { AppointmentInsert, AppointmentStatus, PaymentKind } from '@/types/database';
+import type { AppointmentInsert, AppointmentStatus, Service, StaffMember, StaffService, StaffSpecialty } from '@/types/database';
 import { Header } from '@/components/layout/shell';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,12 +14,21 @@ import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Modal } from '@/components/ui/modal';
 import { Badge } from '@/components/ui/badge';
-import { Tabs } from '@/components/ui/tabs';
 import { DateTimePicker } from '@/components/ui/DateTimePicker';
 import { CalendarView } from '@/components/citas/CalendarView';
-import { formatCurrency, formatTime, formatDate, startOfToday, endOfToday, startOfWeek, cn, calculateServiceCommission } from '@/lib/utils';
-import { APPOINTMENT_STATUS_LABELS } from '@/types/database';
-import { CalendarDays, Plus, Clock, User, DollarSign, AlertTriangle, Check, Pencil, XCircle, X, MapPin, Calendar as CalendarIcon } from 'lucide-react';
+import { 
+  formatCurrency, 
+  formatTime, 
+  formatDate, 
+  startOfToday, 
+  endOfToday, 
+  startOfWeek, 
+  cn, 
+  calculateServiceCommission,
+  formatServicePrice 
+} from '@/lib/utils';
+import { APPOINTMENT_STATUS_LABELS, PriceType } from '@/types/database';
+import { CalendarDays, Plus, Clock, User, DollarSign, AlertTriangle, Check, Pencil, XCircle, X, MapPin, Calendar as CalendarIcon, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -42,26 +51,59 @@ function getServiceEmoji(appt: any): string {
   return '📋';
 }
 
- function toLocalISO(dateStr: string): string {
-   const d = new Date(dateStr);
-   const pad = (n: number) => String(n).padStart(2, '0');
-   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
- }
+function toLocalISO(dateStr: string): string {
+  const d = new Date(dateStr);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
- function generateAppointmentTitle(selectedServiceIds: string[], allServices: any[]): string {
-   const selected = allServices.filter((s) => selectedServiceIds.includes(s.id));
-   if (selected.length === 0) return 'Cita';
-   const names = selected.map((s) => s.name);
-   if (names.length <= 3) return names.join(' + ');
-   return `${names[0]} + ${names.length - 1} más`;
- }
+function generateAppointmentTitle(selectedServiceIds: string[], allServices: Service[]): string {
+  const selected = allServices.filter((s) => selectedServiceIds.includes(s.id));
+  if (selected.length === 0) return 'Cita';
+  const names = selected.map((s) => s.name);
+  if (names.length <= 3) return names.join(' + ');
+  return `${names[0]} + ${names.length - 1} más`;
+}
+
+function getAvailableArtistsForService(
+  serviceId: string,
+  categoryId: string | null | undefined,
+  staff: StaffMember[],
+  services: Service[]
+): StaffMember[] {
+  const svc = services.find(s => s.id === serviceId);
+  const hasExplicitStaff = svc?.staff_services && svc.staff_services.length > 0;
+  
+  if (hasExplicitStaff) {
+    const assignedIds = (svc.staff_services || []).map((ss: StaffService) => ss.staff_id);
+    return staff.filter(s => s.active && assignedIds.includes(s.id));
+  }
+  
+  if (categoryId) {
+    return staff.filter(s => 
+      s.active && (s.staff_specialties || []).some(
+        (sp: StaffSpecialty) => sp.category_id === categoryId
+      )
+    );
+  }
+  
+  return staff.filter(s => s.active);
+}
+
+interface AppointmentFormData {
+  client_id: string;
+  start_time: string;
+  status: AppointmentInsert['status'];
+  notes: string;
+  color: string;
+}
 
 export default function CitasPage() {
   const router = useRouter();
   const { confirm } = useConfirm();
   const [appointments, setAppointments] = useState<any[]>([]);
-  const [staff, setStaff] = useState<any[]>([]);
-  const [services, setServices] = useState<any[]>([]);
+  const [staff, setStaff] = useState<StaffMember[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -70,21 +112,29 @@ export default function CitasPage() {
   const [listFilter, setListFilter] = useState<ListFilter>('list');
   const [filterArtist, setFilterArtist] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('');
+  
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [serviceArtists, setServiceArtists] = useState<Record<string, string>>({});
+  const [customPrices, setCustomPrices] = useState<Record<string, number>>({});
+  
+  const [initialForm, setInitialForm] = useState<AppointmentFormData | null>(null);
+  const [initialSelectedServices, setInitialSelectedServices] = useState<string[]>([]);
+  const [initialServiceArtists, setInitialServiceArtists] = useState<Record<string, string>>({});
+  const [initialCustomPrices, setInitialCustomPrices] = useState<Record<string, number>>({});
+  
   const [overlapWarning, setOverlapWarning] = useState<string | null>(null);
   const [pendingDate, setPendingDate] = useState<Date | null>(null);
   const [showDetail, setShowDetail] = useState(false);
   const [selectedAppt, setSelectedAppt] = useState<any>(null);
   const detailRef = useRef<HTMLDivElement>(null);
 
-   const [form, setForm] = useState({
-     client_id: '',
-     start_time: '',
-     status: 'programada' as AppointmentInsert['status'],
-     notes: '',
-     color: '',
-   });
+  const [form, setForm] = useState<AppointmentFormData>({
+    client_id: '',
+    start_time: '',
+    status: 'programada',
+    notes: '',
+    color: '',
+  });
 
   async function load() {
     setLoading(true);
@@ -111,8 +161,8 @@ export default function CitasPage() {
         getServices(),
       ]);
       setAppointments(appts as any[]);
-      setStaff(s as any[]);
-      setServices(svcs as any[]);
+      setStaff(s as StaffMember[]);
+      setServices(svcs as Service[]);
     } catch (e) {
       console.error(e);
     } finally {
@@ -140,25 +190,72 @@ export default function CitasPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const totalPrice = services
-    .filter((s) => selectedServices.includes(s.id))
-    .reduce((sum, s) => sum + Number(s.price), 0);
-
   const totalDuration = services
     .filter((s) => selectedServices.includes(s.id))
     .reduce((sum, s) => sum + Number(s.duration_min), 0);
 
+  function calculateTotalPrice(): number {
+    return services
+      .filter((s) => selectedServices.includes(s.id))
+      .reduce((sum, s) => {
+        if (s.price_type === 'variable' as PriceType && customPrices[s.id]) {
+          return sum + customPrices[s.id];
+        }
+        return sum + Number(s.price);
+      }, 0);
+  }
+
+  function haveChanges(): boolean {
+    if (!editingAppt || !initialForm) return true;
+    
+    if (form.client_id !== initialForm.client_id) return true;
+    if (form.start_time !== initialForm.start_time) return true;
+    if (form.status !== initialForm.status) return true;
+    if (form.notes !== initialForm.notes) return true;
+    if (form.color !== initialForm.color) return true;
+    
+    if (selectedServices.length !== initialSelectedServices.length) return true;
+    const sortedSelected = [...selectedServices].sort();
+    const sortedInitial = [...initialSelectedServices].sort();
+    if (!sortedSelected.every((id, i) => id === sortedInitial[i])) return true;
+    
+    for (const svcId of sortedSelected) {
+      if (serviceArtists[svcId] !== initialServiceArtists[svcId]) return true;
+      if (customPrices[svcId] !== initialCustomPrices[svcId]) return true;
+    }
+    
+    return false;
+  }
+
   async function checkForOverlap() {
-    const firstSvcArtistId = selectedServices.length > 0 ? serviceArtists[selectedServices[0]] : null;
-    if (!firstSvcArtistId || !form.start_time || totalDuration === 0) return;
+    if (!form.start_time || totalDuration === 0) {
+      setOverlapWarning(null);
+      return;
+    }
+    
+    const artistIds = selectedServices
+      .map(sid => serviceArtists[sid])
+      .filter(Boolean);
+    
+    if (artistIds.length === 0) {
+      setOverlapWarning(null);
+      return;
+    }
+    
     const start = new Date(form.start_time);
     const end = new Date(start.getTime() + totalDuration * 60000);
-    const overlaps = await checkOverlap(firstSvcArtistId, start.toISOString(), end.toISOString());
-    if (overlaps.length > 0) {
-      setOverlapWarning(`⚠️ Conflicto con: ${overlaps[0].title}`);
-    } else {
-      setOverlapWarning(null);
+    const excludeId = editingAppt?.id || null;
+    
+    for (const artistId of artistIds) {
+      const overlaps = await checkOverlap(artistId, start.toISOString(), end.toISOString(), excludeId);
+      if (overlaps.length > 0) {
+        const artistName = staff.find(s => s.id === artistId)?.name || 'artista';
+        setOverlapWarning(`⚠️ Conflicto con: ${overlaps[0].title} (${artistName})`);
+        return;
+      }
     }
+    
+    setOverlapWarning(null);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -168,33 +265,41 @@ export default function CitasPage() {
       toast.error('Completa los campos obligatorios');
       return;
     }
+    if (editingAppt && !haveChanges()) {
+      toast.info('No hay cambios para guardar');
+      return;
+    }
 
     setSubmitting(true);
     try {
       const startTime = new Date(form.start_time);
       const endTime = new Date(startTime.getTime() + totalDuration * 60000);
+      const calculatedTotalPrice = calculateTotalPrice();
 
-      const services = selectedServices.map(sid => ({
+      const servicesData = selectedServices.map(sid => ({
         service_id: sid,
         artist_id: serviceArtists[sid] || null,
+        service_price: services.find(s => s.id === sid)?.price_type === 'variable' 
+          ? (customPrices[sid] || services.find(s => s.id === sid)?.price_from || 0)
+          : services.find(s => s.id === sid)?.price || 0,
       }));
 
-      const firstArtistId = services.find(s => s.artist_id)?.artist_id || null;
+      const firstArtistId = servicesData.find(s => s.artist_id)?.artist_id || null;
 
-       const apptData: AppointmentInsert & { services?: any[]; serviceIds?: string[] } = {
-         title: generateAppointmentTitle(selectedServices, services),
-         client_id: form.client_id || '',
-         artist_id: firstArtistId,
-         start_time: startTime.toISOString(),
-         end_time: endTime.toISOString(),
-         status: form.status,
-         total_price: totalPrice,
-         total_duration_min: totalDuration,
-         notes: form.notes || null,
-         color: form.color || null,
-         overlap_detected: !!overlapWarning,
-         services,
-       };
+      const apptData: AppointmentInsert & { services?: any[]; serviceIds?: string[] } = {
+        title: generateAppointmentTitle(selectedServices, services),
+        client_id: form.client_id || '',
+        artist_id: firstArtistId,
+        start_time: startTime.toISOString(),
+        end_time: endTime.toISOString(),
+        status: form.status,
+        total_price: calculatedTotalPrice,
+        total_duration_min: totalDuration,
+        notes: form.notes || null,
+        color: form.color || null,
+        overlap_detected: !!overlapWarning,
+        services: servicesData,
+      };
 
       if (editingAppt) {
         await updateAppointment(editingAppt.id, apptData);
@@ -211,62 +316,88 @@ export default function CitasPage() {
     } finally {
       setSubmitting(false);
     }
-   }
+  }
 
-    function openEdit(appt: any) {
-     setEditingAppt(appt);
-     setForm({
-       client_id: appt.client_id || '',
-       start_time: toLocalISO(appt.start_time),
-       status: appt.status,
-       notes: appt.notes || '',
-       color: appt.color || '',
-     });
-     const svcIds: string[] = [];
-     const svcArtistMap: Record<string, string> = {};
-     (appt.appointment_services || []).forEach((as: any) => {
-       if (as.service_id) {
-         svcIds.push(as.service_id);
-         if (as.artist_id) {
-           svcArtistMap[as.service_id] = as.artist_id;
-         }
-       }
-     });
-     setSelectedServices(svcIds);
-     setServiceArtists(svcArtistMap);
-     setShowModal(true);
-   }
+  function openEdit(appt: any) {
+    setEditingAppt(appt);
+    
+    const formData: AppointmentFormData = {
+      client_id: appt.client_id || '',
+      start_time: toLocalISO(appt.start_time),
+      status: appt.status,
+      notes: appt.notes || '',
+      color: appt.color || '',
+    };
+    
+    const svcIds: string[] = [];
+    const svcArtistMap: Record<string, string> = {};
+    const customPricesMap: Record<string, number> = {};
+    
+    (appt.appointment_services || []).forEach((as: any) => {
+      if (as.service_id) {
+        svcIds.push(as.service_id);
+        if (as.artist_id) {
+          svcArtistMap[as.service_id] = as.artist_id;
+        }
+        if (as.service && as.service.price_type === 'variable' && as.service_price) {
+          customPricesMap[as.service_id] = as.service_price;
+        }
+      }
+    });
+    
+    setForm(formData);
+    setSelectedServices(svcIds);
+    setServiceArtists(svcArtistMap);
+    setCustomPrices(customPricesMap);
+    
+    setInitialForm({ ...formData });
+    setInitialSelectedServices([...svcIds]);
+    setInitialServiceArtists({ ...svcArtistMap });
+    setInitialCustomPrices({ ...customPricesMap });
+    
+    setShowModal(true);
+  }
 
-   function openNew() {
-     setEditingAppt(null);
-     setForm({
-       client_id: '',
-       start_time: '',
-       status: 'programada',
-       notes: '',
-       color: '',
-     });
-     setSelectedServices([]);
-     setServiceArtists({});
-     setOverlapWarning(null);
-     setShowModal(true);
-   }
+  function openNew() {
+    setEditingAppt(null);
+    setForm({
+      client_id: '',
+      start_time: '',
+      status: 'programada',
+      notes: '',
+      color: '',
+    });
+    setSelectedServices([]);
+    setServiceArtists({});
+    setCustomPrices({});
+    setInitialForm(null);
+    setInitialSelectedServices([]);
+    setInitialServiceArtists({});
+    setInitialCustomPrices({});
+    setOverlapWarning(null);
+    setShowModal(true);
+  }
 
-   function openNewForDate(date: Date) {
-     setEditingAppt(null);
-     const timeStr = date.toISOString().slice(0, 16);
-     setForm({
-       client_id: '',
-       start_time: timeStr,
-       status: 'programada',
-       notes: '',
-       color: '',
-     });
-     setSelectedServices([]);
-     setServiceArtists({});
-     setOverlapWarning(null);
-     setShowModal(true);
-   }
+  function openNewForDate(date: Date) {
+    setEditingAppt(null);
+    const timeStr = date.toISOString().slice(0, 16);
+    setForm({
+      client_id: '',
+      start_time: timeStr,
+      status: 'programada',
+      notes: '',
+      color: '',
+    });
+    setSelectedServices([]);
+    setServiceArtists({});
+    setCustomPrices({});
+    setInitialForm(null);
+    setInitialSelectedServices([]);
+    setInitialServiceArtists({});
+    setInitialCustomPrices({});
+    setOverlapWarning(null);
+    setShowModal(true);
+  }
 
   async function cancelAppt(appt: any) {
     const confirmed = await confirm({
@@ -284,6 +415,28 @@ export default function CitasPage() {
       load();
     } catch (e) {
       toast.error('Error al cancelar');
+    }
+  }
+
+  async function deleteAppt() {
+    if (!editingAppt) return;
+    const confirmed = await confirm({
+      title: 'Eliminar cita',
+      message: `¿Eliminar la cita "${editingAppt.title}"? Esta acción no se puede deshacer.`,
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      variant: 'danger',
+    });
+    
+    if (!confirmed) return;
+    try {
+      await updateAppointment(editingAppt.id, { status: 'cancelada' });
+      toast.success('Cita eliminada');
+      setShowModal(false);
+      setEditingAppt(null);
+      load();
+    } catch (e) {
+      toast.error('Error al eliminar');
     }
   }
 
@@ -316,6 +469,10 @@ export default function CitasPage() {
   const statusColors: Record<string, 'info' | 'warning' | 'success' | 'danger'> = {
     programada: 'info', en_curso: 'warning', completada: 'success', cancelada: 'danger', no_show: 'danger',
   };
+
+  const canDeleteAppt = editingAppt && 
+    editingAppt.status !== 'cancelada' && 
+    editingAppt.status !== 'completada';
 
   return (
     <>
@@ -581,72 +738,72 @@ export default function CitasPage() {
               </div>
 
                {selectedAppt.appointment_services?.length > 0 && (
-                 <div className="space-y-2.5">
-                   {selectedAppt.appointment_services.map((as: any, i: number) => {
-                     const cd = as.commission_detail;
-                     return (
-                       <div key={i} className="p-3 bg-gray-50 rounded-xl space-y-1.5">
-                         <div className="flex items-center justify-between">
-                           <span className="text-sm font-medium text-gray-900">
-                             {SERVICE_EMOJIS[as.service?.category] || '📋'} {as.service?.name}
-                           </span>
-                           <span className="text-sm font-semibold">{formatCurrency(Number(as.service?.price) || 0)}</span>
-                         </div>
-                         {as.artist?.name && (
-                           <p className="text-xs text-gray-400">
-                             Realizado por: {as.artist.name}
-                           </p>
-                         )}
-                         {cd && (
-                           <div className="pt-2 mt-1 border-t border-gray-200 space-y-1">
-                             <div className="flex items-center justify-between text-xs">
-                               <span className="text-emerald-600 font-medium">Para la artista:</span>
-                               <span className="text-emerald-600 font-semibold">{formatCurrency(cd.artist_commission)}</span>
-                             </div>
-                             <div className="flex items-center justify-between text-xs">
-                               <span className="text-salon-600 font-medium">Para Founder:</span>
-                               <span className="text-salon-600 font-semibold">{formatCurrency(cd.founder_share)}</span>
-                             </div>
-                             {cd.override_founder_fixed_amount !== null && cd.override_founder_fixed_amount !== undefined && (
-                               <p className="text-[10px] text-gray-400 pt-0.5">
-                                 Excepción: Founder recibe {formatCurrency(cd.override_founder_fixed_amount)} fijo
-                               </p>
-                             )}
-                             {cd.artist_commission_pct !== null && cd.artist_commission_pct !== undefined && cd.override_founder_fixed_amount === null && (
-                               <p className="text-[10px] text-gray-400 pt-0.5">
-                                 Comisión general: {cd.artist_commission_pct}%
-                               </p>
-                             )}
-                           </div>
-                         )}
-                       </div>
-                     );
-                   })}
-                   {selectedAppt.appointment_services.some((as: any) => as.commission_detail) && (() => {
-                     const totalArtistComm = selectedAppt.appointment_services.reduce(
-                       (sum: number, as: any) => sum + Number(as.commission_detail?.artist_commission || 0), 
-                       0
-                     );
-                     const totalFounder = selectedAppt.appointment_services.reduce(
-                       (sum: number, as: any) => sum + Number(as.commission_detail?.founder_share || 0), 
-                       0
-                     );
-                     if (totalArtistComm === 0 && totalFounder === 0) return null;
-                     return (
-                       <div className="pt-3 mt-1 border-t border-gray-200 space-y-2">
-                         <div className="flex items-center justify-between text-sm">
-                           <span className="text-gray-600 font-medium">Total Artistas:</span>
-                           <span className="text-emerald-600 font-semibold">{formatCurrency(totalArtistComm)}</span>
-                         </div>
-                         <div className="flex items-center justify-between text-sm">
-                           <span className="text-gray-600 font-medium">Total Founder:</span>
-                           <span className="text-salon-600 font-semibold">{formatCurrency(totalFounder)}</span>
-                         </div>
-                       </div>
-                     );
-                   })()}
-                 </div>
-               )}
+                <div className="space-y-2.5">
+                  {selectedAppt.appointment_services.map((as: any, i: number) => {
+                    const cd = as.commission_detail;
+                    return (
+                      <div key={i} className="p-3 bg-gray-50 rounded-xl space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-gray-900">
+                            {SERVICE_EMOJIS[as.service?.category] || '📋'} {as.service?.name}
+                          </span>
+                          <span className="text-sm font-semibold">{formatCurrency(Number(as.service?.price) || 0)}</span>
+                        </div>
+                        {as.artist?.name && (
+                          <p className="text-xs text-gray-400">
+                            Realizado por: {as.artist.name}
+                          </p>
+                        )}
+                        {cd && (
+                          <div className="pt-2 mt-1 border-t border-gray-200 space-y-1">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-emerald-600 font-medium">Para la artista:</span>
+                              <span className="text-emerald-600 font-semibold">{formatCurrency(cd.artist_commission)}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-salon-600 font-medium">Para Founder:</span>
+                              <span className="text-salon-600 font-semibold">{formatCurrency(cd.founder_share)}</span>
+                            </div>
+                            {cd.override_founder_fixed_amount !== null && cd.override_founder_fixed_amount !== undefined && (
+                              <p className="text-[10px] text-gray-400 pt-0.5">
+                                Excepción: Founder recibe {formatCurrency(cd.override_founder_fixed_amount)} fijo
+                              </p>
+                            )}
+                            {cd.artist_commission_pct !== null && cd.artist_commission_pct !== undefined && cd.override_founder_fixed_amount === null && (
+                              <p className="text-[10px] text-gray-400 pt-0.5">
+                                Comisión general: {cd.artist_commission_pct}%
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {selectedAppt.appointment_services.some((as: any) => as.commission_detail) && (() => {
+                    const totalArtistComm = selectedAppt.appointment_services.reduce(
+                      (sum: number, as: any) => sum + Number(as.commission_detail?.artist_commission || 0), 
+                      0
+                    );
+                    const totalFounder = selectedAppt.appointment_services.reduce(
+                      (sum: number, as: any) => sum + Number(as.commission_detail?.founder_share || 0), 
+                      0
+                    );
+                    if (totalArtistComm === 0 && totalFounder === 0) return null;
+                    return (
+                      <div className="pt-3 mt-1 border-t border-gray-200 space-y-2">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-600 font-medium">Total Artistas:</span>
+                          <span className="text-emerald-600 font-semibold">{formatCurrency(totalArtistComm)}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-600 font-medium">Total Founder:</span>
+                          <span className="text-salon-600 font-semibold">{formatCurrency(totalFounder)}</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
 
               {selectedAppt.notes && (
                 <p className="text-xs text-gray-400 bg-gray-50 rounded-xl p-3">{selectedAppt.notes}</p>
@@ -682,47 +839,95 @@ export default function CitasPage() {
           {/* Service Selection */}
           <div className="space-y-2">
             <label className="block text-sm font-medium text-gray-700">Servicios</label>
-            <div className="space-y-1.5 max-h-52 overflow-y-auto">
-              {services.map((svc: any) => {
+            <div className="space-y-1.5 max-h-64 overflow-y-auto">
+              {services.map((svc: Service) => {
                 const isSelected = selectedServices.includes(svc.id);
+                const availableArtists = getAvailableArtistsForService(svc.id, svc.category_id, staff, services);
+                const isVariablePrice = svc.price_type === 'variable';
+                
                 return (
-                  <div key={svc.id} className={cn(
-                    "flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors",
-                    isSelected ? "bg-salon-50 border border-salon-200" : "hover:bg-gray-50"
-                  )}>
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={(e) => {
-                        setSelectedServices(e.target.checked
-                          ? [...selectedServices, svc.id]
-                          : selectedServices.filter(id => id !== svc.id)
-                        );
-                        if (!e.target.checked) {
-                          const newMap = { ...serviceArtists };
-                          delete newMap[svc.id];
-                          setServiceArtists(newMap);
-                        }
-                      }}
-                      className="rounded border-gray-300 text-salon-600 focus:ring-salon-500"
-                    />
-                    <span className="text-sm flex-1 min-w-0 truncate">{svc.name}</span>
-                    <span className="text-xs text-gray-400 hidden sm:inline">{svc.duration_min} min</span>
-                    <span className="text-sm font-medium text-gray-700">{formatCurrency(Number(svc.price))}</span>
-                    {isSelected && (
-                      <select
-                        value={serviceArtists[svc.id] || ''}
+                  <div key={svc.id}>
+                    <div className={cn(
+                      "flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors",
+                      isSelected ? "bg-salon-50 border border-salon-200" : "hover:bg-gray-50"
+                    )}>
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
                         onChange={(e) => {
-                          setServiceArtists({ ...serviceArtists, [svc.id]: e.target.value || '' });
+                          setSelectedServices(e.target.checked
+                            ? [...selectedServices, svc.id]
+                            : selectedServices.filter(id => id !== svc.id)
+                          );
+                          if (!e.target.checked) {
+                            const newMap = { ...serviceArtists };
+                            delete newMap[svc.id];
+                            setServiceArtists(newMap);
+                            const newPrices = { ...customPrices };
+                            delete newPrices[svc.id];
+                            setCustomPrices(newPrices);
+                          }
                           checkForOverlap();
                         }}
-                        className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white focus:ring-2 focus:ring-salon-500 focus:border-transparent max-w-32"
-                      >
-                        <option value="">Sin artista</option>
-                        {staff.filter((s: any) => s.active).map((s: any) => (
-                          <option key={s.id} value={s.id}>{s.name}</option>
-                        ))}
-                      </select>
+                        className="rounded border-gray-300 text-salon-600 focus:ring-salon-500"
+                      />
+                      <span className="text-sm flex-1 min-w-0 truncate">{svc.name}</span>
+                      <span className="text-xs text-gray-400 hidden sm:inline">{svc.duration_min} min</span>
+                      <span className={cn(
+                        "text-sm font-medium",
+                        isVariablePrice ? "text-amber-600" : "text-gray-700"
+                      )}>
+                        {formatServicePrice({
+                          price_type: svc.price_type,
+                          price: svc.price,
+                          price_from: svc.price_from,
+                          price_to: svc.price_to,
+                        })}
+                      </span>
+                    </div>
+                    
+                    {isSelected && (
+                      <div className="ml-6 mt-1 space-y-1.5 pl-3 border-l-2 border-salon-100">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-500 w-16">Artista:</span>
+                          <select
+                            value={serviceArtists[svc.id] || ''}
+                            onChange={(e) => {
+                              setServiceArtists({ ...serviceArtists, [svc.id]: e.target.value || '' });
+                              checkForOverlap();
+                            }}
+                            className="flex-1 text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-salon-500 focus:border-transparent"
+                          >
+                            <option value="">Sin artista</option>
+                            {availableArtists.map((s: StaffMember) => (
+                              <option key={s.id} value={s.id}>{s.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        
+                        {isVariablePrice && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-500 w-16">Precio:</span>
+                            <div className="flex-1 relative">
+                              <div className="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none">
+                                <span className="text-gray-400 text-xs font-medium select-none">S/</span>
+                              </div>
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={customPrices[svc.id] ?? ''}
+                                onChange={(e) => {
+                                  const newPrices = { ...customPrices };
+                                  newPrices[svc.id] = e.target.value ? parseFloat(e.target.value) : 0;
+                                  setCustomPrices(newPrices);
+                                }}
+                                placeholder={svc.price_from ? `Desde ${svc.price_from}` : '0'}
+                                className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-gray-200 bg-white text-xs focus:outline-none focus:ring-2 focus:ring-salon-500 focus:border-transparent"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                 );
@@ -737,7 +942,7 @@ export default function CitasPage() {
                 <Clock className="w-4 h-4" /> {totalDuration} min
               </div>
               <div className="text-sm font-semibold text-salon-700">
-                {formatCurrency(totalPrice)}
+                {formatCurrency(calculateTotalPrice())}
               </div>
             </div>
           )}
@@ -786,15 +991,42 @@ export default function CitasPage() {
 
           <Textarea label="Notas" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Notas especiales..." />
 
-           <div className="flex gap-3 pt-2">
-             <Button type="button" variant="outline" className="flex-1" onClick={() => { setShowModal(false); setEditingAppt(null); }}>Cancelar</Button>
-             <Button type="submit" className="flex-1" disabled={!form.start_time} loading={submitting}>
-               {!submitting && <Check className="w-4 h-4 mr-1" />}
-               {submitting ? 'Guardando...' : (editingAppt ? 'Actualizar' : 'Crear cita')}
-             </Button>
-           </div>
-        </form>
-      </Modal>
+          {/* Botones de acción */}
+          <div className="flex flex-wrap gap-2 sm:gap-3 pt-4 sm:pt-6 mt-2 border-t border-gray-100">
+            {canDeleteAppt && (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full sm:w-auto border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 order-last sm:order-none"
+                onClick={deleteAppt}
+              >
+                <Trash2 className="w-4 h-4 mr-1" /> Eliminar
+              </Button>
+            )}
+            
+            <div className="hidden sm:block flex-1" />
+            
+            <div className="flex flex-1 sm:flex-none gap-2 order-first sm:order-none">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                onClick={() => { setShowModal(false); setEditingAppt(null); }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                className="flex-1"
+                loading={submitting}
+                disabled={!form.start_time || (editingAppt && !haveChanges())}
+              >
+                {submitting ? 'Guardando...' : (editingAppt ? 'Actualizar' : 'Crear cita')}
+              </Button>
+            </div>
+          </div>
+         </form>
+       </Modal>
     </>
   );
 }
