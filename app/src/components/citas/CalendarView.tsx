@@ -82,9 +82,9 @@ function getApptHeight(appt: any): string {
   return 'min-h-[80px]';
 }
 
-export function CalendarView({ appointments, staff, onEdit, onCancel, onNew, onUpdateDate }: CalendarViewProps) {
-  const [view, setView] = useState<'month' | 'week'>('month');
-  const [currentDate, setCurrentDate] = useState(new Date());
+ export function CalendarView({ appointments, staff, onEdit, onCancel, onNew, onUpdateDate }: CalendarViewProps) {
+   const [view, setView] = useState<'month' | 'week' | 'day'>('month');
+   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedAppt, setSelectedAppt] = useState<any>(null);
   const [showPopover, setShowPopover] = useState(false);
   const [draggedAppt, setDraggedAppt] = useState<any>(null);
@@ -134,15 +134,17 @@ export function CalendarView({ appointments, staff, onEdit, onCancel, onNew, onU
     setCurrentDate(new Date());
   }
 
-  function prev() {
-    if (view === 'month') setCurrentDate(subMonths(currentDate, 1));
-    else setCurrentDate(subWeeks(currentDate, 1));
-  }
+   function prev() {
+     if (view === 'month') setCurrentDate(subMonths(currentDate, 1));
+     else if (view === 'week') setCurrentDate(subWeeks(currentDate, 1));
+     else setCurrentDate(addDays(currentDate, -1));
+   }
 
-  function next() {
-    if (view === 'month') setCurrentDate(addMonths(currentDate, 1));
-    else setCurrentDate(addWeeks(currentDate, 1));
-  }
+   function next() {
+     if (view === 'month') setCurrentDate(addMonths(currentDate, 1));
+     else if (view === 'week') setCurrentDate(addWeeks(currentDate, 1));
+     else setCurrentDate(addDays(currentDate, 1));
+   }
 
   function handleApptClick(appt: any, e: React.MouseEvent) {
     e.stopPropagation();
@@ -382,33 +384,33 @@ export function CalendarView({ appointments, staff, onEdit, onCancel, onNew, onU
   return (
     <div className="space-y-4">
       {/* Toolbar */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-xl">
-          {(['month', 'week'] as const).map(v => (
-            <button
-              key={v}
-              onClick={() => setView(v)}
-              className={cn(
-                'px-4 py-2 text-sm font-medium rounded-lg transition-all',
-                view === v ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-              )}
-            >
-              {v === 'month' ? 'Mes' : 'Semana'}
-            </button>
-          ))}
-        </div>
+       <div className="flex items-center justify-between">
+         <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-xl">
+           {(['month', 'week', 'day'] as const).map(v => (
+             <button
+               key={v}
+               onClick={() => setView(v)}
+               className={cn(
+                 'px-4 py-2 text-sm font-medium rounded-lg transition-all',
+                 view === v ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+               )}
+             >
+               {v === 'month' ? 'Mes' : v === 'week' ? 'Semana' : 'Día'}
+             </button>
+           ))}
+         </div>
 
-        <div className="flex items-center gap-2">
-          <button onClick={prev} className="p-2 rounded-xl hover:bg-gray-100 transition-colors">
-            <ChevronLeft className="w-5 h-5 text-gray-600" />
-          </button>
-          <h2 className="text-lg font-semibold text-gray-900 min-w-[160px] text-center">
-            {view === 'week' ? weekRangeLabel : format(currentDate, 'MMMM yyyy', { locale: es })}
-          </h2>
-          <button onClick={next} className="p-2 rounded-xl hover:bg-gray-100 transition-colors">
-            <ChevronRight className="w-5 h-5 text-gray-600" />
-          </button>
-        </div>
+         <div className="flex items-center gap-2">
+           <button onClick={prev} className="p-2 rounded-xl hover:bg-gray-100 transition-colors">
+             <ChevronLeft className="w-5 h-5 text-gray-600" />
+           </button>
+           <h2 className="text-lg font-semibold text-gray-900 min-w-[160px] text-center">
+             {view === 'day' ? format(currentDate, "EEEE d 'de' MMMM yyyy", { locale: es }) : view === 'week' ? weekRangeLabel : format(currentDate, 'MMMM yyyy', { locale: es })}
+           </h2>
+           <button onClick={next} className="p-2 rounded-xl hover:bg-gray-100 transition-colors">
+             <ChevronRight className="w-5 h-5 text-gray-600" />
+           </button>
+         </div>
       </div>
 
       {/* Legend */}
@@ -424,8 +426,118 @@ export function CalendarView({ appointments, staff, onEdit, onCancel, onNew, onU
         })}
       </div>
 
-      {/* Calendar */}
-      {view === 'month' ? renderMonthView() : renderWeekView()}
+       {/* Calendar */}
+       {view === 'month' ? renderMonthView() : view === 'week' ? renderWeekView() : (() => {
+         const now = new Date();
+         const day = currentDate;
+         const key = format(day, 'yyyy-MM-dd');
+         const dayAppts = apptsByDay.get(key) || [];
+
+         return (
+           <div className="border border-gray-100 rounded-2xl overflow-hidden bg-white">
+             {/* Header */}
+             <div className="grid grid-cols-2 border-b border-gray-100">
+               <div className="p-3 text-xs text-gray-400 border-r border-gray-100 w-16">Hora</div>
+               <div className={cn(
+                 'p-2 text-center',
+                 isToday(day) && 'bg-salon-50/30'
+               )}>
+                 <div className="text-xs text-gray-400">{format(day, 'EEE', { locale: es })}</div>
+                 <div className={cn(
+                   'text-lg font-bold mt-0.5',
+                   isToday(day) ? 'text-salon-600' : 'text-gray-800'
+                 )}>
+                   {format(day, 'd')}
+                 </div>
+               </div>
+             </div>
+
+             {/* Time Grid */}
+             <div className="relative" style={{ maxHeight: 'calc(100vh - 340px)', overflowY: 'auto' }}>
+               {/* Current time line */}
+               {isSameDay(day, now) && (
+                 <div
+                   className="absolute left-16 right-0 z-10 pointer-events-none"
+                   style={{ top: `${(getHours(now) - 7) * 64 + (getMinutes(now) / 60) * 64}px` }}
+                 >
+                   <div className="flex items-center">
+                     <div className="w-2.5 h-2.5 rounded-full bg-red-500 -ml-1.5 flex-shrink-0" />
+                     <div className="flex-1 h-px bg-red-500" />
+                   </div>
+                 </div>
+               )}
+
+               {HOURS.map(hour => (
+                 <div key={hour} className="grid grid-cols-2 border-b border-gray-50 min-h-[64px]">
+                   <div className="p-2 text-xs text-gray-300 border-r border-gray-100 text-right pr-2 relative -top-2">
+                     {String(hour).padStart(2, '0')}:00
+                   </div>
+                   {(() => {
+                     const hourAppts = dayAppts.filter(a => getHours(new Date(a.start_time)) === hour);
+
+                     return (
+                       <div
+                         onClick={() => {
+                           const d = new Date(day);
+                           d.setHours(hour, 0, 0, 0);
+                           handleEmptyDayClick(d);
+                         }}
+                         onDragOver={handleDragOver}
+                         onDrop={(e) => handleDrop(day, hour, e)}
+                         className={cn(
+                           'min-h-[64px] hover:bg-salon-50/20 transition-colors cursor-pointer relative',
+                           isToday(day) && 'bg-salon-50/10'
+                         )}
+                       >
+                         {hourAppts.map((appt) => {
+                           const colors = getApptColor(appt, staff);
+                           const emoji = getServiceEmoji(appt);
+                           const isCancelled = appt.status === 'cancelada';
+                           const isCompleted = appt.status === 'completada';
+                           const startMin = getHours(new Date(appt.start_time)) * 60 + getMinutes(new Date(appt.start_time));
+                           const topOffset = ((startMin - hour * 60) / 60) * 64;
+                           const dur = appt.total_duration_min || 60;
+                           const height = Math.max((dur / 60) * 64, 28);
+
+                           return (
+                             <button
+                               key={appt.id}
+                               type="button"
+                               draggable
+                               onDragStart={(e) => handleDragStart(appt, e)}
+                               onClick={(e) => handleApptClick(appt, e)}
+                               className={cn(
+                                 'absolute left-0.5 right-0.5 rounded-lg border-l-[3px] px-1.5 py-1 text-left overflow-hidden transition-all hover:shadow-md',
+                                 colors.bg, colors.border, colors.text,
+                                 isCancelled && 'opacity-40 line-through',
+                                 isCompleted && 'opacity-70',
+                                 !(isCancelled || isCompleted) && 'cursor-grab active:cursor-grabbing'
+                               )}
+                               style={{ top: `${topOffset}px`, height: `${height}px`, zIndex: 2 }}
+                             >
+                               <div className="flex items-center gap-1">
+                                 <span className="text-xs">{emoji}</span>
+                                 <span className="text-[10px] font-medium truncate">
+                                   {format(new Date(appt.start_time), 'HH:mm')} {appt.client?.name || ''}
+                                 </span>
+                               </div>
+                               {dur > 45 && (
+                                 <p className="text-[9px] text-gray-500 truncate mt-0.5">
+                                   {appt.title}
+                                 </p>
+                               )}
+                             </button>
+                           );
+                         })}
+                       </div>
+                     );
+                   })()}
+                 </div>
+               ))}
+             </div>
+           </div>
+         );
+       })()}
 
       {/* Appointment Popover */}
       {showPopover && selectedAppt && (

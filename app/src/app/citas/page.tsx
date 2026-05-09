@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { getAppointments, getStaff, getServices } from '@/lib/db/queries';
-import { createAppointment, updateAppointment, checkOverlap } from '@/lib/db/queries';
+import { createAppointment, updateAppointment, checkOverlap, createPayment } from '@/lib/db/queries';
 import { ClientCombobox } from '@/components/citas/ClientCombobox';
 import type { AppointmentInsert, AppointmentStatus, Service, StaffMember, StaffService, StaffSpecialty, Category } from '@/types/database';
 import { Header } from '@/components/layout/shell';
@@ -28,7 +28,7 @@ import {
   formatServicePrice 
 } from '@/lib/utils';
 import { APPOINTMENT_STATUS_LABELS, PriceType } from '@/types/database';
-import { CalendarDays, Plus, Clock, User, DollarSign, AlertTriangle, Check, Pencil, XCircle, X, MapPin, Calendar as CalendarIcon, Trash2, Sparkles, Settings2, Search } from 'lucide-react';
+import { CalendarDays, Plus, Clock, User, AlertTriangle, Check, Pencil, XCircle, X, MapPin, Calendar as CalendarIcon, Trash2, Sparkles, Settings2, Search } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -117,10 +117,13 @@ export default function CitasPage() {
   const [serviceArtists, setServiceArtists] = useState<Record<string, string>>({});
   const [customPrices, setCustomPrices] = useState<Record<string, number>>({});
   
-  const [initialForm, setInitialForm] = useState<AppointmentFormData | null>(null);
-  const [initialSelectedServices, setInitialSelectedServices] = useState<string[]>([]);
-  const [initialServiceArtists, setInitialServiceArtists] = useState<Record<string, string>>({});
-  const [initialCustomPrices, setInitialCustomPrices] = useState<Record<string, number>>({});
+   const [initialForm, setInitialForm] = useState<AppointmentFormData | null>(null);
+   const [initialSelectedServices, setInitialSelectedServices] = useState<string[]>([]);
+   const [initialServiceArtists, setInitialServiceArtists] = useState<Record<string, string>>({});
+   const [initialCustomPrices, setInitialCustomPrices] = useState<Record<string, number>>({});
+   const [initialAdvancePaid, setInitialAdvancePaid] = useState<boolean>(false);
+   
+   const [advancePaid, setAdvancePaid] = useState<boolean>(true);
   
    const [overlapWarning, setOverlapWarning] = useState<string | null>(null);
    const [pendingDate, setPendingDate] = useState<Date | null>(null);
@@ -322,13 +325,25 @@ export default function CitasPage() {
         services: servicesData,
       };
 
-      if (editingAppt) {
-        await updateAppointment(editingAppt.id, apptData);
-        toast.success('Cita actualizada');
-      } else {
-        await createAppointment(apptData);
-        toast.success('Cita creada');
-      }
+       if (editingAppt) {
+         await updateAppointment(editingAppt.id, apptData);
+         toast.success('Cita actualizada');
+       } else {
+         const newAppt = await createAppointment(apptData);
+         
+         if (advancePaid) {
+           await createPayment({
+             concept: 'Adelanto de cita',
+             amount: 10,
+             type: 'ingreso',
+             category: 'servicio',
+             appointment_id: newAppt.id,
+             client_id: form.client_id || null,
+           });
+         }
+         
+         toast.success('Cita creada');
+       }
       setShowModal(false);
       setEditingAppt(null);
       load();
@@ -366,78 +381,139 @@ export default function CitasPage() {
       }
     });
     
-    setForm(formData);
-    setSelectedServices(svcIds);
-    setServiceArtists(svcArtistMap);
-    setCustomPrices(customPricesMap);
-    
-    setInitialForm({ ...formData });
-    setInitialSelectedServices([...svcIds]);
-    setInitialServiceArtists({ ...svcArtistMap });
-    setInitialCustomPrices({ ...customPricesMap });
-    
-    setShowModal(true);
-  }
+     setForm(formData);
+     setSelectedServices(svcIds);
+     setServiceArtists(svcArtistMap);
+     setCustomPrices(customPricesMap);
+     setAdvancePaid(false);
+     
+     setInitialForm({ ...formData });
+     setInitialSelectedServices([...svcIds]);
+     setInitialServiceArtists({ ...svcArtistMap });
+     setInitialCustomPrices({ ...customPricesMap });
+     setInitialAdvancePaid(false);
+     
+     setShowModal(true);
+   }
 
-  function openNew() {
-    setEditingAppt(null);
-    setForm({
-      client_id: '',
-      start_time: '',
-      status: 'programada',
-      notes: '',
-      color: '',
-    });
-    setSelectedServices([]);
-    setServiceArtists({});
-    setCustomPrices({});
-    setInitialForm(null);
-    setInitialSelectedServices([]);
-    setInitialServiceArtists({});
-    setInitialCustomPrices({});
-    setOverlapWarning(null);
-    setShowModal(true);
-  }
+   function openNew() {
+     setEditingAppt(null);
+     setForm({
+       client_id: '',
+       start_time: '',
+       status: 'programada',
+       notes: '',
+       color: '',
+     });
+     setSelectedServices([]);
+     setServiceArtists({});
+     setCustomPrices({});
+     setAdvancePaid(true);
+     setInitialForm(null);
+     setInitialSelectedServices([]);
+     setInitialServiceArtists({});
+     setInitialCustomPrices({});
+     setInitialAdvancePaid(true);
+     setOverlapWarning(null);
+     setShowModal(true);
+   }
 
-  function openNewForDate(date: Date) {
-    setEditingAppt(null);
-    const timeStr = date.toISOString().slice(0, 16);
-    setForm({
-      client_id: '',
-      start_time: timeStr,
-      status: 'programada',
-      notes: '',
-      color: '',
-    });
-    setSelectedServices([]);
-    setServiceArtists({});
-    setCustomPrices({});
-    setInitialForm(null);
-    setInitialSelectedServices([]);
-    setInitialServiceArtists({});
-    setInitialCustomPrices({});
-    setOverlapWarning(null);
-    setShowModal(true);
-  }
+   function openNewForDate(date: Date) {
+     setEditingAppt(null);
+     const timeStr = date.toISOString().slice(0, 16);
+     setForm({
+       client_id: '',
+       start_time: timeStr,
+       status: 'programada',
+       notes: '',
+       color: '',
+     });
+     setSelectedServices([]);
+     setServiceArtists({});
+     setCustomPrices({});
+     setAdvancePaid(true);
+     setInitialForm(null);
+     setInitialSelectedServices([]);
+     setInitialServiceArtists({});
+     setInitialCustomPrices({});
+     setInitialAdvancePaid(true);
+     setOverlapWarning(null);
+     setShowModal(true);
+   }
 
-  async function cancelAppt(appt: any) {
-    const confirmed = await confirm({
-      title: 'Cancelar cita',
-      message: `¿Cancelar la cita "${appt.title}"?`,
-      confirmText: 'Cancelar cita',
-      cancelText: 'No cancelar',
-      variant: 'warning',
-    });
-    
-    if (!confirmed) return;
-    try {
-      await updateAppointment(appt.id, { status: 'cancelada' });
-      toast.success('Cita cancelada');
-      load();
-    } catch (e) {
-      toast.error('Error al cancelar');
+   async function cancelAppt(appt: any) {
+     const confirmed = await confirm({
+       title: 'Cancelar cita',
+       message: `¿Cancelar la cita "${appt.title}"?`,
+       confirmText: 'Cancelar cita',
+       cancelText: 'No cancelar',
+       variant: 'warning',
+     });
+     
+     if (!confirmed) return;
+     try {
+       await updateAppointment(appt.id, { status: 'cancelada' });
+       toast.success('Cita cancelada');
+       load();
+     } catch (e) {
+       toast.error('Error al cancelar');
+     }
+   }
+
+    async function advanceStatus(appt: any) {
+      const nextStatus: Record<string, string> = {
+        'programada': 'en_curso',
+        'en_curso': 'completada',
+      };
+      
+      const newStatus = nextStatus[appt.status];
+      if (!newStatus) return;
+      
+      try {
+        await updateAppointment(appt.id, { status: newStatus });
+        
+        if (newStatus === 'completada') {
+          const pendingBalance = Number(appt.appointment_balance?.pending_balance || 0);
+          if (pendingBalance > 0) {
+            await createPayment({
+              concept: 'Pago completo de cita',
+              amount: pendingBalance,
+              type: 'ingreso',
+              category: 'servicio',
+              appointment_id: appt.id,
+              client_id: appt.client_id || null,
+            });
+          }
+        }
+        
+        const statusLabel = APPOINTMENT_STATUS_LABELS[newStatus as keyof typeof APPOINTMENT_STATUS_LABELS];
+        toast.success(`Cita marcada como ${statusLabel}`);
+        setShowDetail(false);
+        load();
+      } catch (e) {
+        toast.error('Error al actualizar estado');
+      }
     }
-  }
+
+   async function markAsNoShow(appt: any) {
+     const confirmed = await confirm({
+       title: 'Marcar como No Show',
+       message: `¿Marcar la cita "${appt.title}" como no show? Esto indica que la clienta no asistió.`,
+       confirmText: 'Marcar como No Show',
+       cancelText: 'Cancelar',
+       variant: 'warning',
+     });
+     
+     if (!confirmed) return;
+     try {
+       await updateAppointment(appt.id, { status: 'no_show' });
+       toast.success('Cita marcada como No Show');
+       setShowDetail(false);
+       load();
+     } catch (e) {
+       toast.error('Error al marcar como No Show');
+     }
+   }
 
   async function deleteAppt() {
     if (!editingAppt) return;
@@ -752,10 +828,10 @@ export default function CitasPage() {
                     <span>{selectedAppt.artist.name}</span>
                   </div>
                 )}
-                <div className="flex items-center gap-3 text-sm">
-                  <DollarSign className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                  <span className="font-semibold">{formatCurrency(selectedAppt.total_price)}</span>
-                </div>
+                 <div className="flex items-center gap-3 text-sm">
+                   <span className="text-gray-400 font-medium select-none">S/</span>
+                   <span className="font-semibold">{formatCurrency(selectedAppt.total_price)}</span>
+                 </div>
               </div>
 
                {selectedAppt.appointment_services?.length > 0 && (
@@ -830,22 +906,52 @@ export default function CitasPage() {
                 <p className="text-xs text-gray-400 bg-gray-50 rounded-xl p-3">{selectedAppt.notes}</p>
               )}
 
-              <div className="flex gap-2 pt-2">
-                {selectedAppt.status !== 'cancelada' && selectedAppt.status !== 'completada' && (
-                  <button
-                    onClick={() => { cancelAppt(selectedAppt); setShowDetail(false); }}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
-                  >
-                    <XCircle className="w-4 h-4" /> Cancelar
-                  </button>
-                )}
-                <button
-                  onClick={() => { openEdit(selectedAppt); setShowDetail(false); }}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium text-white bg-salon-600 hover:bg-salon-700 transition-colors"
-                >
-                  <Pencil className="w-4 h-4" /> Editar
-                </button>
-              </div>
+               <div className="space-y-2 pt-2">
+                 {selectedAppt.status === 'programada' && (
+                   <button
+                     onClick={() => advanceStatus(selectedAppt)}
+                     className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium text-white bg-amber-500 hover:bg-amber-600 transition-colors"
+                   >
+                     <Clock className="w-4 h-4" /> Iniciar cita
+                   </button>
+                 )}
+                 {selectedAppt.status === 'en_curso' && (
+                   <button
+                     onClick={() => advanceStatus(selectedAppt)}
+                     className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium text-white bg-emerald-500 hover:bg-emerald-600 transition-colors"
+                   >
+                     <Check className="w-4 h-4" /> Completar cita
+                   </button>
+                 )}
+                 
+                 <div className="flex gap-2">
+                   {selectedAppt.status !== 'cancelada' && selectedAppt.status !== 'completada' && selectedAppt.status !== 'no_show' && (
+                     <>
+                       <button
+                         onClick={() => { cancelAppt(selectedAppt); setShowDetail(false); }}
+                         className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
+                       >
+                         <XCircle className="w-4 h-4" /> Cancelar
+                       </button>
+                       <button
+                         onClick={() => markAsNoShow(selectedAppt)}
+                         className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 transition-colors"
+                       >
+                         <AlertTriangle className="w-4 h-4" /> No Show
+                       </button>
+                     </>
+                   )}
+                   <button
+                     onClick={() => { openEdit(selectedAppt); setShowDetail(false); }}
+                     className={cn(
+                       "flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium text-white bg-salon-600 hover:bg-salon-700 transition-colors",
+                       selectedAppt.status !== 'cancelada' && selectedAppt.status !== 'completada' && selectedAppt.status !== 'no_show' ? "flex-1" : "w-full"
+                     )}
+                   >
+                     <Pencil className="w-4 h-4" /> Editar
+                   </button>
+                 </div>
+               </div>
             </div>
           </div>
         </div>
@@ -1013,10 +1119,34 @@ export default function CitasPage() {
                   title={c.label}
                 />
               ))}
-            </div>
-          </div>
+             </div>
+           </div>
 
-          <Textarea label="Notas" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Notas especiales..." />
+           {!editingAppt && (
+             <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+               <div className="flex items-center gap-2">
+                 <span className="text-sm font-medium text-gray-700">Adelanto de S/10</span>
+                 <span className="text-xs text-gray-500">(para separar la cita)</span>
+               </div>
+               <button
+                 type="button"
+                 onClick={() => setAdvancePaid(!advancePaid)}
+                 className={cn(
+                   "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-salon-500 focus-visible:ring-offset-2",
+                   advancePaid ? "bg-salon-600" : "bg-gray-200"
+                 )}
+               >
+                 <span
+                   className={cn(
+                     "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out",
+                     advancePaid ? "translate-x-5" : "translate-x-0"
+                   )}
+                 />
+               </button>
+             </div>
+           )}
+
+           <Textarea label="Notas" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Notas especiales..." />
 
           {/* Botones de acción */}
           <div className="flex flex-wrap gap-2 sm:gap-3 pt-4 sm:pt-6 mt-2 border-t border-gray-100">

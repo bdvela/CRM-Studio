@@ -514,11 +514,11 @@ export async function getAppointments(filters?: any) {
       );
     }
 
-    if (filtered && filtered.length > 0) {
-      const apptIds = filtered.map(a => a.id);
+     if (filtered && filtered.length > 0) {
+       const apptIds = filtered.map(a => a.id);
        const { data: svcData } = await supabase
          .from('appointment_services')
-         .select('appointment_id, service_id, artist_id, service:services(name, price, duration_min, category_id, category:categories(*)), artist:staff(name, photo_url)')
+         .select('id, appointment_id, service_id, artist_id, service_price, service:services(name, price, duration_min, category_id, category:categories(*)), artist:staff(name, photo_url)')
          .in('appointment_id', apptIds);
        
        let commissionMap = new Map<string, any[]>();
@@ -538,6 +538,21 @@ export async function getAppointments(filters?: any) {
          console.log('commission details view may not exist yet', e);
        }
        
+       let balanceMap = new Map<string, any>();
+       try {
+         const { data: balanceData } = await supabase
+           .from('appointment_balance')
+           .select('*')
+           .in('id', apptIds);
+         if (balanceData) {
+           for (const b of balanceData) {
+             balanceMap.set(b.id, b);
+           }
+         }
+       } catch (e) {
+         console.log('appointment_balance view may not exist yet', e);
+       }
+       
        if (svcData) {
          filtered.forEach((appt: any) => {
            const apptServices = svcData
@@ -545,21 +560,28 @@ export async function getAppointments(filters?: any) {
            
            appt.appointment_services = apptServices.map(s => {
              const svc: any = { 
+               id: s.id,
                service_id: s.service_id, 
                artist_id: s.artist_id || null,
+               service_price: s.service_price,
                service: s.service 
              };
              if (s.artist) svc.artist = s.artist;
              
              const comms = commissionMap.get(appt.id) || [];
-             const cd = comms.find((c: any) => c.appointment_service_id === s.service_id);
+             const cd = comms.find((c: any) => c.appointment_service_id === s.id);
              if (cd) svc.commission_detail = cd;
              
              return svc;
            });
+           
+           const balance = balanceMap.get(appt.id);
+           if (balance) {
+             appt.appointment_balance = balance;
+           }
          });
        }
-    }
+     }
     return filtered;
   } catch (e) {
     console.error('getAppointments error:', e);
@@ -574,15 +596,16 @@ export async function createAppointment(input: any) {
   const { data, error } = await supabase.from('appointments').insert(apptData).select().single();
   if (error) throw error;
   
-  const serviceInputs = services || (serviceIds ? serviceIds.map((sid: string) => ({ service_id: sid })) : []);
-  if (serviceInputs && serviceInputs.length > 0) {
-    const svcRows = serviceInputs.map((si: any) => ({ 
-      appointment_id: data.id, 
-      service_id: si.service_id,
-      artist_id: si.artist_id || null,
-    }));
-    await supabase.from('appointment_services').insert(svcRows);
-  }
+   const serviceInputs = services || (serviceIds ? serviceIds.map((sid: string) => ({ service_id: sid })) : []);
+   if (serviceInputs && serviceInputs.length > 0) {
+     const svcRows = serviceInputs.map((si: any) => ({ 
+       appointment_id: data.id, 
+       service_id: si.service_id,
+       artist_id: si.artist_id || null,
+       service_price: si.service_price || null,
+     }));
+     await supabase.from('appointment_services').insert(svcRows);
+   }
   return data;
 }
 
@@ -593,19 +616,20 @@ export async function updateAppointment(id: string, input: any) {
   const { data, error } = await supabase.from('appointments').update(rest).eq('id', id).select().single();
   if (error) throw error;
   
-  const hasServices = services !== undefined || serviceIds !== undefined;
-  if (hasServices) {
-    await supabase.from('appointment_services').delete().eq('appointment_id', id);
-    const serviceInputs = services || (serviceIds ? serviceIds.map((sid: string) => ({ service_id: sid })) : []);
-    if (serviceInputs.length > 0) {
-      const svcRows = serviceInputs.map((si: any) => ({ 
-        appointment_id: id, 
-        service_id: si.service_id,
-        artist_id: si.artist_id || null,
-      }));
-      await supabase.from('appointment_services').insert(svcRows);
-    }
-  }
+   const hasServices = services !== undefined || serviceIds !== undefined;
+   if (hasServices) {
+     await supabase.from('appointment_services').delete().eq('appointment_id', id);
+     const serviceInputs = services || (serviceIds ? serviceIds.map((sid: string) => ({ service_id: sid })) : []);
+     if (serviceInputs.length > 0) {
+       const svcRows = serviceInputs.map((si: any) => ({ 
+         appointment_id: id, 
+         service_id: si.service_id,
+         artist_id: si.artist_id || null,
+         service_price: si.service_price || null,
+       }));
+       await supabase.from('appointment_services').insert(svcRows);
+     }
+   }
   
   return data;
 }
