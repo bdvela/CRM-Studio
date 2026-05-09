@@ -146,16 +146,16 @@ export default function ClientDetailPage() {
         </div>
       } />
 
-      <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-6">
+      <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-4">
         {/* Profile Card */}
         <Card>
-          <CardContent className="py-6">
+          <CardContent className="py-5">
             <div className="flex items-start gap-5">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-salon-400 to-accent-500 flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
+              <div className="w-16 h-16 rounded-full bg-accent-100 flex items-center justify-center text-accent-600 font-bold text-2xl flex-shrink-0">
                 {client.name[0].toUpperCase()}
               </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-3 flex-wrap">
                   <h2 className="text-xl font-bold">{client.name}</h2>
                   <Badge variant={statusBadge[client.status]}>{statusLabels[client.status]}</Badge>
                 </div>
@@ -174,10 +174,10 @@ export default function ClientDetailPage() {
             )}
 
             {editing && editForm && (
-              <div className="mt-4 space-y-3 p-4 rounded-xl bg-salon-50 border border-salon-200">
+              <div className="mt-4 space-y-3 p-4 rounded-xl bg-gray-50 border border-gray-200">
                 <Input label="Nombre" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
                 <Input label="Teléfono" value={editForm.phone || ''} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} />
-                <Input label="Email" value={editForm.email || ''} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
+                <Input label="Email" type="email" value={editForm.email || ''} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
                 <Input label="Instagram" value={editForm.instagram || ''} onChange={(e) => setEditForm({ ...editForm, instagram: e.target.value })} />
                  <Select label="Estado" value={editForm.status} onChange={(value) => setEditForm({ ...editForm, status: value as ClientInsert['status'] })} options={[
                    { value: 'prospecto', label: 'Prospecto' },
@@ -265,24 +265,26 @@ export default function ClientDetailPage() {
             {appointments.length === 0 ? (
               <p className="text-center py-8 text-gray-400 text-sm">Sin citas registradas</p>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {appointments.map((appt) => (
-                  <div key={appt.id} className="flex items-center gap-4 p-3 rounded-xl bg-gray-50">
-                    <div className="text-center w-16">
-                      <p className="text-sm font-bold">{formatTime(appt.start_time)}</p>
-                      <p className="text-xs text-gray-400">{formatDate(appt.start_time)}</p>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm">{appt.title}</p>
-                      {appt.artist && <p className="text-xs text-gray-400">{appt.artist.name}</p>}
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-semibold">{formatCurrency(appt.total_price)}</p>
-                      <Badge variant={appt.status === 'completada' ? 'success' : appt.status === 'programada' ? 'info' : 'danger'} className="text-xs">
-                        {APPOINTMENT_STATUS_LABELS[appt.status as AppointmentStatus]}
-                      </Badge>
-                    </div>
-                  </div>
+                  <Card key={appt.id} className="hover:shadow-sm transition-all">
+                    <CardContent className="flex items-center gap-4 py-3">
+                      <div className="text-center w-16">
+                        <p className="text-sm font-bold">{formatTime(appt.start_time)}</p>
+                        <p className="text-xs text-gray-400">{formatDate(appt.start_time)}</p>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm">{appt.title}</p>
+                        {appt.artist && <p className="text-xs text-gray-400">{appt.artist.name}</p>}
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-semibold">{formatCurrency(appt.total_price)}</p>
+                        <Badge variant={appt.status === 'completada' ? 'success' : appt.status === 'programada' ? 'info' : 'danger'} className="text-xs">
+                          {APPOINTMENT_STATUS_LABELS[appt.status as AppointmentStatus]}
+                        </Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             )}
