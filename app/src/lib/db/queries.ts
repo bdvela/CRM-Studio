@@ -124,16 +124,53 @@ export async function deleteCategory(id: string) {
 // ─── SERVICES ───────────────────────────────────────────────────────────────
 
 export async function getServices(activeOnly = true) {
-  if (USE_MOCK) { await delay(); return activeOnly ? mockData.services.filter(s => s.active) : mockData.services; }
+  if (USE_MOCK) { 
+    await delay(); 
+    let result = activeOnly ? mockData.services.filter(s => s.active) : mockData.services;
+    return result.map(svc => ({
+      ...svc,
+      staff_services: (mockData.staffServices || []).filter((ss: any) => ss.service_id === svc.id)
+    }));
+  }
   try {
     let q = supabase.from('services').select(`
       *,
       category:categories(*)
     `).order('category_id').order('name');
     if (activeOnly) q = q.eq('active', true);
-    const { data, error } = await q;
-    if (error) throw error;
-    return data;
+    const { data: servicesData, error: servicesErr } = await q;
+    if (servicesErr) throw servicesErr;
+    
+    if (!servicesData || servicesData.length === 0) return [];
+    
+    try {
+      const serviceIds = servicesData.map((s: any) => s.id);
+      const { data: staffServicesData, error: ssErr } = await supabase
+        .from('staff_services')
+        .select('*')
+        .in('service_id', serviceIds);
+      
+      if (!ssErr && staffServicesData) {
+        const ssMap = new Map<string, any[]>();
+        for (const ss of staffServicesData) {
+          const existing = ssMap.get(ss.service_id) || [];
+          existing.push(ss);
+          ssMap.set(ss.service_id, existing);
+        }
+        
+        return servicesData.map((svc: any) => ({
+          ...svc,
+          staff_services: ssMap.get(svc.id) || []
+        }));
+      }
+    } catch (ssE) {
+      console.log('staff_services table may not exist yet, skipping:', ssE);
+    }
+    
+    return servicesData.map((svc: any) => ({
+      ...svc,
+      staff_services: []
+    }));
   } catch (e) {
     console.error('getServices error:', e);
     return [];
@@ -157,13 +194,170 @@ export async function updateService(id: string, input: any) {
 }
 
 export async function deleteService(id: string) {
-  if (USE_MOCK) { await delay(); mockData.services = mockData.services.filter(s => s.id !== id); return true; }
+  if (USE_MOCK) { 
+    await delay(); 
+    mockData.services = mockData.services.filter(s => s.id !== id); 
+    if (mockData.staffServices) {
+      mockData.staffServices = (mockData.staffServices as any[]).filter((s: any) => s.service_id !== id);
+    }
+    return true; 
+  }
   
-  // Delete appointment_services first (FK constraint)
+  try {
+    await supabase.from('staff_services').delete().eq('service_id', id);
+  } catch (e) {
+    console.log('staff_services table may not exist, skipping:', e);
+  }
   await supabase.from('appointment_services').delete().eq('service_id', id);
   const { error } = await supabase.from('services').delete().eq('id', id);
   if (error) throw error;
   return true;
+}
+
+export async function getStaffServicesByService(serviceId: string) {
+  if (USE_MOCK) {
+    await delay();
+    return (mockData.staffServices || []).filter((s: any) => s.service_id === serviceId);
+  }
+  try {
+    const { data, error } = await supabase
+      .from('staff_services')
+      .select('*')
+      .eq('service_id', serviceId);
+    if (error) {
+      console.log('staff_services table may not exist:', error);
+      return [];
+    }
+    return data || [];
+  } catch (e) {
+    console.log('getStaffServicesByService (table may not exist):', e);
+    return [];
+  }
+}
+
+export async function updateStaffServices(serviceId: string, staffIds: string[]) {
+  if (USE_MOCK) {
+    await delay();
+    if (!mockData.staffServices) mockData.staffServices = [];
+    mockData.staffServices = (mockData.staffServices as any[]).filter((s: any) => s.service_id !== serviceId);
+    for (const staffId of staffIds) {
+      (mockData.staffServices as any[]).push({
+        id: String(Date.now()),
+        service_id: serviceId,
+        staff_id: staffId,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+    }
+    return true;
+  }
+  try {
+    await supabase.from('staff_services').delete().eq('service_id', serviceId);
+    if (staffIds.length > 0) {
+      const rows = staffIds.map(sid => ({ service_id: serviceId, staff_id: sid }));
+      await supabase.from('staff_services').insert(rows);
+    }
+    return true;
+  } catch (e) {
+    console.log('updateStaffServices (table may not exist yet):', e);
+    if (staffIds.length > 0) {
+      throw new Error('La tabla staff_services no existe. Ejecuta la migración primero.');
+    }
+    return true;
+  }
+}
+
+export async function getStaffForService(serviceId: string, categoryId?: string, activeOnly = true) {
+  if (USE_MOCK) {
+    await delay();
+    
+    const explicitAssignments = (mockData.staffServices || []).filter((s: any) => s.service_id === serviceId);
+    
+    if (explicitAssignments.length > 0) {
+      const assignedStaffIds = explicitAssignments.map((s: any) => s.staff_id);
+      let staff = mockData.staff;
+      if (activeOnly) staff = staff.filter((s: any) => s.active);
+      return staff.filter((s: any) => assignedStaffIds.includes(s.id));
+    }
+    
+    if (categoryId) {
+      let staff = mockData.staff;
+      if (activeOnly) staff = staff.filter((s: any) => s.active);
+      return staff.filter((s: any) => 
+        (s.staff_specialties || []).some((sp: any) => sp.category_id === categoryId)
+      );
+    }
+    
+    let staff = mockData.staff;
+    if (activeOnly) staff = staff.filter((s: any) => s.active);
+    return staff;
+  }
+  
+  try {
+    let hasExplicitAssignments = false;
+    let assignedStaffIds: string[] = [];
+    
+    try {
+      const { data: explicitAssignments, error: ssErr } = await supabase
+        .from('staff_services')
+        .select('staff_id')
+        .eq('service_id', serviceId);
+      
+      if (!ssErr && explicitAssignments && explicitAssignments.length > 0) {
+        hasExplicitAssignments = true;
+        assignedStaffIds = explicitAssignments.map(s => s.staff_id);
+      }
+    } catch (ssE) {
+      console.log('staff_services table may not exist, falling back to categories:', ssE);
+    }
+    
+    if (hasExplicitAssignments && assignedStaffIds.length > 0) {
+      let q = supabase.from('staff').select(`
+        *,
+        role:roles(name, color),
+        staff_specialties(*, category:categories(*))
+      `).order('name').in('id', assignedStaffIds);
+      if (activeOnly) q = q.eq('active', true);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data || [];
+    }
+    
+    if (categoryId) {
+      const { data: specialtyStaffIds, error: spErr } = await supabase
+        .from('staff_specialties')
+        .select('staff_id')
+        .eq('category_id', categoryId);
+      
+      if (spErr) throw spErr;
+      
+      if (specialtyStaffIds && specialtyStaffIds.length > 0) {
+        const staffIds = specialtyStaffIds.map(s => s.staff_id);
+        let q = supabase.from('staff').select(`
+          *,
+          role:roles(name, color),
+          staff_specialties(*, category:categories(*))
+        `).order('name').in('id', staffIds);
+        if (activeOnly) q = q.eq('active', true);
+        const { data, error } = await q;
+        if (error) throw error;
+        return data || [];
+      }
+    }
+    
+    let q = supabase.from('staff').select(`
+      *,
+      role:roles(name, color),
+      staff_specialties(*, category:categories(*))
+    `).order('name');
+    if (activeOnly) q = q.eq('active', true);
+    const { data, error } = await q;
+    if (error) throw error;
+    return data || [];
+  } catch (e) {
+    console.error('getStaffForService error:', e);
+    return [];
+  }
 }
 
 export async function getStaff(activeOnly = true) {

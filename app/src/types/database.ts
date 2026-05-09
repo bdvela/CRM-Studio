@@ -73,6 +73,8 @@ export interface Client {
 
 export type ClientInsert = Omit<Client, 'id' | 'created_at' | 'updated_at' | 'client_stats'>;
 
+export type PriceType = 'fixed' | 'variable';
+
 export interface Service {
   id: string;
   name: string;
@@ -80,14 +82,18 @@ export interface Service {
   category?: Category;
   duration_min: number;
   price: number;
+  price_type: PriceType;
+  price_from: number | null;
+  price_to: number | null;
   description: string | null;
   image_url: string | null;
   active: boolean;
   created_at: string;
   updated_at: string;
+  staff_services?: StaffService[];
 }
 
-export type ServiceInsert = Omit<Service, 'id' | 'created_at' | 'updated_at' | 'category'>;
+export type ServiceInsert = Omit<Service, 'id' | 'created_at' | 'updated_at' | 'category' | 'staff_services'>;
 
 export interface StaffSpecialty {
   id: string;
@@ -96,6 +102,17 @@ export interface StaffSpecialty {
   category?: Category;
   created_at: string;
 }
+
+export interface StaffService {
+  id: string;
+  staff_id: string;
+  service_id: string;
+  created_at: string;
+  updated_at: string;
+  staff?: StaffMember;
+}
+
+export type StaffServiceInsert = Omit<StaffService, 'id' | 'created_at' | 'updated_at' | 'staff'>;
 
 export interface CommissionOverride {
   id: string;
@@ -231,4 +248,8 @@ export function getCategoryIcon(service: Service | null | undefined): string {
 
 export function getStaffSpecialtyNames(staff: StaffMember | null | undefined): string[] {
   return staff?.staff_specialties?.map(s => s.category?.name || '').filter(Boolean) || [];
+}
+
+export function getCategoryIdsFromStaffSpecialties(staff: StaffMember | null | undefined): string[] {
+  return staff?.staff_specialties?.map(s => s.category_id || '').filter(Boolean) || [];
 }

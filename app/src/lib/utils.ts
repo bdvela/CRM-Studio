@@ -6,6 +6,29 @@ export function formatCurrency(amount: number) {
   return `S/ ${amount.toFixed(2)}`;
 }
 
+export function formatServicePrice(params: {
+  price_type: 'fixed' | 'variable';
+  price: number;
+  price_from: number | null;
+  price_to: number | null;
+}): string {
+  const { price_type, price, price_from, price_to } = params;
+  
+  if (price_type === 'fixed') {
+    return formatCurrency(price);
+  }
+  
+  if (price_from === null || price_from === 0) {
+    return 'Precio variable';
+  }
+  
+  if (price_to === null || price_to === 0) {
+    return `Desde ${formatCurrency(price_from)}`;
+  }
+  
+  return `${formatCurrency(price_from)} - ${formatCurrency(price_to)}`;
+}
+
 export function formatDate(date: string) {
   return new Date(date).toLocaleDateString('es-PE', {
     day: 'numeric',

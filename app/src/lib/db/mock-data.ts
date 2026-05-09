@@ -19,14 +19,16 @@ const MOCK_CLIENTS = [
 ];
 
 const MOCK_SERVICES = [
-  { id: 'svc-1', name: 'Acrílico completo', category_id: 'cat-1', category: getCategoryById('cat-1'), duration_min: 90, price: 80, description: 'Uñas acrílicas con diseño básico', image_url: null, active: true, created_at: '', updated_at: '' },
-  { id: 'svc-2', name: 'Rubber base', category_id: 'cat-1', category: getCategoryById('cat-1'), duration_min: 60, price: 60, description: 'Rubber base semipermanente', image_url: null, active: true, created_at: '', updated_at: '' },
-  { id: 'svc-3', name: 'Soft gel', category_id: 'cat-1', category: getCategoryById('cat-1'), duration_min: 75, price: 70, description: 'Soft gel press on personalizado', image_url: null, active: true, created_at: '', updated_at: '' },
-  { id: 'svc-4', name: 'Pedicura spa', category_id: 'cat-2', category: getCategoryById('cat-2'), duration_min: 45, price: 50, description: 'Pedicura completa con mascarilla', image_url: null, active: true, created_at: '', updated_at: '' },
-  { id: 'svc-5', name: 'Pestañas clásicas', category_id: 'cat-4', category: getCategoryById('cat-4'), duration_min: 90, price: 100, description: 'Extensiones pelo a pelo', image_url: null, active: true, created_at: '', updated_at: '' },
-  { id: 'svc-6', name: 'Pestañas volumen', category_id: 'cat-4', category: getCategoryById('cat-4'), duration_min: 120, price: 140, description: 'Volumen ruso 2D-3D', image_url: null, active: true, created_at: '', updated_at: '' },
-  { id: 'svc-7', name: 'Maquillaje social', category_id: 'cat-3', category: getCategoryById('cat-3'), duration_min: 60, price: 120, description: 'Maquillaje para eventos', image_url: null, active: true, created_at: '', updated_at: '' },
-  { id: 'svc-8', name: 'Diseño de cejas', category_id: 'cat-5', category: getCategoryById('cat-5'), duration_min: 30, price: 35, description: 'Perfilado y diseño', image_url: null, active: true, created_at: '', updated_at: '' },
+  { id: 'svc-1', name: 'Acrílico completo', category_id: 'cat-1', category: getCategoryById('cat-1'), duration_min: 90, price: 80, price_type: 'fixed' as const, price_from: null, price_to: null, description: 'Uñas acrílicas con diseño básico', image_url: null, active: true, created_at: '', updated_at: '' },
+  { id: 'svc-2', name: 'Rubber base', category_id: 'cat-1', category: getCategoryById('cat-1'), duration_min: 60, price: 60, price_type: 'fixed' as const, price_from: null, price_to: null, description: 'Rubber base semipermanente', image_url: null, active: true, created_at: '', updated_at: '' },
+  { id: 'svc-3', name: 'Soft gel', category_id: 'cat-1', category: getCategoryById('cat-1'), duration_min: 75, price: 70, price_type: 'fixed' as const, price_from: null, price_to: null, description: 'Soft gel press on personalizado', image_url: null, active: true, created_at: '', updated_at: '' },
+  { id: 'svc-4', name: 'Pedicura spa', category_id: 'cat-2', category: getCategoryById('cat-2'), duration_min: 45, price: 50, price_type: 'fixed' as const, price_from: null, price_to: null, description: 'Pedicura completa con mascarilla', image_url: null, active: true, created_at: '', updated_at: '' },
+  { id: 'svc-5', name: 'Pestañas clásicas', category_id: 'cat-4', category: getCategoryById('cat-4'), duration_min: 90, price: 100, price_type: 'fixed' as const, price_from: null, price_to: null, description: 'Extensiones pelo a pelo', image_url: null, active: true, created_at: '', updated_at: '' },
+  { id: 'svc-6', name: 'Pestañas volumen', category_id: 'cat-4', category: getCategoryById('cat-4'), duration_min: 120, price: 140, price_type: 'fixed' as const, price_from: null, price_to: null, description: 'Volumen ruso 2D-3D', image_url: null, active: true, created_at: '', updated_at: '' },
+  { id: 'svc-7', name: 'Maquillaje social', category_id: 'cat-3', category: getCategoryById('cat-3'), duration_min: 60, price: 120, price_type: 'fixed' as const, price_from: null, price_to: null, description: 'Maquillaje para eventos', image_url: null, active: true, created_at: '', updated_at: '' },
+  { id: 'svc-8', name: 'Diseño de cejas', category_id: 'cat-5', category: getCategoryById('cat-5'), duration_min: 30, price: 35, price_type: 'fixed' as const, price_from: null, price_to: null, description: 'Perfilado y diseño', image_url: null, active: true, created_at: '', updated_at: '' },
+  { id: 'svc-9', name: 'Manicure básico', category_id: 'cat-1', category: getCategoryById('cat-1'), duration_min: 45, price: 0, price_type: 'variable' as const, price_from: 40, price_to: 80, description: 'Precio varía según esmalte y diseño', image_url: null, active: true, created_at: '', updated_at: '' },
+  { id: 'svc-10', name: 'Depilación', category_id: 'cat-2', category: getCategoryById('cat-2'), duration_min: 30, price: 0, price_type: 'variable' as const, price_from: 30, price_to: null, description: 'Precio según zona corporal', image_url: null, active: true, created_at: '', updated_at: '' },
 ];
 
  const MOCK_ROLES = [
@@ -138,6 +140,31 @@ const MOCK_COMMISSION_OVERRIDES = [
     service: { name: 'Diseño de cejas', price: 35 }
   },
 ];
+
+const MOCK_STAFF_SERVICES = [
+  {
+    id: 'ssvc-1',
+    staff_id: 'staff-1',
+    service_id: 'svc-9',
+    created_at: '',
+    updated_at: '',
+  },
+  {
+    id: 'ssvc-2',
+    staff_id: 'staff-founder',
+    service_id: 'svc-9',
+    created_at: '',
+    updated_at: '',
+  },
+  {
+    id: 'ssvc-3',
+    staff_id: 'staff-2',
+    service_id: 'svc-6',
+    created_at: '',
+    updated_at: '',
+  },
+];
+
 
 const MOCK_APPOINTMENTS = [
   { 
@@ -275,4 +302,5 @@ export const mockData = {
   roles: MOCK_ROLES,
   categories: MOCK_CATEGORIES,
   commissionOverrides: MOCK_COMMISSION_OVERRIDES,
+  staffServices: MOCK_STAFF_SERVICES,
 };

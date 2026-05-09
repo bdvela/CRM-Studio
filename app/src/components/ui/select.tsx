@@ -76,41 +76,41 @@ export function Select({
     setIsOpen(false);
   }
 
-  return (
-    <div className="space-y-1.5" ref={containerRef}>
-      {label && (
-        <label className="block text-sm font-medium text-gray-700">
-          {label}
-        </label>
-      )}
-      <div className="relative">
-        <button
-          type="button"
-          onClick={() => !disabled && setIsOpen(!isOpen)}
-          disabled={disabled}
-           className={cn(
-             'w-full rounded-xl border bg-white px-4 py-2.5 pr-10 text-base text-left',
-             'flex items-center justify-between',
-             'focus:outline-none focus:ring-2 focus:ring-salon-500 focus:border-transparent',
-             'disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed',
-             error ? 'border-red-500 focus:ring-red-500' : 'border-gray-300',
-             isOpen && 'ring-2 ring-salon-500 border-transparent',
-             className
-           )}
-        >
-          <span className={cn(
-            'truncate',
-            !selectedOption && 'text-gray-400'
-          )}>
-            {selectedOption ? selectedOption.label : placeholder}
-          </span>
-          <ChevronDown 
+   return (
+     <div className={cn(label && 'space-y-1.5')} ref={containerRef}>
+       {label && (
+         <label className="block text-sm font-medium text-gray-700">
+           {label}
+         </label>
+       )}
+       <div className="relative">
+         <button
+           type="button"
+           onClick={() => !disabled && setIsOpen(!isOpen)}
+           disabled={disabled}
             className={cn(
-              'w-4 h-4 text-gray-400 flex-shrink-0 transition-transform',
-              isOpen && 'rotate-180'
-            )} 
-          />
-        </button>
+              'w-full rounded-xl border bg-white px-3 py-2.5 text-base text-left',
+              'flex items-center justify-between gap-2',
+              'focus:outline-none focus:ring-2 focus:ring-salon-500 focus:border-transparent',
+              'disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed',
+              error ? 'border-red-500 focus:ring-red-500' : 'border-gray-300',
+              isOpen && 'ring-2 ring-salon-500 border-transparent',
+              className
+            )}
+         >
+           <span className={cn(
+             'truncate',
+             !selectedOption && 'text-gray-400'
+           )}>
+             {selectedOption ? selectedOption.label : placeholder}
+           </span>
+           <ChevronDown 
+             className={cn(
+               'w-4 h-4 text-gray-400 flex-shrink-0 transition-transform',
+               isOpen && 'rotate-180'
+             )} 
+           />
+         </button>
 
         {isOpen && (
           <div
