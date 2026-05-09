@@ -5,6 +5,8 @@ import { getClients, createClient } from '@/lib/db/queries';
 import { cn, normalizePeruPhone } from '@/lib/utils';
 import { Search, Plus, Check, X, Loader2, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 interface ClientComboboxProps {
   value: string;
@@ -100,14 +102,11 @@ export function ClientCombobox({ value, onChange }: ClientComboboxProps) {
         notes: '',
       });
       
-      // Refresh client list
       const updated = await getClients();
       setAllClients(updated as Client[]);
       
-      // Auto-select
       onChange(newClient.id);
       
-      // Show "nueva" badge
       setJustCreated(true);
       setTimeout(() => setJustCreated(false), 4000);
       
@@ -139,7 +138,6 @@ export function ClientCombobox({ value, onChange }: ClientComboboxProps) {
     setJustCreated(false);
   }
 
-  // Selected state with "nueva" badge
   if (selectedClient && !showForm) {
     return (
       <div className="space-y-1.5">
@@ -170,76 +168,71 @@ export function ClientCombobox({ value, onChange }: ClientComboboxProps) {
     <div ref={containerRef} className="space-y-1.5 relative">
       <label className="block text-sm font-medium text-gray-700">Clienta</label>
 
-      {/* Inline create form */}
       {showForm ? (
-        <div className="rounded-xl border border-salon-200 bg-salon-50 p-3 space-y-2.5">
+        <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 space-y-2.5">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold text-salon-700">Nueva clienta</span>
-            <button type="button" onClick={handleCancelForm} className="p-1 rounded-lg hover:bg-salon-100 transition-colors">
-              <X className="w-4 h-4 text-salon-500" />
+            <span className="text-sm font-semibold text-gray-700">Nueva clienta</span>
+            <button 
+              type="button" 
+              onClick={handleCancelForm} 
+              className="p-1 rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              <X className="w-4 h-4 text-gray-500" />
             </button>
           </div>
-          <input
-            type="text"
-            placeholder="Nombre *"
+          
+          <Input
+            label="Nombre *"
             value={formName}
             onChange={(e) => setFormName(e.target.value)}
-            className="w-full px-3 py-2 rounded-lg border border-salon-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-salon-500"
+            placeholder="Ej: Ana López"
           />
-          <input
+          
+          <Input
+            label="Teléfono (opcional)"
             type="tel"
-            placeholder="Teléfono (opcional)"
             value={formPhone}
             onChange={(e) => setFormPhone(e.target.value)}
-            className="w-full px-3 py-2 rounded-lg border border-salon-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-salon-500"
+            placeholder="987 654 321"
           />
-          <div className="grid grid-cols-2 gap-2">
-            <input
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <Input
+              label="Email (opcional)"
               type="email"
-              placeholder="Email (opcional)"
               value={formEmail}
               onChange={(e) => setFormEmail(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-salon-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-salon-500"
+              placeholder="ana@email.com"
             />
-            <input
-              type="text"
-              placeholder="Instagram (opcional)"
+            <Input
+              label="Instagram (opcional)"
               value={formInstagram}
               onChange={(e) => setFormInstagram(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-salon-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-salon-500"
+              placeholder="@analopez"
             />
           </div>
+          
           <div className="flex gap-2 pt-1">
-            <button
+            <Button
               type="button"
+              variant="outline"
+              className="flex-1"
               onClick={handleCancelForm}
-              className="flex-1 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-salon-100 transition-colors"
             >
               Cancelar
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              className="flex-1"
               onClick={handleCreateClient}
-              disabled={isCreating}
-              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-white bg-salon-600 hover:bg-salon-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              loading={isCreating}
             >
-              {isCreating ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Creando...
-                </>
-              ) : (
-                <>
-                  <Check className="w-4 h-4" />
-                  Crear y continuar
-                </>
-              )}
-            </button>
+              {isCreating ? 'Creando...' : 'Crear y continuar'}
+            </Button>
           </div>
         </div>
       ) : (
         <>
-          {/* Search input */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
@@ -258,7 +251,6 @@ export function ClientCombobox({ value, onChange }: ClientComboboxProps) {
             />
           </div>
 
-          {/* Dropdown */}
           {isOpen && (
             <div className="absolute z-50 w-full mt-1 rounded-xl border border-gray-200 bg-white shadow-lg overflow-hidden">
               <div className="max-h-48 overflow-y-auto">

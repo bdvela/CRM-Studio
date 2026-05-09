@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { getAppointments, getStaff, getServices } from '@/lib/db/queries';
 import { createAppointment, updateAppointment, checkOverlap } from '@/lib/db/queries';
 import { ClientCombobox } from '@/components/citas/ClientCombobox';
-import type { AppointmentInsert, AppointmentStatus, Service, StaffMember, StaffService, StaffSpecialty } from '@/types/database';
+import type { AppointmentInsert, AppointmentStatus, Service, StaffMember, StaffService, StaffSpecialty, Category } from '@/types/database';
 import { Header } from '@/components/layout/shell';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -28,7 +28,7 @@ import {
   formatServicePrice 
 } from '@/lib/utils';
 import { APPOINTMENT_STATUS_LABELS, PriceType } from '@/types/database';
-import { CalendarDays, Plus, Clock, User, DollarSign, AlertTriangle, Check, Pencil, XCircle, X, MapPin, Calendar as CalendarIcon, Trash2 } from 'lucide-react';
+import { CalendarDays, Plus, Clock, User, DollarSign, AlertTriangle, Check, Pencil, XCircle, X, MapPin, Calendar as CalendarIcon, Trash2, Sparkles, Settings2, Search } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -122,11 +122,24 @@ export default function CitasPage() {
   const [initialServiceArtists, setInitialServiceArtists] = useState<Record<string, string>>({});
   const [initialCustomPrices, setInitialCustomPrices] = useState<Record<string, number>>({});
   
-  const [overlapWarning, setOverlapWarning] = useState<string | null>(null);
-  const [pendingDate, setPendingDate] = useState<Date | null>(null);
-  const [showDetail, setShowDetail] = useState(false);
-  const [selectedAppt, setSelectedAppt] = useState<any>(null);
-  const detailRef = useRef<HTMLDivElement>(null);
+   const [overlapWarning, setOverlapWarning] = useState<string | null>(null);
+   const [pendingDate, setPendingDate] = useState<Date | null>(null);
+   const [showDetail, setShowDetail] = useState(false);
+   const [selectedAppt, setSelectedAppt] = useState<any>(null);
+   const detailRef = useRef<HTMLDivElement>(null);
+   const [expandedService, setExpandedService] = useState<string | null>(null);
+   
+   const [showServiceConfig, setShowServiceConfig] = useState(false);
+   const [configuringServiceId, setConfiguringServiceId] = useState<string | null>(null);
+   const [tempArtistId, setTempArtistId] = useState<string>('');
+   const [tempCustomPrice, setTempCustomPrice] = useState<number | null>(null);
+   
+   const [showServiceSelector, setShowServiceSelector] = useState(false);
+   const [selectorSearch, setSelectorSearch] = useState('');
+   const [selectorCategoryFilter, setSelectorCategoryFilter] = useState<string>('');
+   const [selectedInSelector, setSelectedInSelector] = useState<string[]>([]);
+   const [selectorArtists, setSelectorArtists] = useState<Record<string, string>>({});
+   const [selectorPrices, setSelectorPrices] = useState<Record<string, number>>({});
 
   const [form, setForm] = useState<AppointmentFormData>({
     client_id: '',
@@ -198,10 +211,13 @@ export default function CitasPage() {
     return services
       .filter((s) => selectedServices.includes(s.id))
       .reduce((sum, s) => {
-        if (s.price_type === 'variable' as PriceType && customPrices[s.id]) {
+        if (customPrices[s.id] !== undefined && customPrices[s.id] !== null) {
           return sum + customPrices[s.id];
         }
-        return sum + Number(s.price);
+        const defaultPrice = s.price_type === 'variable' 
+          ? (s.price_from || 0) 
+          : (s.price || 0);
+        return sum + defaultPrice;
       }, 0);
   }
 
@@ -276,13 +292,18 @@ export default function CitasPage() {
       const endTime = new Date(startTime.getTime() + totalDuration * 60000);
       const calculatedTotalPrice = calculateTotalPrice();
 
-      const servicesData = selectedServices.map(sid => ({
-        service_id: sid,
-        artist_id: serviceArtists[sid] || null,
-        service_price: services.find(s => s.id === sid)?.price_type === 'variable' 
-          ? (customPrices[sid] || services.find(s => s.id === sid)?.price_from || 0)
-          : services.find(s => s.id === sid)?.price || 0,
-      }));
+      const servicesData = selectedServices.map(sid => {
+        const svc = services.find(s => s.id === sid);
+        const defaultPrice = svc?.price_type === 'variable' 
+          ? (svc?.price_from || 0) 
+          : (svc?.price || 0);
+        
+        return {
+          service_id: sid,
+          artist_id: serviceArtists[sid] || null,
+          service_price: customPrices[sid] ?? defaultPrice,
+        };
+      });
 
       const firstArtistId = servicesData.find(s => s.artist_id)?.artist_id || null;
 
@@ -339,7 +360,7 @@ export default function CitasPage() {
         if (as.artist_id) {
           svcArtistMap[as.service_id] = as.artist_id;
         }
-        if (as.service && as.service.price_type === 'variable' && as.service_price) {
+        if (as.service_price !== undefined && as.service_price !== null) {
           customPricesMap[as.service_id] = as.service_price;
         }
       }
@@ -836,116 +857,122 @@ export default function CitasPage() {
            <ClientCombobox value={form.client_id} onChange={(id) => setForm({ ...form, client_id: id })} />
            <DateTimePicker value={form.start_time} onChange={(v) => { setForm({ ...form, start_time: v }); checkForOverlap(); }} />
 
-          {/* Service Selection */}
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">Servicios</label>
-            <div className="space-y-1.5 max-h-64 overflow-y-auto">
-              {services.map((svc: Service) => {
-                const isSelected = selectedServices.includes(svc.id);
-                const availableArtists = getAvailableArtistsForService(svc.id, svc.category_id, staff, services);
-                const isVariablePrice = svc.price_type === 'variable';
-                
-                return (
-                  <div key={svc.id}>
-                    <div className={cn(
-                      "flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors",
-                      isSelected ? "bg-salon-50 border border-salon-200" : "hover:bg-gray-50"
-                    )}>
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={(e) => {
-                          setSelectedServices(e.target.checked
-                            ? [...selectedServices, svc.id]
-                            : selectedServices.filter(id => id !== svc.id)
-                          );
-                          if (!e.target.checked) {
-                            const newMap = { ...serviceArtists };
-                            delete newMap[svc.id];
-                            setServiceArtists(newMap);
-                            const newPrices = { ...customPrices };
-                            delete newPrices[svc.id];
-                            setCustomPrices(newPrices);
-                          }
-                          checkForOverlap();
-                        }}
-                        className="rounded border-gray-300 text-salon-600 focus:ring-salon-500"
-                      />
-                      <span className="text-sm flex-1 min-w-0 truncate">{svc.name}</span>
-                      <span className="text-xs text-gray-400 hidden sm:inline">{svc.duration_min} min</span>
-                      <span className={cn(
-                        "text-sm font-medium",
-                        isVariablePrice ? "text-amber-600" : "text-gray-700"
-                      )}>
-                        {formatServicePrice({
-                          price_type: svc.price_type,
-                          price: svc.price,
-                          price_from: svc.price_from,
-                          price_to: svc.price_to,
-                        })}
-                      </span>
-                    </div>
-                    
-                    {isSelected && (
-                      <div className="ml-6 mt-1 space-y-1.5 pl-3 border-l-2 border-salon-100">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-500 w-16">Artista:</span>
-                          <select
-                            value={serviceArtists[svc.id] || ''}
-                            onChange={(e) => {
-                              setServiceArtists({ ...serviceArtists, [svc.id]: e.target.value || '' });
-                              checkForOverlap();
-                            }}
-                            className="flex-1 text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-salon-500 focus:border-transparent"
-                          >
-                            <option value="">Sin artista</option>
-                            {availableArtists.map((s: StaffMember) => (
-                              <option key={s.id} value={s.id}>{s.name}</option>
-                            ))}
-                          </select>
-                        </div>
-                        
-                        {isVariablePrice && (
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-gray-500 w-16">Precio:</span>
-                            <div className="flex-1 relative">
-                              <div className="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none">
-                                <span className="text-gray-400 text-xs font-medium select-none">S/</span>
-                              </div>
-                              <input
-                                type="number"
-                                step="0.01"
-                                value={customPrices[svc.id] ?? ''}
-                                onChange={(e) => {
-                                  const newPrices = { ...customPrices };
-                                  newPrices[svc.id] = e.target.value ? parseFloat(e.target.value) : 0;
-                                  setCustomPrices(newPrices);
-                                }}
-                                placeholder={svc.price_from ? `Desde ${svc.price_from}` : '0'}
-                                className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-gray-200 bg-white text-xs focus:outline-none focus:ring-2 focus:ring-salon-500 focus:border-transparent"
-                              />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+            {/* Service Selection - Button + Modal Pattern */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">Servicios</label>
+              
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedInSelector([...selectedServices]);
+                  setSelectorArtists({ ...serviceArtists });
+                  setSelectorPrices({ ...customPrices });
+                  setSelectorSearch('');
+                  setSelectorCategoryFilter('');
+                  setShowServiceSelector(true);
+                }}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-gray-300 text-gray-600 hover:border-salon-300 hover:text-salon-600 hover:bg-salon-50 transition-all"
+              >
+                <Plus className="w-5 h-5" />
+                <span className="text-sm font-medium">Agregar servicio</span>
+              </button>
             </div>
-          </div>
 
-          {/* Summary */}
-          {selectedServices.length > 0 && (
-            <div className="flex items-center gap-4 p-3 rounded-xl bg-salon-50">
-              <div className="flex items-center gap-1.5 text-sm text-salon-700">
-                <Clock className="w-4 h-4" /> {totalDuration} min
-              </div>
-              <div className="text-sm font-semibold text-salon-700">
-                {formatCurrency(calculateTotalPrice())}
-              </div>
-            </div>
-          )}
+           {/* Selected Services Section - Simple Cards + Config Button */}
+           {selectedServices.length > 0 && (
+             <>
+               <div className="border-t-2 border-salon-200 pt-3 mt-1">
+                 <div className="flex items-center gap-2 mb-2.5">
+                   <span className="text-sm font-semibold text-gray-700">
+                     📋 Servicios seleccionados ({selectedServices.length})
+                   </span>
+                 </div>
+                 
+                 <div className="space-y-2">
+                   {selectedServices.map((svcId) => {
+                     const svc = services.find(s => s.id === svcId);
+                     if (!svc) return null;
+                     
+                     const availableArtists = getAvailableArtistsForService(svc.id, svc.category_id, staff, services);
+                     const isVariablePrice = svc.price_type === 'variable';
+                     const catIcon = svc.category?.icon || '📋';
+                     
+                     const suggestedArtistIds = availableArtists.map(a => a.id);
+                     const selectedArtistId = serviceArtists[svcId];
+                     const selectedArtist = staff.find(s => s.id === selectedArtistId);
+                     const isSelectedArtistSuggested = selectedArtistId && suggestedArtistIds.includes(selectedArtistId);
+                     
+                     const currentPrice = customPrices[svcId] ?? (isVariablePrice ? (svc.price_from || 0) : (svc.price || 0));
+                     
+                     function openConfigModal() {
+                       setConfiguringServiceId(svcId);
+                       setTempArtistId(selectedArtistId || '');
+                       setTempCustomPrice(customPrices[svcId] ?? null);
+                       setShowServiceConfig(true);
+                     }
+                     
+                     return (
+                       <div key={svcId} className="border border-gray-200 rounded-xl p-3 bg-gray-50">
+                         <div className="flex items-center gap-3">
+                           <span className="text-xl">{catIcon}</span>
+                           
+                           <div className="flex-1 min-w-0">
+                             <p className="text-sm font-medium text-gray-900 truncate">{svc.name}</p>
+                             
+                             <div className="flex items-center gap-3 mt-1 flex-wrap">
+                               {selectedArtist ? (
+                                 <span className={cn(
+                                   "text-xs",
+                                   isSelectedArtistSuggested ? "text-salon-600" : "text-gray-500"
+                                 )}>
+                                   {selectedArtist.name}
+                                   {isSelectedArtistSuggested && (
+                                     <span className="ml-1 text-salon-500">(sugerida)</span>
+                                   )}
+                                 </span>
+                               ) : (
+                                 <span className="text-xs text-amber-600 flex items-center gap-1">
+                                   <AlertTriangle className="w-3 h-3" /> Sin artista
+                                 </span>
+                               )}
+                               
+                               <span className="text-xs text-gray-400">{svc.duration_min} min</span>
+                               
+                               <span className={cn(
+                                 "text-sm font-semibold",
+                                 isVariablePrice ? "text-amber-600" : "text-gray-700"
+                               )}>
+                                 {formatCurrency(currentPrice)}
+                               </span>
+                             </div>
+                           </div>
+                           
+                           <button
+                             type="button"
+                             onClick={openConfigModal}
+                             className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-sm text-salon-600 hover:bg-salon-100 transition-colors"
+                           >
+                             <Settings2 className="w-4 h-4" />
+                             Configurar
+                           </button>
+                         </div>
+                       </div>
+                     );
+                   })}
+                 </div>
+               </div>
+
+               {/* Summary */}
+               <div className="flex items-center gap-4 p-3 rounded-xl bg-salon-50">
+                 <div className="flex items-center gap-1.5 text-sm text-salon-700">
+                   <Clock className="w-4 h-4" /> {totalDuration} min
+                 </div>
+                 <div className="text-sm font-semibold text-salon-700">
+                   {formatCurrency(calculateTotalPrice())}
+                 </div>
+               </div>
+             </>
+           )}
 
           {overlapWarning && (
             <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-50 text-amber-700 text-sm">
@@ -1025,8 +1052,513 @@ export default function CitasPage() {
               </Button>
             </div>
           </div>
-         </form>
-       </Modal>
-    </>
+          </form>
+        </Modal>
+
+        {/* Service Config Modal */}
+        <Modal
+          open={showServiceConfig}
+          onClose={() => setShowServiceConfig(false)}
+          title={(() => {
+            const svc = services.find(s => s.id === configuringServiceId);
+            return `⚙️ Configurar: ${svc?.name || 'Servicio'}`;
+          })()}
+        >
+          {configuringServiceId && (() => {
+            const svc = services.find(s => s.id === configuringServiceId);
+            if (!svc) return null;
+            
+            const availableArtists = getAvailableArtistsForService(svc.id, svc.category_id, staff, services);
+            const isVariablePrice = svc.price_type === 'variable';
+            const suggestedArtistIds = availableArtists.map(a => a.id);
+            const isSelectedArtistSuggested = tempArtistId && suggestedArtistIds.includes(tempArtistId);
+            const defaultPrice = isVariablePrice ? (svc.price_from || 0) : (svc.price || 0);
+            
+            function handleSaveConfig() {
+              const svcId = configuringServiceId;
+              if (!svcId) return;
+              
+              if (tempArtistId) {
+                setServiceArtists({ ...serviceArtists, [svcId]: tempArtistId });
+              } else {
+                const newMap = { ...serviceArtists };
+                delete newMap[svcId];
+                setServiceArtists(newMap);
+              }
+              
+              if (tempCustomPrice !== null) {
+                setCustomPrices({ ...customPrices, [svcId]: tempCustomPrice });
+              }
+              
+              checkForOverlap();
+              setShowServiceConfig(false);
+            }
+            
+            async function handleRemoveService() {
+              const svcId = configuringServiceId;
+              if (!svcId) return;
+              const svc = services.find(s => s.id === svcId);
+              if (!svc) return;
+              
+              const confirmed = await confirm({
+                title: 'Quitar servicio',
+                message: `¿Quitar "${svc.name}" de la cita?`,
+                confirmText: 'Quitar',
+                cancelText: 'Cancelar',
+                variant: 'warning',
+              });
+              
+              if (!confirmed) return;
+              
+              setSelectedServices(selectedServices.filter(id => id !== svcId));
+              const newMap = { ...serviceArtists };
+              delete newMap[svcId];
+              setServiceArtists(newMap);
+              const newPrices = { ...customPrices };
+              delete newPrices[svcId];
+              setCustomPrices(newPrices);
+              
+              setShowServiceConfig(false);
+              checkForOverlap();
+            }
+            
+            return (
+              <div className="space-y-4">
+                {/* Artist */}
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700">Artista</label>
+                  <select
+                    value={tempArtistId}
+                    onChange={(e) => setTempArtistId(e.target.value)}
+                    className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5 bg-white focus:ring-2 focus:ring-salon-500 focus:border-transparent"
+                  >
+                    <option value="">Sin artista</option>
+                    {availableArtists.map((s: StaffMember) => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                  {isSelectedArtistSuggested && (
+                    <p className="text-xs text-salon-600 flex items-center gap-1">
+                      <Sparkles className="w-3 h-3" /> Sugerida para este servicio
+                    </p>
+                  )}
+                  {suggestedArtistIds.length > 1 && (
+                    <p className="text-xs text-gray-400">
+                      {suggestedArtistIds.length} artistas sugeridos para este servicio
+                    </p>
+                  )}
+                </div>
+                
+                {/* Price - Always editable */}
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700">Precio</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                      <span className="text-gray-400 text-sm font-medium select-none">S/</span>
+                    </div>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={tempCustomPrice ?? defaultPrice}
+                      onChange={(e) => {
+                        setTempCustomPrice(e.target.value ? parseFloat(e.target.value) : 0);
+                      }}
+                      placeholder={isVariablePrice 
+                        ? (svc.price_from ? `Desde ${svc.price_from}` : '0')
+                        : (svc.price ? `${svc.price}` : '0')
+                      }
+                      className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-salon-500 focus:border-transparent"
+                    />
+                  </div>
+                  {isVariablePrice && svc.price_from && (
+                    <p className="text-xs text-amber-600">
+                      Rango sugerido: S/{svc.price_from} - {svc.price_to ? `S/${svc.price_to}` : 'Sin límite'}
+                    </p>
+                  )}
+                  {!isVariablePrice && (
+                    <p className="text-xs text-gray-400">
+                      Precio estándar del servicio: {formatCurrency(svc.price)}
+                    </p>
+                  )}
+                </div>
+                
+                {/* Duration - read only */}
+                <div className="flex items-center gap-2 pt-1 pb-2">
+                  <Clock className="w-4 h-4 text-gray-400" />
+                  <span className="text-sm text-gray-500">Duración: {svc.duration_min} min</span>
+                  <span className="text-xs text-gray-400">(no modificable)</span>
+                </div>
+                
+                {/* Action buttons */}
+                <div className="flex flex-wrap gap-2 sm:gap-3 pt-4 border-t border-gray-100">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full sm:w-auto border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 order-last sm:order-none"
+                    onClick={handleRemoveService}
+                  >
+                    <Trash2 className="w-4 h-4 mr-1" /> Quitar servicio
+                  </Button>
+                  
+                  <div className="hidden sm:block flex-1" />
+                  
+                  <div className="flex flex-1 sm:flex-none gap-2 order-first sm:order-none">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => setShowServiceConfig(false)}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      type="button"
+                      className="flex-1"
+                      onClick={handleSaveConfig}
+                    >
+                      Guardar
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+         </Modal>
+
+        {/* Service Selector Modal */}
+        <Modal
+          open={showServiceSelector}
+          onClose={() => setShowServiceSelector(false)}
+          title="Seleccionar servicios"
+        >
+          {(() => {
+            const activeServices = services.filter(s => s.active);
+            
+            const categoriesForFilter = (() => {
+              const byCategory: Record<string, { id: string; name: string; icon: string; sort_order: number }> = {};
+              activeServices.forEach(s => {
+                if (s.category_id && !byCategory[s.category_id]) {
+                  byCategory[s.category_id] = {
+                    id: s.category_id,
+                    name: s.category?.name || 'Otros',
+                    icon: s.category?.icon || '📋',
+                    sort_order: s.category?.sort_order ?? 999,
+                  };
+                }
+              });
+              return Object.values(byCategory).sort((a, b) => a.sort_order - b.sort_order);
+            })();
+            
+            const filteredServices = activeServices.filter(s => {
+              if (selectorSearch) {
+                const searchLower = selectorSearch.toLowerCase();
+                const matchesSearch = s.name.toLowerCase().includes(searchLower);
+                const matchesCategory = (s.category?.name || '').toLowerCase().includes(searchLower);
+                if (!matchesSearch && !matchesCategory) return false;
+              }
+              if (selectorCategoryFilter && s.category_id !== selectorCategoryFilter) {
+                return false;
+              }
+              return true;
+            });
+            
+             function handleToggleService(serviceId: string) {
+               const svc = services.find(s => s.id === serviceId);
+               
+               if (selectedInSelector.includes(serviceId)) {
+                 setSelectedInSelector(selectedInSelector.filter(id => id !== serviceId));
+                 const newArtists = { ...selectorArtists };
+                 delete newArtists[serviceId];
+                 setSelectorArtists(newArtists);
+                 const newPrices = { ...selectorPrices };
+                 delete newPrices[serviceId];
+                 setSelectorPrices(newPrices);
+               } else {
+                 setSelectedInSelector([...selectedInSelector, serviceId]);
+                 
+                 if (svc && !selectorArtists[serviceId]) {
+                   const artists = getAvailableArtistsForService(svc.id, svc.category_id, staff, services);
+                   if (artists.length === 1) {
+                     setSelectorArtists({ ...selectorArtists, [serviceId]: artists[0].id });
+                   }
+                 }
+                 
+                 if (svc && selectorPrices[serviceId] === undefined) {
+                   const defaultPrice = svc.price_type === 'variable' 
+                     ? (svc.price_from || 0) 
+                     : (svc.price || 0);
+                   setSelectorPrices({ ...selectorPrices, [serviceId]: defaultPrice });
+                 }
+                 
+                 setTimeout(() => {
+                   const element = document.getElementById(`service-selector-${serviceId}`);
+                   if (element) {
+                     element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                   }
+                 }, 100);
+               }
+             }
+            
+            function handleConfirmSelection() {
+              const newSelectedIds = [...selectedInSelector];
+              
+              const newArtists: Record<string, string> = {};
+              const newPrices: Record<string, number> = {};
+              
+              newSelectedIds.forEach(svcId => {
+                if (selectorArtists[svcId]) {
+                  newArtists[svcId] = selectorArtists[svcId];
+                }
+                if (selectorPrices[svcId] !== undefined && selectorPrices[svcId] !== null) {
+                  newPrices[svcId] = selectorPrices[svcId];
+                }
+              });
+              
+              setSelectedServices(newSelectedIds);
+              setServiceArtists(newArtists);
+              setCustomPrices(newPrices);
+              
+              checkForOverlap();
+              setShowServiceSelector(false);
+            }
+            
+            return (
+              <div className="space-y-4">
+                 {/* Search */}
+                 <div className="relative">
+                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                   <input
+                     type="text"
+                     value={selectorSearch}
+                     onChange={(e) => setSelectorSearch(e.target.value)}
+                     placeholder="Buscar servicio..."
+                     className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-300 bg-white text-base focus:outline-none focus:ring-2 focus:ring-salon-500"
+                   />
+                 </div>
+                
+                {/* Category filters */}
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setSelectorCategoryFilter('')}
+                    className={cn(
+                      'px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
+                      !selectorCategoryFilter
+                        ? 'bg-salon-100 text-salon-700'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    )}
+                  >
+                    Todos
+                  </button>
+                  {categoriesForFilter.map(cat => (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => setSelectorCategoryFilter(cat.id)}
+                      className={cn(
+                        'px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1',
+                        selectorCategoryFilter === cat.id
+                          ? 'bg-salon-100 text-salon-700'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      )}
+                    >
+                      <span>{cat.icon}</span>
+                      <span>{cat.name}</span>
+                    </button>
+                  ))}
+                </div>
+                
+                {/* Selected count */}
+                {selectedInSelector.length > 0 && (
+                  <div className="flex items-center gap-2 text-sm text-salon-600">
+                    <Check className="w-4 h-4" />
+                    <span className="font-medium">{selectedInSelector.length} servicio{selectedInSelector.length !== 1 ? 's' : ''} seleccionado{selectedInSelector.length !== 1 ? 's' : ''}</span>
+                  </div>
+                )}
+                
+                 {/* Services list with inline config */}
+                 <div className="space-y-1.5 max-h-80 overflow-y-auto">
+                   {filteredServices.length === 0 ? (
+                     <div className="py-8 text-center text-gray-400 text-sm">
+                       No hay servicios que coincidan
+                     </div>
+                   ) : (
+                     filteredServices.map(svc => {
+                       const isSelected = selectedInSelector.includes(svc.id);
+                       const isVariablePrice = svc.price_type === 'variable';
+                       const catIcon = svc.category?.icon || '📋';
+                       
+                       const availableArtists = getAvailableArtistsForService(svc.id, svc.category_id, staff, services);
+                       const suggestedArtistIds = availableArtists.map(a => a.id);
+                       const selectedArtistId = selectorArtists[svc.id];
+                       const selectedArtist = staff.find(s => s.id === selectedArtistId);
+                       const isSelectedArtistSuggested = selectedArtistId && suggestedArtistIds.includes(selectedArtistId);
+                       
+                       const currentPrice = selectorPrices[svc.id] ?? (isVariablePrice ? (svc.price_from || 0) : (svc.price || 0));
+                       
+                       let priceLabel = '';
+                       if (isVariablePrice) {
+                         if (svc.price_from && svc.price_to) {
+                           priceLabel = `S/${svc.price_from}-${svc.price_to}`;
+                         } else if (svc.price_from) {
+                           priceLabel = `S/${svc.price_from}+`;
+                         } else {
+                           priceLabel = 'Variable';
+                         }
+                       } else {
+                         priceLabel = `S/${svc.price}`;
+                       }
+                       
+                       const artistOptions = [
+                         { value: '', label: 'Sin artista' },
+                         ...availableArtists.map(s => ({ value: s.id, label: s.name })),
+                       ];
+                       
+                       return (
+                         <div 
+                           key={svc.id}
+                           id={`service-selector-${svc.id}`}
+                           className={cn(
+                             'rounded-xl transition-colors overflow-hidden',
+                             isSelected ? 'bg-salon-50 border border-salon-200' : 'border border-transparent hover:bg-gray-50'
+                           )}
+                         >
+                           {/* Header - click anywhere (except interactive elements) to toggle selection */}
+                           <div 
+                             className="flex items-center gap-3 p-2.5 cursor-pointer"
+                             onClick={() => handleToggleService(svc.id)}
+                           >
+                             <div className={cn(
+                               'w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors flex-shrink-0',
+                               isSelected
+                                 ? 'bg-salon-500 border-salon-500'
+                                 : 'border-gray-300'
+                             )}>
+                               {isSelected && <Check className="w-3.5 h-3.5 text-white" />}
+                             </div>
+                             
+                             <div className="flex-1 min-w-0">
+                               <div className="flex items-center gap-2">
+                                 <span className="text-sm">{catIcon}</span>
+                                 <span className="text-sm font-medium text-gray-900 truncate">{svc.name}</span>
+                               </div>
+                               <div className="flex items-center gap-3 mt-0.5">
+                                 <span className="text-xs text-gray-400">{svc.duration_min} min</span>
+                                 <span className={cn(
+                                   'text-xs font-medium',
+                                   isVariablePrice ? 'text-amber-600' : 'text-gray-500'
+                                 )}>
+                                   {priceLabel}
+                                 </span>
+                               </div>
+                             </div>
+                           </div>
+                           
+                           {/* Expanded section - only when selected */}
+                           {isSelected && (
+                             <div className="px-3 pb-3 pt-1 ml-8 space-y-3 border-t border-salon-100">
+                               {/* Artist - Using Select component */}
+                               <div onClick={(e) => e.stopPropagation()}>
+                                 <Select
+                                   label="Artista"
+                                   value={selectedArtistId || ''}
+                                   onChange={(val) => {
+                                     if (val) {
+                                       setSelectorArtists({ ...selectorArtists, [svc.id]: val });
+                                     } else {
+                                       const newMap = { ...selectorArtists };
+                                       delete newMap[svc.id];
+                                       setSelectorArtists(newMap);
+                                     }
+                                   }}
+                                   options={artistOptions}
+                                   placeholder="Seleccionar artista..."
+                                 />
+                                 {isSelectedArtistSuggested && selectedArtist && (
+                                   <p className="text-xs text-salon-600 flex items-center gap-1 mt-1.5">
+                                     <Sparkles className="w-3 h-3" /> 
+                                     <span className="font-medium">{selectedArtist.name}</span> sugerida para este servicio
+                                   </p>
+                                 )}
+                                 {!selectedArtistId && suggestedArtistIds.length > 0 && (
+                                   <p className="text-xs text-gray-400 mt-1.5">
+                                     {suggestedArtistIds.length} artista{suggestedArtistIds.length !== 1 ? 's' : ''} sugerido{suggestedArtistIds.length !== 1 ? 's' : ''}
+                                   </p>
+                                 )}
+                               </div>
+                               
+                                {/* Price - Following services/page.tsx pattern */}
+                                <div onClick={(e) => e.stopPropagation()} className="space-y-1.5">
+                                  <label className="block text-sm font-medium text-gray-700">
+                                    Precio
+                                  </label>
+                                  <div className="relative">
+                                    <div className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none">
+                                      <span className="text-gray-400 text-sm font-medium select-none">S/</span>
+                                    </div>
+                                    <input
+                                      type="number"
+                                      step="0.01"
+                                      value={currentPrice}
+                                      onChange={(e) => {
+                                        setSelectorPrices({ 
+                                          ...selectorPrices, 
+                                          [svc.id]: e.target.value ? parseFloat(e.target.value) : 0 
+                                        });
+                                      }}
+                                      placeholder={isVariablePrice 
+                                        ? (svc.price_from ? `Desde ${svc.price_from}` : '0')
+                                        : (svc.price ? `${svc.price}` : '0')
+                                      }
+                                      className="w-full pl-12 pr-3.5 py-2.5 rounded-xl border border-gray-200 bg-white text-base focus:outline-none focus:ring-2 focus:ring-salon-500 focus:border-transparent placeholder:text-gray-300"
+                                    />
+                                  </div>
+                                  {isVariablePrice && svc.price_from && (
+                                    <p className="text-xs text-amber-600 mt-1.5">
+                                      Rango sugerido: S/{svc.price_from} - {svc.price_to ? `S/${svc.price_to}` : 'Sin límite'}
+                                    </p>
+                                  )}
+                                  {!isVariablePrice && (
+                                    <p className="text-xs text-gray-400 mt-1.5">
+                                      Precio estándar del servicio: {formatCurrency(svc.price)}
+                                    </p>
+                                  )}
+                                </div>
+                             </div>
+                           )}
+                         </div>
+                       );
+                     })
+                   )}
+                 </div>
+                
+                {/* Action buttons */}
+                <div className="flex flex-wrap gap-2 sm:gap-3 pt-4 border-t border-gray-100">
+                  <div className="hidden sm:block flex-1" />
+                  
+                  <div className="flex flex-1 sm:flex-none gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => setShowServiceSelector(false)}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      type="button"
+                      className="flex-1"
+                      onClick={handleConfirmSelection}
+                      disabled={selectedInSelector.length === 0}
+                    >
+                      Agregar ({selectedInSelector.length})
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+        </Modal>
+      </>
   );
 }
