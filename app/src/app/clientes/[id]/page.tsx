@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Modal } from '@/components/ui/modal';
 import { formatCurrency, formatDate, formatTime } from '@/lib/utils';
 import { APPOINTMENT_STATUS_LABELS } from '@/types/database';
 import {
@@ -34,11 +35,12 @@ export default function ClientDetailPage() {
   const [client, setClient] = useState<Client | null>(null);
   const [appointments, setAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState(false);
-  const [editForm, setEditForm] = useState<ClientInsert | null>(null);
-  const [initialEditForm, setInitialEditForm] = useState<ClientInsert | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editForm, setEditForm] = useState<ClientInsert | null>(null);
+  const [initialEditForm, setInitialEditForm] = useState<ClientInsert | null>(null);
 
   async function load() {
     try {
@@ -48,12 +50,6 @@ export default function ClientDetailPage() {
       ]);
       setClient(c as unknown as Client);
       setAppointments(a as any[]);
-      const formData: ClientInsert = {
-        name: c.name, phone: c.phone || '', email: c.email || '',
-        instagram: c.instagram || '', status: c.status, notes: c.notes || '', photo_url: c.photo_url,
-      };
-      setEditForm(formData);
-      setInitialEditForm({ ...formData });
     } catch (e) {
       console.error(e);
     } finally {
@@ -63,8 +59,19 @@ export default function ClientDetailPage() {
 
   useEffect(() => { load(); }, [params.id]);
 
+  function openEditModal() {
+    if (!client) return;
+    const formData: ClientInsert = {
+      name: client.name, phone: client.phone || '', email: client.email || '',
+      instagram: client.instagram || '', status: client.status, notes: client.notes || '', photo_url: client.photo_url,
+    };
+    setEditForm(formData);
+    setInitialEditForm({ ...formData });
+    setShowEditModal(true);
+  }
+
   function haveChanges(): boolean {
-    if (!editing || !editForm || !initialEditForm) return false;
+    if (!editForm || !initialEditForm) return false;
     if (editForm.name !== initialEditForm.name) return true;
     if (editForm.phone !== initialEditForm.phone) return true;
     if (editForm.email !== initialEditForm.email) return true;
@@ -86,24 +93,13 @@ export default function ClientDetailPage() {
     try {
       await updateClient(client.id, editForm);
       toast.success('Datos actualizados');
-      setEditing(false);
+      setShowEditModal(false);
       load();
     } catch (e) {
       toast.error('Error al actualizar');
     } finally {
       setSaving(false);
     }
-  }
-
-  async function handleCancel() {
-    if (!client) return;
-    setEditing(false);
-    const formData: ClientInsert = {
-      name: client.name, phone: client.phone || '', email: client.email || '',
-      instagram: client.instagram || '', status: client.status, notes: client.notes || '', photo_url: client.photo_url,
-    };
-    setEditForm(formData);
-    setInitialEditForm({ ...formData });
   }
 
   async function handleDelete() {
@@ -138,11 +134,9 @@ export default function ClientDetailPage() {
           <Button variant="outline" size="sm" onClick={() => router.back()}>
             <ArrowLeft className="w-4 h-4 mr-1" /> Volver
           </Button>
-          {!editing && (
-            <Button size="sm" onClick={() => setEditing(true)}>
-              <Edit className="w-4 h-4 mr-1" /> Editar
-            </Button>
-          )}
+          <Button size="sm" onClick={openEditModal}>
+            <Edit className="w-4 h-4 mr-1" /> Editar
+          </Button>
         </div>
       } />
 
@@ -167,61 +161,9 @@ export default function ClientDetailPage() {
               </div>
             </div>
 
-            {client.notes && !editing && (
+            {client.notes && (
               <div className="mt-4 p-3 rounded-xl bg-gray-50 text-sm text-gray-600">
                 {client.notes}
-              </div>
-            )}
-
-            {editing && editForm && (
-              <div className="mt-4 space-y-3 p-4 rounded-xl bg-gray-50 border border-gray-200">
-                <Input label="Nombre" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
-                <Input label="Teléfono" value={editForm.phone || ''} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} />
-                <Input label="Email" type="email" value={editForm.email || ''} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
-                <Input label="Instagram" value={editForm.instagram || ''} onChange={(e) => setEditForm({ ...editForm, instagram: e.target.value })} />
-                 <Select label="Estado" value={editForm.status} onChange={(value) => setEditForm({ ...editForm, status: value as ClientInsert['status'] })} options={[
-                   { value: 'prospecto', label: 'Prospecto' },
-                   { value: 'activa', label: 'Activa' },
-                   { value: 'inactiva', label: 'Inactiva' },
-                   { value: 'vip', label: 'VIP' },
-                 ]} />
-                <Textarea label="Notas" value={editForm.notes || ''} onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} />
-
-                {/* Botones de acción */}
-                <div className="flex flex-wrap gap-2 sm:gap-3 pt-4 sm:pt-6 mt-2 border-t border-gray-100">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full sm:w-auto border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 order-last sm:order-none"
-                    loading={deleting}
-                    onClick={handleDelete}
-                  >
-                    {!deleting && <Trash2 className="w-4 h-4 mr-1" />}
-                    {deleting ? 'Eliminando...' : 'Eliminar'}
-                  </Button>
-                  
-                  <div className="hidden sm:block flex-1" />
-                  
-                  <div className="flex flex-1 sm:flex-none gap-2 order-first sm:order-none">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="flex-1"
-                      onClick={handleCancel}
-                    >
-                      Cancelar
-                    </Button>
-                    <Button
-                      type="button"
-                      className="flex-1"
-                      loading={saving}
-                      disabled={!isEditFormValid() || !haveChanges()}
-                      onClick={handleSave}
-                    >
-                      {saving ? 'Guardando...' : 'Guardar'}
-                    </Button>
-                  </div>
-                </div>
               </div>
             )}
           </CardContent>
@@ -291,6 +233,62 @@ export default function ClientDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Edit Modal */}
+      <Modal open={showEditModal} onClose={() => { setShowEditModal(false); }} title="Editar Clienta">
+        <form onSubmit={(e) => { e.preventDefault(); if (isEditFormValid() && haveChanges()) handleSave(); }} className="space-y-4">
+          {editForm && (
+            <>
+              <Input label="Nombre *" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} placeholder="Nombre completo" />
+              <Input label="Teléfono" value={editForm.phone || ''} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} placeholder="Teléfono" />
+              <Input label="Email" type="email" value={editForm.email || ''} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} placeholder="email@ejemplo.com" />
+              <Input label="Instagram" value={editForm.instagram || ''} onChange={(e) => setEditForm({ ...editForm, instagram: e.target.value })} placeholder="@usuario" />
+               <Select label="Estado" value={editForm.status} onChange={(value) => setEditForm({ ...editForm, status: value as ClientInsert['status'] })} options={[
+                 { value: 'prospecto', label: 'Prospecto' },
+                 { value: 'activa', label: 'Activa' },
+                 { value: 'inactiva', label: 'Inactiva' },
+                 { value: 'vip', label: 'VIP' },
+               ]} />
+              <Textarea label="Notas" value={editForm.notes || ''} onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} placeholder="Preferencias, alergias, notas..." />
+
+              {/* Botones de acción */}
+              <div className="flex flex-wrap gap-2 sm:gap-3 pt-4 sm:pt-6 mt-2 border-t border-gray-100">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full sm:w-auto border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 order-last sm:order-none"
+                  loading={deleting}
+                  onClick={handleDelete}
+                >
+                  {!deleting && <Trash2 className="w-4 h-4 mr-1" />}
+                  {deleting ? 'Eliminando...' : 'Eliminar'}
+                </Button>
+                
+                <div className="hidden sm:block flex-1" />
+                
+                <div className="flex flex-1 sm:flex-none gap-2 order-first sm:order-none">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => { setShowEditModal(false); }}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="flex-1"
+                    loading={saving}
+                    disabled={!isEditFormValid() || !haveChanges()}
+                  >
+                    {saving ? 'Guardando...' : 'Guardar'}
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </form>
+      </Modal>
     </>
   );
 }
