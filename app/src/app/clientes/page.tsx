@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { getClients, createClient, updateClient, deleteClient } from '@/lib/db/queries';
-import type { Client, ClientInsert } from '@/types/database';
+import type { Client, ClientInsert, ClientStatus } from '@/types/database';
 import { Header } from '@/components/layout/shell';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,8 +12,8 @@ import { Select } from '@/components/ui/select';
 import { Modal } from '@/components/ui/modal';
 import { Textarea } from '@/components/ui/textarea';
 import { FlagPeru } from '@/components/ui/FlagPeru';
-import { formatCurrency, formatDate, normalizePeruPhone, formatPeruPhoneForInput } from '@/lib/utils';
-import { Users, Plus, Search, Phone, Mail, Instagram, Eye, Trash2 } from 'lucide-react';
+import { formatCurrency, normalizePeruPhone, formatPeruPhoneForInput } from '@/lib/utils';
+import { Users, Plus, Search, Phone, Instagram } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { useConfirm } from '@/context/confirm-context';
@@ -32,6 +32,30 @@ const statusLabels: Record<string, string> = {
   vip: 'VIP',
 };
 
+const STATUS_OPTIONS = [
+  { value: 'all' as const, label: 'Todos' },
+  { value: 'prospecto' as const, label: 'Prospecto' },
+  { value: 'activa' as const, label: 'Activa' },
+  { value: 'inactiva' as const, label: 'Inactiva' },
+  { value: 'vip' as const, label: 'VIP' },
+];
+
+function getStatusGroup(clients: Client[], status: ClientStatus | 'all'): Client[] {
+  if (status === 'all') return clients;
+  return clients.filter(c => c.status === status);
+}
+
+function groupByStatus(clients: Client[]): Record<string, Client[]> {
+  return clients.reduce((acc, c) => {
+    const key = c.status;
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(c);
+    return acc;
+  }, {} as Record<string, Client[]>);
+}
+
+const STATUS_ORDER: ClientStatus[] = ['activa', 'vip', 'prospecto', 'inactiva'];
+
 export default function ClientesPage() {
   const router = useRouter();
   const { confirm } = useConfirm();
@@ -40,6 +64,7 @@ export default function ClientesPage() {
   const [submitting, setSubmitting] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [form, setForm] = useState<ClientInsert>({
     name: '', phone: '', email: '', instagram: '', status: 'prospecto', notes: '', photo_url: null,
   });
@@ -78,30 +103,17 @@ export default function ClientesPage() {
     }
   }
 
-  async function deactivateClient(client: Client) {
-    const confirmed = await confirm({
-      title: 'Eliminar clienta',
-      message: `¿Eliminar a ${client.name}? Esta acción no se puede deshacer.`,
-      confirmText: 'Eliminar',
-      cancelText: 'Cancelar',
-      variant: 'danger',
-    });
-    
-    if (!confirmed) return;
-    try {
-      await deleteClient(client.id);
-      toast.success('Clienta eliminada');
-      load();
-    } catch (e) {
-      toast.error('Error al eliminar');
-    }
-  }
-
-  const filtered = clients.filter((c) =>
+  const filteredBySearch = clients.filter((c) =>
     c.name.toLowerCase().includes(search.toLowerCase()) ||
     (c.phone || '').includes(search) ||
     (c.instagram || '').toLowerCase().includes(search.toLowerCase())
   );
+
+  const filtered = statusFilter === 'all'
+    ? filteredBySearch
+    : filteredBySearch.filter(c => c.status === statusFilter);
+
+  const grouped = groupByStatus(filtered);
 
   return (
     <>
@@ -112,25 +124,25 @@ export default function ClientesPage() {
       } />
 
       <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-4">
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Buscar por nombre, teléfono o Instagram..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-salon-500"
-          />
-        </div>
-
-        {/* Stats bar */}
-        <div className="flex items-center gap-4 text-sm text-gray-500">
-          <span>{filtered.length} clientas</span>
-          <span>·</span>
-          <span>{clients.filter(c => c.status === 'activa').length} activas</span>
-          <span>·</span>
-          <span>{clients.filter(c => c.status === 'vip').length} VIP</span>
+        {/* Buscador + Filtro */}
+        <div className="flex flex-col sm:flex-row gap-2 items-stretch">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Buscar por nombre, teléfono o Instagram..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-salon-500"
+            />
+          </div>
+          <div className="w-full sm:w-48 flex-shrink-0">
+            <Select
+              value={statusFilter}
+              onChange={(value) => setStatusFilter(value)}
+              options={STATUS_OPTIONS.map(o => ({ value: o.value, label: o.label }))}
+            />
+          </div>
         </div>
 
         {/* Client List */}
@@ -147,51 +159,36 @@ export default function ClientesPage() {
               <p className="text-sm">No hay clientas {search ? 'que coincidan' : 'registradas'}</p>
             </CardContent>
           </Card>
+        ) : statusFilter === 'all' ? (
+          /* Vista Todos: agrupado por estado */
+          <div className="space-y-6">
+            {STATUS_ORDER.map((status) => {
+              const items = grouped[status] || [];
+              if (items.length === 0) return null;
+              return (
+                <div key={status}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Badge variant={statusBadge[status]} className="text-xs">
+                      {statusLabels[status]}
+                    </Badge>
+                    <span className="text-xs text-gray-400">
+                      {items.length} clienta{items.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {items.map((client) => (
+                      <ClientCard key={client.id} client={client} onClick={() => router.push(`/clientes/${client.id}`)} />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         ) : (
+          /* Vista filtrada: sin agrupación */
           <div className="space-y-2">
             {filtered.map((client) => (
-              <Card
-                key={client.id}
-                className="cursor-pointer hover:border-salon-300 hover:shadow-sm transition-all"
-                onClick={() => router.push(`/clientes/${client.id}`)}
-              >
-                <CardContent className="flex items-center gap-4 py-3.5">
-                  <div className="w-11 h-11 rounded-full bg-salon-100 flex items-center justify-center text-salon-600 font-bold flex-shrink-0">
-                    {client.name[0].toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium truncate">{client.name}</p>
-                      <Badge variant={statusBadge[client.status] || 'default'}>
-                        {statusLabels[client.status]}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-3 text-xs text-gray-400 mt-0.5">
-                      {client.phone && (
-                        <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{client.phone}</span>
-                      )}
-                      {client.instagram && (
-                        <span className="flex items-center gap-1"><Instagram className="w-3 h-3" />{client.instagram}</span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="text-right hidden sm:block">
-                    {client.client_stats && (
-                      <>
-                        <p className="text-sm font-medium">{formatCurrency(client.client_stats.total_spent)}</p>
-                        <p className="text-xs text-gray-400">{client.client_stats.total_appointments} citas</p>
-                      </>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); deactivateClient(client); }}
-                    className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors flex-shrink-0"
-                  >
-                    <Trash2 className="w-3.5 h-3.5 text-gray-400 hover:text-red-500" />
-                  </button>
-                </CardContent>
-              </Card>
+              <ClientCard key={client.id} client={client} onClick={() => router.push(`/clientes/${client.id}`)} />
             ))}
           </div>
         )}
@@ -220,5 +217,44 @@ export default function ClientesPage() {
         </form>
       </Modal>
     </>
+  );
+}
+
+function ClientCard({ client, onClick }: { client: Client; onClick: () => void }) {
+  return (
+    <Card
+      className="cursor-pointer hover:border-salon-300 hover:shadow-sm transition-all"
+      onClick={onClick}
+    >
+      <CardContent className="flex items-center gap-4 py-3.5">
+        <div className="w-11 h-11 rounded-full bg-salon-100 flex items-center justify-center text-salon-600 font-bold flex-shrink-0">
+          {client.name[0].toUpperCase()}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <p className="font-medium truncate">{client.name}</p>
+            <Badge variant={statusBadge[client.status] || 'default'}>
+              {statusLabels[client.status]}
+            </Badge>
+          </div>
+          <div className="flex items-center gap-3 text-xs text-gray-400 mt-0.5">
+            {client.phone && (
+              <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{client.phone}</span>
+            )}
+            {client.instagram && (
+              <span className="flex items-center gap-1"><Instagram className="w-3 h-3" />{client.instagram}</span>
+            )}
+          </div>
+        </div>
+        <div className="text-right hidden sm:block">
+          {client.client_stats && (
+            <>
+              <p className="text-sm font-medium">{formatCurrency(client.client_stats.total_spent)}</p>
+              <p className="text-xs text-gray-400">{client.client_stats.total_appointments} citas</p>
+            </>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

@@ -2,13 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { getClientById, getAppointments, updateClient } from '@/lib/db/queries';
+import { getClientById, getAppointments, updateClient, deleteClient } from '@/lib/db/queries';
 import type { Client, ClientInsert, AppointmentStatus } from '@/types/database';
 import { Header } from '@/components/layout/shell';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Modal } from '@/components/ui/modal';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -16,9 +15,10 @@ import { formatCurrency, formatDate, formatTime } from '@/lib/utils';
 import { APPOINTMENT_STATUS_LABELS } from '@/types/database';
 import {
   Phone, Mail, Instagram, CalendarDays, DollarSign,
-  Clock, ArrowLeft, Edit, Save,
+  Clock, ArrowLeft, Edit, Save, Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useConfirm } from '@/context/confirm-context';
 
 const statusBadge: Record<string, 'success' | 'warning' | 'danger' | 'purple'> = {
   prospecto: 'warning', activa: 'success', inactiva: 'danger', vip: 'purple',
@@ -30,11 +30,15 @@ const statusLabels: Record<string, string> = {
 export default function ClientDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { confirm } = useConfirm();
   const [client, setClient] = useState<Client | null>(null);
   const [appointments, setAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState<ClientInsert | null>(null);
+  const [initialEditForm, setInitialEditForm] = useState<ClientInsert | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   async function load() {
     try {
@@ -44,10 +48,12 @@ export default function ClientDetailPage() {
       ]);
       setClient(c as unknown as Client);
       setAppointments(a as any[]);
-      setEditForm({
+      const formData: ClientInsert = {
         name: c.name, phone: c.phone || '', email: c.email || '',
         instagram: c.instagram || '', status: c.status, notes: c.notes || '', photo_url: c.photo_url,
-      });
+      };
+      setEditForm(formData);
+      setInitialEditForm({ ...formData });
     } catch (e) {
       console.error(e);
     } finally {
@@ -57,8 +63,26 @@ export default function ClientDetailPage() {
 
   useEffect(() => { load(); }, [params.id]);
 
+  function haveChanges(): boolean {
+    if (!editing || !editForm || !initialEditForm) return false;
+    if (editForm.name !== initialEditForm.name) return true;
+    if (editForm.phone !== initialEditForm.phone) return true;
+    if (editForm.email !== initialEditForm.email) return true;
+    if (editForm.instagram !== initialEditForm.instagram) return true;
+    if (editForm.status !== initialEditForm.status) return true;
+    if (editForm.notes !== initialEditForm.notes) return true;
+    if (editForm.photo_url !== initialEditForm.photo_url) return true;
+    return false;
+  }
+
+  function isEditFormValid(): boolean {
+    if (!editForm) return false;
+    return editForm.name.trim().length > 0;
+  }
+
   async function handleSave() {
     if (!client || !editForm) return;
+    setSaving(true);
     try {
       await updateClient(client.id, editForm);
       toast.success('Datos actualizados');
@@ -66,6 +90,41 @@ export default function ClientDetailPage() {
       load();
     } catch (e) {
       toast.error('Error al actualizar');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleCancel() {
+    if (!client) return;
+    setEditing(false);
+    const formData: ClientInsert = {
+      name: client.name, phone: client.phone || '', email: client.email || '',
+      instagram: client.instagram || '', status: client.status, notes: client.notes || '', photo_url: client.photo_url,
+    };
+    setEditForm(formData);
+    setInitialEditForm({ ...formData });
+  }
+
+  async function handleDelete() {
+    if (!client) return;
+    const confirmed = await confirm({
+      title: 'Eliminar clienta',
+      message: `¿Eliminar a ${client.name}? Esta acción no se puede deshacer.`,
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
+    setDeleting(true);
+    try {
+      await deleteClient(client.id);
+      toast.success('Clienta eliminada');
+      router.push('/clientes');
+    } catch (e) {
+      toast.error('Error al eliminar');
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -79,10 +138,11 @@ export default function ClientDetailPage() {
           <Button variant="outline" size="sm" onClick={() => router.back()}>
             <ArrowLeft className="w-4 h-4 mr-1" /> Volver
           </Button>
-          <Button size="sm" onClick={() => editing ? handleSave() : setEditing(true)}>
-            {editing ? <Save className="w-4 h-4 mr-1" /> : <Edit className="w-4 h-4 mr-1" />}
-            {editing ? 'Guardar' : 'Editar'}
-          </Button>
+          {!editing && (
+            <Button size="sm" onClick={() => setEditing(true)}>
+              <Edit className="w-4 h-4 mr-1" /> Editar
+            </Button>
+          )}
         </div>
       } />
 
@@ -107,7 +167,7 @@ export default function ClientDetailPage() {
               </div>
             </div>
 
-            {client.notes && (
+            {client.notes && !editing && (
               <div className="mt-4 p-3 rounded-xl bg-gray-50 text-sm text-gray-600">
                 {client.notes}
               </div>
@@ -126,6 +186,42 @@ export default function ClientDetailPage() {
                    { value: 'vip', label: 'VIP' },
                  ]} />
                 <Textarea label="Notas" value={editForm.notes || ''} onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} />
+
+                {/* Botones de acción */}
+                <div className="flex flex-wrap gap-2 sm:gap-3 pt-4 sm:pt-6 mt-2 border-t border-gray-100">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full sm:w-auto border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 order-last sm:order-none"
+                    loading={deleting}
+                    onClick={handleDelete}
+                  >
+                    {!deleting && <Trash2 className="w-4 h-4 mr-1" />}
+                    {deleting ? 'Eliminando...' : 'Eliminar'}
+                  </Button>
+                  
+                  <div className="hidden sm:block flex-1" />
+                  
+                  <div className="flex flex-1 sm:flex-none gap-2 order-first sm:order-none">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={handleCancel}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      type="button"
+                      className="flex-1"
+                      loading={saving}
+                      disabled={!isEditFormValid() || !haveChanges()}
+                      onClick={handleSave}
+                    >
+                      {saving ? 'Guardando...' : 'Guardar'}
+                    </Button>
+                  </div>
+                </div>
               </div>
             )}
           </CardContent>
