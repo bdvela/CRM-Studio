@@ -129,7 +129,7 @@ export default function ClientDetailPage() {
 
   return (
     <>
-      <Header title={client.name} action={
+      <Header action={
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => router.back()}>
             <ArrowLeft className="w-4 h-4 mr-1" /> Volver

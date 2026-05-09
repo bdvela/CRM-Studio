@@ -107,11 +107,12 @@ export function MobileNav() {
   );
 }
 
-export function Header({ title, action }: { title: string; action?: React.ReactNode }) {
+export function Header({ title, action }: { title?: string; action?: React.ReactNode }) {
   return (
     <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-gray-100">
       <div className="flex items-center justify-between px-4 md:px-8 py-4">
-        <h1 className="text-xl md:text-2xl font-bold text-gray-900">{title}</h1>
+        {title && <h1 className="text-xl md:text-2xl font-bold text-gray-900">{title}</h1>}
+        {!title && <div className="flex-1" />}
         {action && <div>{action}</div>}
       </div>
     </header>
