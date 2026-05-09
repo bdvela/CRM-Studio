@@ -42,11 +42,19 @@ function getServiceEmoji(appt: any): string {
   return '📋';
 }
 
-function toLocalISO(dateStr: string): string {
-  const d = new Date(dateStr);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
+ function toLocalISO(dateStr: string): string {
+   const d = new Date(dateStr);
+   const pad = (n: number) => String(n).padStart(2, '0');
+   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+ }
+
+ function generateAppointmentTitle(selectedServiceIds: string[], allServices: any[]): string {
+   const selected = allServices.filter((s) => selectedServiceIds.includes(s.id));
+   if (selected.length === 0) return 'Cita';
+   const names = selected.map((s) => s.name);
+   if (names.length <= 3) return names.join(' + ');
+   return `${names[0]} + ${names.length - 1} más`;
+ }
 
 export default function CitasPage() {
   const router = useRouter();
@@ -70,14 +78,13 @@ export default function CitasPage() {
   const [selectedAppt, setSelectedAppt] = useState<any>(null);
   const detailRef = useRef<HTMLDivElement>(null);
 
-  const [form, setForm] = useState({
-    title: '',
-    client_id: '',
-    start_time: '',
-    status: 'programada' as AppointmentInsert['status'],
-    notes: '',
-    color: '',
-  });
+   const [form, setForm] = useState({
+     client_id: '',
+     start_time: '',
+     status: 'programada' as AppointmentInsert['status'],
+     notes: '',
+     color: '',
+   });
 
   async function load() {
     setLoading(true);
@@ -174,20 +181,20 @@ export default function CitasPage() {
 
       const firstArtistId = services.find(s => s.artist_id)?.artist_id || null;
 
-      const apptData: AppointmentInsert & { services?: any[]; serviceIds?: string[] } = {
-        title: form.title || 'Cita',
-        client_id: form.client_id || '',
-        artist_id: firstArtistId,
-        start_time: startTime.toISOString(),
-        end_time: endTime.toISOString(),
-        status: form.status,
-        total_price: totalPrice,
-        total_duration_min: totalDuration,
-        notes: form.notes || null,
-        color: form.color || null,
-        overlap_detected: !!overlapWarning,
-        services,
-      };
+       const apptData: AppointmentInsert & { services?: any[]; serviceIds?: string[] } = {
+         title: generateAppointmentTitle(selectedServices, services),
+         client_id: form.client_id || '',
+         artist_id: firstArtistId,
+         start_time: startTime.toISOString(),
+         end_time: endTime.toISOString(),
+         status: form.status,
+         total_price: totalPrice,
+         total_duration_min: totalDuration,
+         notes: form.notes || null,
+         color: form.color || null,
+         overlap_detected: !!overlapWarning,
+         services,
+       };
 
       if (editingAppt) {
         await updateAppointment(editingAppt.id, apptData);
@@ -206,63 +213,60 @@ export default function CitasPage() {
     }
    }
 
-   function openEdit(appt: any) {
-    setEditingAppt(appt);
-    setForm({
-      title: appt.title,
-      client_id: appt.client_id || '',
-      start_time: toLocalISO(appt.start_time),
-      status: appt.status,
-      notes: appt.notes || '',
-      color: appt.color || '',
-    });
-    const svcIds: string[] = [];
-    const svcArtistMap: Record<string, string> = {};
-    (appt.appointment_services || []).forEach((as: any) => {
-      if (as.service_id) {
-        svcIds.push(as.service_id);
-        if (as.artist_id) {
-          svcArtistMap[as.service_id] = as.artist_id;
-        }
-      }
-    });
-    setSelectedServices(svcIds);
-    setServiceArtists(svcArtistMap);
-    setShowModal(true);
-  }
+    function openEdit(appt: any) {
+     setEditingAppt(appt);
+     setForm({
+       client_id: appt.client_id || '',
+       start_time: toLocalISO(appt.start_time),
+       status: appt.status,
+       notes: appt.notes || '',
+       color: appt.color || '',
+     });
+     const svcIds: string[] = [];
+     const svcArtistMap: Record<string, string> = {};
+     (appt.appointment_services || []).forEach((as: any) => {
+       if (as.service_id) {
+         svcIds.push(as.service_id);
+         if (as.artist_id) {
+           svcArtistMap[as.service_id] = as.artist_id;
+         }
+       }
+     });
+     setSelectedServices(svcIds);
+     setServiceArtists(svcArtistMap);
+     setShowModal(true);
+   }
 
-  function openNew() {
-    setEditingAppt(null);
-    setForm({
-      title: '',
-      client_id: '',
-      start_time: '',
-      status: 'programada',
-      notes: '',
-      color: '',
-    });
-    setSelectedServices([]);
-    setServiceArtists({});
-    setOverlapWarning(null);
-    setShowModal(true);
-  }
+   function openNew() {
+     setEditingAppt(null);
+     setForm({
+       client_id: '',
+       start_time: '',
+       status: 'programada',
+       notes: '',
+       color: '',
+     });
+     setSelectedServices([]);
+     setServiceArtists({});
+     setOverlapWarning(null);
+     setShowModal(true);
+   }
 
-  function openNewForDate(date: Date) {
-    setEditingAppt(null);
-    const timeStr = date.toISOString().slice(0, 16);
-    setForm({
-      title: '',
-      client_id: '',
-      start_time: timeStr,
-      status: 'programada',
-      notes: '',
-      color: '',
-    });
-    setSelectedServices([]);
-    setServiceArtists({});
-    setOverlapWarning(null);
-    setShowModal(true);
-  }
+   function openNewForDate(date: Date) {
+     setEditingAppt(null);
+     const timeStr = date.toISOString().slice(0, 16);
+     setForm({
+       client_id: '',
+       start_time: timeStr,
+       status: 'programada',
+       notes: '',
+       color: '',
+     });
+     setSelectedServices([]);
+     setServiceArtists({});
+     setOverlapWarning(null);
+     setShowModal(true);
+   }
 
   async function cancelAppt(appt: any) {
     const confirmed = await confirm({
@@ -669,12 +673,11 @@ export default function CitasPage() {
         </div>
       )}
 
-      {/* Modal */}
-      <Modal open={showModal} onClose={() => { setShowModal(false); setEditingAppt(null); }} title={editingAppt ? 'Editar Cita' : 'Nueva Cita'}>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Input label="Título" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Ej: Manicure + Pedicure" />
-          <ClientCombobox value={form.client_id} onChange={(id) => setForm({ ...form, client_id: id })} />
-          <DateTimePicker value={form.start_time} onChange={(v) => { setForm({ ...form, start_time: v }); checkForOverlap(); }} />
+       {/* Modal */}
+       <Modal open={showModal} onClose={() => { setShowModal(false); setEditingAppt(null); }} title={editingAppt ? 'Editar Cita' : 'Nueva Cita'}>
+         <form onSubmit={handleSubmit} className="space-y-4">
+           <ClientCombobox value={form.client_id} onChange={(id) => setForm({ ...form, client_id: id })} />
+           <DateTimePicker value={form.start_time} onChange={(v) => { setForm({ ...form, start_time: v }); checkForOverlap(); }} />
 
           {/* Service Selection */}
           <div className="space-y-2">
