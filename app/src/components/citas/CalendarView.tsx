@@ -3,13 +3,22 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, addMonths, subMonths, addWeeks, subWeeks, isToday, startOfDay, eachDayOfInterval, getHours, getMinutes } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, MapPin, X, Pencil, XCircle, User, Clock, DollarSign } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, MapPin, X, Pencil, XCircle, User, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatCurrency, formatTime } from '@/lib/utils';
 import { APPOINTMENT_STATUS_LABELS } from '@/types/database';
-import { toast } from 'sonner';
-
-export type ViewMode = 'list' | 'day' | 'week' | 'calendar';
+ import { toast } from 'sonner';
+ 
+ function isAppointmentPastOrCompleted(appt: any): boolean {
+   if (appt.status === 'completada' || appt.status === 'cancelada' || appt.status === 'no_show') {
+     return true;
+   }
+   const now = new Date();
+   const endTime = new Date(appt.end_time || appt.start_time);
+   return endTime < now;
+ }
+ 
+ export type ViewMode = 'list' | 'day' | 'week' | 'calendar';
 
 const SERVICE_EMOJIS: Record<string, string> = {
   sistema_unas: '💅',
@@ -231,32 +240,32 @@ function getApptHeight(appt: any): string {
                   )}
                 </div>
 
-                <div className="space-y-0.5">
-                  {dayAppts.slice(0, 3).map((appt) => {
-                    const colors = getApptColor(appt, staff);
-                    const emoji = getServiceEmoji(appt);
-                    const isCancelled = appt.status === 'cancelada';
-                    const isCompleted = appt.status === 'completada';
+                 <div className="space-y-0.5">
+                   {dayAppts.slice(0, 3).map((appt) => {
+                     const colors = getApptColor(appt, staff);
+                     const emoji = getServiceEmoji(appt);
+                     const isCancelled = appt.status === 'cancelada';
+                     const isPastOrCompleted = isAppointmentPastOrCompleted(appt);
 
-                    return (
-                      <button
-                        key={appt.id}
-                        type="button"
-                        onClick={(e) => handleApptClick(appt, e)}
-                        className={cn(
-                          'w-full text-left px-1.5 py-0.5 rounded text-xs truncate border-l-2 transition-all',
-                          colors.bg, colors.border, colors.text,
-                          getApptHeight(appt),
-                          isCancelled && 'opacity-40 line-through',
-                          isCompleted && 'opacity-70'
-                        )}
-                      >
-                        <span className="mr-0.5">{emoji}</span>
-                        {format(new Date(appt.start_time), 'HH:mm')} {appt.client?.name || 'Sin clienta'}
-                      </button>
-                    );
-                  })}
-                </div>
+                     return (
+                       <button
+                         key={appt.id}
+                         type="button"
+                         onClick={(e) => handleApptClick(appt, e)}
+                         className={cn(
+                           'w-full text-left px-1.5 py-0.5 rounded text-xs truncate border-l-2 transition-all',
+                           colors.bg, colors.border, colors.text,
+                           getApptHeight(appt),
+                           isCancelled && 'opacity-40 line-through',
+                           isPastOrCompleted && !isCancelled && 'opacity-50'
+                         )}
+                       >
+                         <span className="mr-0.5">{emoji}</span>
+                         {format(new Date(appt.start_time), 'HH:mm')} {appt.client?.name || 'Sin clienta'}
+                       </button>
+                     );
+                   })}
+                 </div>
               </div>
             );
           })}
@@ -333,30 +342,30 @@ function getApptHeight(appt: any): string {
                   >
                     {hourAppts.map((appt) => {
                       const colors = getApptColor(appt, staff);
-                      const emoji = getServiceEmoji(appt);
-                      const isCancelled = appt.status === 'cancelada';
-                      const isCompleted = appt.status === 'completada';
-                      const startMin = getHours(new Date(appt.start_time)) * 60 + getMinutes(new Date(appt.start_time));
-                      const topOffset = ((startMin - hour * 60) / 60) * 64;
-                      const dur = appt.total_duration_min || 60;
-                      const height = Math.max((dur / 60) * 64, 28);
+                       const emoji = getServiceEmoji(appt);
+                       const isCancelled = appt.status === 'cancelada';
+                       const isPastOrCompleted = isAppointmentPastOrCompleted(appt);
+                       const startMin = getHours(new Date(appt.start_time)) * 60 + getMinutes(new Date(appt.start_time));
+                       const topOffset = ((startMin - hour * 60) / 60) * 64;
+                       const dur = appt.total_duration_min || 60;
+                       const height = Math.max((dur / 60) * 64, 28);
 
-                      return (
-                        <button
-                          key={appt.id}
-                          type="button"
-                          draggable
-                          onDragStart={(e) => handleDragStart(appt, e)}
-                          onClick={(e) => handleApptClick(appt, e)}
-                          className={cn(
-                            'absolute left-0.5 right-0.5 rounded-lg border-l-[3px] px-1.5 py-1 text-left overflow-hidden transition-all hover:shadow-md',
-                            colors.bg, colors.border, colors.text,
-                            isCancelled && 'opacity-40 line-through',
-                            isCompleted && 'opacity-70',
-                            !(isCancelled || isCompleted) && 'cursor-grab active:cursor-grabbing'
-                          )}
-                          style={{ top: `${topOffset}px`, height: `${height}px`, zIndex: 2 }}
-                        >
+                       return (
+                         <button
+                           key={appt.id}
+                           type="button"
+                           draggable={!isPastOrCompleted}
+                           onDragStart={(e) => handleDragStart(appt, e)}
+                           onClick={(e) => handleApptClick(appt, e)}
+                           className={cn(
+                             'absolute left-0.5 right-0.5 rounded-lg border-l-[3px] px-1.5 py-1 text-left overflow-hidden transition-all hover:shadow-md',
+                             colors.bg, colors.border, colors.text,
+                             isCancelled && 'opacity-40 line-through',
+                             isPastOrCompleted && !isCancelled && 'opacity-50',
+                             !isPastOrCompleted && 'cursor-grab active:cursor-grabbing'
+                           )}
+                           style={{ top: `${topOffset}px`, height: `${height}px`, zIndex: 2 }}
+                         >
                           <div className="flex items-center gap-1">
                             <span className="text-xs">{emoji}</span>
                             <span className="text-[10px] font-medium truncate">
@@ -493,28 +502,28 @@ function getApptHeight(appt: any): string {
                            const colors = getApptColor(appt, staff);
                            const emoji = getServiceEmoji(appt);
                            const isCancelled = appt.status === 'cancelada';
-                           const isCompleted = appt.status === 'completada';
-                           const startMin = getHours(new Date(appt.start_time)) * 60 + getMinutes(new Date(appt.start_time));
-                           const topOffset = ((startMin - hour * 60) / 60) * 64;
-                           const dur = appt.total_duration_min || 60;
-                           const height = Math.max((dur / 60) * 64, 28);
+                            const isPastOrCompleted = isAppointmentPastOrCompleted(appt);
+                            const startMin = getHours(new Date(appt.start_time)) * 60 + getMinutes(new Date(appt.start_time));
+                            const topOffset = ((startMin - hour * 60) / 60) * 64;
+                            const dur = appt.total_duration_min || 60;
+                            const height = Math.max((dur / 60) * 64, 28);
 
-                           return (
-                             <button
-                               key={appt.id}
-                               type="button"
-                               draggable
-                               onDragStart={(e) => handleDragStart(appt, e)}
-                               onClick={(e) => handleApptClick(appt, e)}
-                               className={cn(
-                                 'absolute left-0.5 right-0.5 rounded-lg border-l-[3px] px-1.5 py-1 text-left overflow-hidden transition-all hover:shadow-md',
-                                 colors.bg, colors.border, colors.text,
-                                 isCancelled && 'opacity-40 line-through',
-                                 isCompleted && 'opacity-70',
-                                 !(isCancelled || isCompleted) && 'cursor-grab active:cursor-grabbing'
-                               )}
-                               style={{ top: `${topOffset}px`, height: `${height}px`, zIndex: 2 }}
-                             >
+                            return (
+                              <button
+                                key={appt.id}
+                                type="button"
+                                draggable={!isPastOrCompleted}
+                                onDragStart={(e) => handleDragStart(appt, e)}
+                                onClick={(e) => handleApptClick(appt, e)}
+                                className={cn(
+                                  'absolute left-0.5 right-0.5 rounded-lg border-l-[3px] px-1.5 py-1 text-left overflow-hidden transition-all hover:shadow-md',
+                                  colors.bg, colors.border, colors.text,
+                                  isCancelled && 'opacity-40 line-through',
+                                  isPastOrCompleted && !isCancelled && 'opacity-50',
+                                  !isPastOrCompleted && 'cursor-grab active:cursor-grabbing'
+                                )}
+                                style={{ top: `${topOffset}px`, height: `${height}px`, zIndex: 2 }}
+                              >
                                <div className="flex items-center gap-1">
                                  <span className="text-xs">{emoji}</span>
                                  <span className="text-[10px] font-medium truncate">
@@ -596,7 +605,7 @@ function getApptHeight(appt: any): string {
                   </div>
                 )}
                 <div className="flex items-center gap-3 text-sm">
-                  <DollarSign className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  <span className="text-gray-400 font-medium select-none">S/</span>
                   <span className="font-semibold">{formatCurrency(selectedAppt.total_price)}</span>
                 </div>
               </div>

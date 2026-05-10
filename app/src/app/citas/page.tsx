@@ -29,9 +29,18 @@ import {
 } from '@/lib/utils';
 import { APPOINTMENT_STATUS_LABELS, PriceType } from '@/types/database';
 import { CalendarDays, Plus, Clock, User, AlertTriangle, Check, Pencil, XCircle, X, MapPin, Calendar as CalendarIcon, Trash2, Sparkles, Settings2, Search } from 'lucide-react';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
-import { toast } from 'sonner';
+ import { format } from 'date-fns';
+ import { es } from 'date-fns/locale';
+ import { toast } from 'sonner';
+ 
+ function isAppointmentPastOrCompleted(appt: any): boolean {
+   if (appt.status === 'completada' || appt.status === 'cancelada' || appt.status === 'no_show') {
+     return true;
+   }
+   const now = new Date();
+   const endTime = new Date(appt.end_time || appt.start_time);
+   return endTime < now;
+ }
 import { useConfirm } from '@/context/confirm-context';
 
 type ListFilter = 'list' | 'day' | 'week';
@@ -152,18 +161,20 @@ export default function CitasPage() {
     color: '',
   });
 
-  async function load() {
-    setLoading(true);
-    try {
-      let dateFrom: string | undefined;
-      let dateTo: string | undefined;
+   async function load() {
+     setLoading(true);
+     try {
+       let dateFrom: string | undefined;
+       let dateTo: string | undefined;
 
-      if (listFilter === 'day') {
-        dateFrom = startOfToday();
-        dateTo = endOfToday();
-      } else if (listFilter === 'week') {
-        dateFrom = startOfWeek();
-      }
+       if (listFilter === 'list') {
+         dateFrom = startOfToday();
+       } else if (listFilter === 'day') {
+         dateFrom = startOfToday();
+         dateTo = endOfToday();
+       } else if (listFilter === 'week') {
+         dateFrom = startOfWeek();
+       }
 
       const filter: any = {};
       if (dateFrom) filter.dateFrom = dateFrom;
@@ -731,10 +742,13 @@ export default function CitasPage() {
               <div className="space-y-2">
                 {(appts as any[]).map((appt) => (
                   <Card
-                    key={appt.id}
-                    className="hover:border-salon-300 transition-all cursor-pointer"
-                    onClick={() => { setSelectedAppt(appt); setShowDetail(true); }}
-                  >
+                     key={appt.id}
+                     className={cn(
+                       "hover:border-salon-300 transition-all cursor-pointer",
+                       isAppointmentPastOrCompleted(appt) && "opacity-50"
+                     )}
+                     onClick={() => { setSelectedAppt(appt); setShowDetail(true); }}
+                   >
                     <CardContent className="flex items-center gap-4 py-3">
                       <div className="text-center w-14 flex-shrink-0">
                         <p className="text-sm font-bold text-gray-900">{formatTime(appt.start_time)}</p>
