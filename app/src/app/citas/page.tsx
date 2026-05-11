@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
 import { getAppointments, getStaff, getServices } from '@/lib/db/queries';
 import { createAppointment, updateAppointment, checkOverlap, createPayment } from '@/lib/db/queries';
 import { ClientCombobox } from '@/components/citas/ClientCombobox';
@@ -16,48 +15,32 @@ import { Modal } from '@/components/ui/modal';
 import { Badge } from '@/components/ui/badge';
 import { DateTimePicker } from '@/components/ui/DateTimePicker';
 import { CalendarView } from '@/components/citas/CalendarView';
-import { 
-  formatCurrency, 
-  formatTime, 
-  formatDate, 
-  startOfToday, 
-  endOfToday, 
-  startOfWeek, 
-  cn, 
+import {
+  formatCurrency,
+  formatTime,
+  formatDate,
+  startOfToday,
+  endOfToday,
+  startOfWeek,
+  cn,
   calculateServiceCommission,
-  formatServicePrice 
+  formatServicePrice,
+  isAppointmentPastOrCompleted,
 } from '@/lib/utils';
-import { APPOINTMENT_STATUS_LABELS, PriceType } from '@/types/database';
+import { APPOINTMENT_STATUS_LABELS } from '@/types/database';
 import { CalendarDays, Plus, Clock, User, AlertTriangle, Check, Pencil, XCircle, X, MapPin, Calendar as CalendarIcon, Trash2, Sparkles, Settings2, Search } from 'lucide-react';
  import { format } from 'date-fns';
  import { es } from 'date-fns/locale';
  import { toast } from 'sonner';
  
- function isAppointmentPastOrCompleted(appt: any): boolean {
-   if (appt.status === 'completada' || appt.status === 'cancelada' || appt.status === 'no_show') {
-     return true;
-   }
-   const now = new Date();
-   const endTime = new Date(appt.end_time || appt.start_time);
-   return endTime < now;
- }
 import { useConfirm } from '@/context/confirm-context';
 
 type ListFilter = 'list' | 'day' | 'week';
 type ViewMode = 'list' | 'calendar';
 
-const SERVICE_EMOJIS: Record<string, string> = {
-  sistema_unas: '💅',
-  pedicura: '🦶',
-  makeup: '💄',
-  pestanas: '👁️',
-  cejas: '✨',
-};
-
 function getServiceEmoji(appt: any): string {
   const svc = appt.appointment_services?.[0]?.service;
-  if (svc?.category) return SERVICE_EMOJIS[svc.category] || '📋';
-  return '📋';
+  return svc?.category?.icon || '📋';
 }
 
 function toLocalISO(dateStr: string): string {
@@ -108,7 +91,6 @@ interface AppointmentFormData {
 }
 
 export default function CitasPage() {
-  const router = useRouter();
   const { confirm } = useConfirm();
   const [appointments, setAppointments] = useState<any[]>([]);
   const [staff, setStaff] = useState<StaffMember[]>([]);
@@ -139,8 +121,6 @@ export default function CitasPage() {
    const [showDetail, setShowDetail] = useState(false);
    const [selectedAppt, setSelectedAppt] = useState<any>(null);
    const detailRef = useRef<HTMLDivElement>(null);
-   const [expandedService, setExpandedService] = useState<string | null>(null);
-   
    const [showServiceConfig, setShowServiceConfig] = useState(false);
    const [configuringServiceId, setConfiguringServiceId] = useState<string | null>(null);
    const [tempArtistId, setTempArtistId] = useState<string>('');
@@ -182,11 +162,11 @@ export default function CitasPage() {
       if (filterArtist) filter.artistId = filterArtist;
       if (filterStatus) filter.status = filterStatus;
 
-      const [appts, s, svcs] = await Promise.all([
-        getAppointments(filter),
-        getStaff(),
-        getServices(),
-      ]);
+       const [appts, s, svcs] = await Promise.all([
+         getAppointments(filter),
+         getStaff(),
+         getServices(false),
+       ]);
       setAppointments(appts as any[]);
       setStaff(s as StaffMember[]);
       setServices(svcs as Service[]);
@@ -291,8 +271,8 @@ export default function CitasPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (submitting) return;
-    if (!form.start_time) {
-      toast.error('Completa los campos obligatorios');
+    if (!form.client_id || !form.start_time) {
+      toast.error('Selecciona clienta y fecha');
       return;
     }
     if (editingAppt && !haveChanges()) {
@@ -306,18 +286,17 @@ export default function CitasPage() {
       const endTime = new Date(startTime.getTime() + totalDuration * 60000);
       const calculatedTotalPrice = calculateTotalPrice();
 
-      const servicesData = selectedServices.map(sid => {
-        const svc = services.find(s => s.id === sid);
-        const defaultPrice = svc?.price_type === 'variable' 
-          ? (svc?.price_from || 0) 
-          : (svc?.price || 0);
-        
-        return {
-          service_id: sid,
-          artist_id: serviceArtists[sid] || null,
-          service_price: customPrices[sid] ?? defaultPrice,
-        };
-      });
+       const servicesData = selectedServices.map(sid => {
+         const svc = services.find(s => s.id === sid);
+         const price = customPrices[sid] !== undefined
+           ? customPrices[sid]
+           : svc?.price_type === 'variable' ? (svc.price_from || 0) : (svc?.price || 0);
+         return {
+           service_id: sid,
+           artist_id: serviceArtists[sid] || null,
+           service_price: price,
+         };
+       });
 
       const firstArtistId = servicesData.find(s => s.artist_id)?.artist_id || null;
 
@@ -365,43 +344,45 @@ export default function CitasPage() {
     }
   }
 
-  function openEdit(appt: any) {
-    setEditingAppt(appt);
-    
-    const formData: AppointmentFormData = {
-      client_id: appt.client_id || '',
-      start_time: toLocalISO(appt.start_time),
-      status: appt.status,
-      notes: appt.notes || '',
-      color: appt.color || '',
-    };
-    
-    const svcIds: string[] = [];
-    const svcArtistMap: Record<string, string> = {};
-    const customPricesMap: Record<string, number> = {};
-    
-    (appt.appointment_services || []).forEach((as: any) => {
-      if (as.service_id) {
-        svcIds.push(as.service_id);
-        if (as.artist_id) {
-          svcArtistMap[as.service_id] = as.artist_id;
-        }
-        if (as.service_price !== undefined && as.service_price !== null) {
-          customPricesMap[as.service_id] = as.service_price;
-        }
-      }
-    });
-    
+   function openEdit(appt: any) {
+     setEditingAppt(appt);
+     
+     const formData: AppointmentFormData = {
+       client_id: appt.client_id || '',
+       start_time: toLocalISO(appt.start_time),
+       status: appt.status,
+       notes: appt.notes || '',
+       color: appt.color || '',
+     };
+     
+     const svcIds: string[] = [];
+     const svcArtistMap: Record<string, string> = {};
+     
+     (appt.appointment_services || []).forEach((as: any) => {
+       if (as.service_id) {
+         svcIds.push(as.service_id);
+         if (as.artist_id) {
+           svcArtistMap[as.service_id] = as.artist_id;
+         }
+       }
+     });
+     
      setForm(formData);
      setSelectedServices(svcIds);
      setServiceArtists(svcArtistMap);
-     setCustomPrices(customPricesMap);
+     const pricemap: Record<string, number> = {};
+     (appt.appointment_services || []).forEach((as: any) => {
+       if (as.service_id && as.service_price != null) {
+         pricemap[as.service_id] = Number(as.service_price);
+       }
+     });
+     setCustomPrices(pricemap);
      setAdvancePaid(false);
-     
+
      setInitialForm({ ...formData });
      setInitialSelectedServices([...svcIds]);
      setInitialServiceArtists({ ...svcArtistMap });
-     setInitialCustomPrices({ ...customPricesMap });
+     setInitialCustomPrices({ ...pricemap });
      setInitialAdvancePaid(false);
      
      setShowModal(true);
@@ -431,7 +412,7 @@ export default function CitasPage() {
 
    function openNewForDate(date: Date) {
      setEditingAppt(null);
-     const timeStr = date.toISOString().slice(0, 16);
+     const timeStr = toLocalISO(date.toISOString());
      setForm({
        client_id: '',
        start_time: timeStr,
@@ -476,10 +457,24 @@ export default function CitasPage() {
         'programada': 'en_curso',
         'en_curso': 'completada',
       };
-      
+
       const newStatus = nextStatus[appt.status];
       if (!newStatus) return;
-      
+
+      if (newStatus === 'completada') {
+        const pendingBalance = Number(appt.appointment_balance?.pending_balance || 0);
+        const confirmed = await confirm({
+          title: 'Completar cita',
+          message: pendingBalance > 0
+            ? `¿Completar la cita? Se registrará un pago de ${formatCurrency(pendingBalance)}.`
+            : '¿Marcar la cita como completada?',
+          confirmText: 'Completar',
+          cancelText: 'Volver',
+          variant: 'warning',
+        });
+        if (!confirmed) return;
+      }
+
       try {
         await updateAppointment(appt.id, { status: newStatus });
         
@@ -719,6 +714,8 @@ export default function CitasPage() {
             onCancel={cancelAppt}
             onNew={(date) => setPendingDate(date)}
             onUpdateDate={updateApptDate}
+            onAdvanceStatus={advanceStatus}
+            onMarkAsNoShow={markAsNoShow}
           />
         ) : loading ? (
           <div className="space-y-3">
@@ -756,15 +753,17 @@ export default function CitasPage() {
                       </div>
                       <div className="w-px h-10 bg-gray-200" />
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{appt.title}</p>
-                        <p className="text-xs text-gray-400">
-                          {appt.client?.name && `${appt.client.name} · `}{appt.artist?.name}
+                        <p className="font-semibold text-sm text-gray-900 truncate">
+                          {appt.client?.name || 'Sin clienta'}
                         </p>
+                        {appt.artist?.name && (
+                          <p className="text-xs text-salon-600 mt-0.5 truncate">{appt.artist.name}</p>
+                        )}
                         {appt.appointment_services?.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-1">
+                          <div className="flex flex-wrap gap-1 mt-1.5">
                             {appt.appointment_services.map((as: any, i: number) => (
                               <Badge key={i} variant="default" className="text-[10px]">
-                                {as.service.name}
+                                {as.service?.category?.icon} {as.service?.name}
                               </Badge>
                             ))}
                           </div>
@@ -789,183 +788,163 @@ export default function CitasPage() {
       {showDetail && selectedAppt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm" onClick={() => setShowDetail(false)}>
           <div ref={detailRef} className="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="relative">
-              <div className={cn(
-                'h-2',
-                selectedAppt.status === 'cancelada' ? 'bg-red-500'
-                : selectedAppt.status === 'completada' ? 'bg-emerald-500'
-                : 'bg-salon-500'
-              )} />
+            {/* Header tipo ticket: barra de color full-width con label de estado */}
+            <div className={cn(
+              'px-5 py-3 flex items-center justify-between',
+              selectedAppt.status === 'cancelada' ? 'bg-red-500'
+              : selectedAppt.status === 'completada' ? 'bg-emerald-500'
+              : selectedAppt.status === 'en_curso' ? 'bg-amber-500'
+              : selectedAppt.status === 'no_show' ? 'bg-gray-500'
+              : 'bg-salon-500'
+            )}>
+              <span className="text-xs font-bold text-white tracking-widest uppercase">
+                {APPOINTMENT_STATUS_LABELS[selectedAppt.status as keyof typeof APPOINTMENT_STATUS_LABELS]}
+              </span>
               <button
                 onClick={() => setShowDetail(false)}
-                className="absolute top-3 right-3 p-1.5 rounded-lg hover:bg-white/80 transition-colors"
+                className="p-1.5 rounded-lg hover:bg-white/20 transition-colors"
               >
-                <X className="w-4 h-4 text-gray-500" />
+                <X className="w-4 h-4 text-white" />
               </button>
             </div>
 
+            {/* Cuerpo del ticket */}
             <div className="p-5 space-y-4">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xl">{getServiceEmoji(selectedAppt)}</span>
-                  <h3 className="text-lg font-semibold">{selectedAppt.title}</h3>
+              {/* Cliente + precio */}
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">
+                    {selectedAppt.client?.name || 'Sin clienta'}
+                  </h3>
+                  {selectedAppt.artist?.name && (
+                    <p className="text-sm text-gray-500 mt-0.5">con {selectedAppt.artist.name}</p>
+                  )}
                 </div>
-                <p className={cn(
-                  'text-sm font-medium',
-                  selectedAppt.status === 'cancelada' ? 'text-red-500' : 'text-gray-500'
-                )}>
-                  {APPOINTMENT_STATUS_LABELS[selectedAppt.status as keyof typeof APPOINTMENT_STATUS_LABELS]}
+                <p className="text-xl font-bold text-gray-900 shrink-0 tabular-nums">
+                  {formatCurrency(selectedAppt.total_price)}
                 </p>
               </div>
 
-              <div className="space-y-2.5">
+              <div className="border-t border-dashed border-gray-200" />
+
+              {/* Fecha + hora */}
+              <div className="space-y-2">
                 <div className="flex items-center gap-3 text-sm">
                   <CalendarIcon className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                  <span>{format(new Date(selectedAppt.start_time), "EEEE d 'de' MMMM", { locale: es })}</span>
+                  <span className="text-gray-700 capitalize">
+                    {format(new Date(selectedAppt.start_time), "EEEE d 'de' MMMM", { locale: es })}
+                  </span>
                 </div>
                 <div className="flex items-center gap-3 text-sm">
                   <Clock className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                  <span>
+                  <span className="text-gray-700">
                     {formatTime(selectedAppt.start_time)} — {formatTime(selectedAppt.end_time || selectedAppt.start_time)}
-                    {' '}({selectedAppt.total_duration_min} min)
+                    <span className="text-gray-400 ml-2">({selectedAppt.total_duration_min} min)</span>
                   </span>
                 </div>
-                {selectedAppt.client && (
-                  <div className="flex items-center gap-3 text-sm">
-                    <User className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                    <span>{selectedAppt.client.name}</span>
-                  </div>
-                )}
-                {selectedAppt.artist && (
-                  <div className="flex items-center gap-3 text-sm">
-                    <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                    <span>{selectedAppt.artist.name}</span>
-                  </div>
-                )}
-                 <div className="flex items-center gap-3 text-sm">
-                   <span className="text-gray-400 font-medium select-none">S/</span>
-                   <span className="font-semibold">{formatCurrency(selectedAppt.total_price)}</span>
-                 </div>
               </div>
 
-               {selectedAppt.appointment_services?.length > 0 && (
+              <div className="border-t border-dashed border-gray-200" />
+
+              {/* Servicios */}
+              {selectedAppt.appointment_services?.length > 0 && (
                 <div className="space-y-2.5">
-                  {selectedAppt.appointment_services.map((as: any, i: number) => {
-                    const cd = as.commission_detail;
-                    return (
-                      <div key={i} className="p-3 bg-gray-50 rounded-xl space-y-1.5">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-gray-900">
-                            {SERVICE_EMOJIS[as.service?.category] || '📋'} {as.service?.name}
-                          </span>
-                          <span className="text-sm font-semibold">{formatCurrency(Number(as.service?.price) || 0)}</span>
-                        </div>
-                        {as.artist?.name && (
-                          <p className="text-xs text-gray-400">
-                            Realizado por: {as.artist.name}
-                          </p>
-                        )}
-                        {cd && (
-                          <div className="pt-2 mt-1 border-t border-gray-200 space-y-1">
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="text-emerald-600 font-medium">Para la artista:</span>
-                              <span className="text-emerald-600 font-semibold">{formatCurrency(cd.artist_commission)}</span>
-                            </div>
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="text-salon-600 font-medium">Para Founder:</span>
-                              <span className="text-salon-600 font-semibold">{formatCurrency(cd.founder_share)}</span>
-                            </div>
-                            {cd.override_founder_fixed_amount !== null && cd.override_founder_fixed_amount !== undefined && (
-                              <p className="text-[10px] text-gray-400 pt-0.5">
-                                Excepción: Founder recibe {formatCurrency(cd.override_founder_fixed_amount)} fijo
-                              </p>
-                            )}
-                            {cd.artist_commission_pct !== null && cd.artist_commission_pct !== undefined && cd.override_founder_fixed_amount === null && (
-                              <p className="text-[10px] text-gray-400 pt-0.5">
-                                Comisión general: {cd.artist_commission_pct}%
-                              </p>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                  {selectedAppt.appointment_services.some((as: any) => as.commission_detail) && (() => {
-                    const totalArtistComm = selectedAppt.appointment_services.reduce(
-                      (sum: number, as: any) => sum + Number(as.commission_detail?.artist_commission || 0), 
-                      0
-                    );
-                    const totalFounder = selectedAppt.appointment_services.reduce(
-                      (sum: number, as: any) => sum + Number(as.commission_detail?.founder_share || 0), 
-                      0
-                    );
-                    if (totalArtistComm === 0 && totalFounder === 0) return null;
-                    return (
-                      <div className="pt-3 mt-1 border-t border-gray-200 space-y-2">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-600 font-medium">Total Artistas:</span>
-                          <span className="text-emerald-600 font-semibold">{formatCurrency(totalArtistComm)}</span>
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-600 font-medium">Total Founder:</span>
-                          <span className="text-salon-600 font-semibold">{formatCurrency(totalFounder)}</span>
+                  {selectedAppt.appointment_services.map((as: any, i: number) => (
+                    <div key={i} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-base">{as.service?.category?.icon || '📋'}</span>
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{as.service?.name}</p>
+                          {as.artist?.name && (
+                            <p className="text-xs text-gray-400">{as.artist.name}</p>
+                          )}
                         </div>
                       </div>
-                    );
-                  })()}
+                      <span className="text-sm font-semibold text-gray-700 tabular-nums">
+                        {formatCurrency(Number(as.service_price ?? as.service?.price) || 0)}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               )}
 
-              {selectedAppt.notes && (
-                <p className="text-xs text-gray-400 bg-gray-50 rounded-xl p-3">{selectedAppt.notes}</p>
-              )}
+              {/* Comisiones totales */}
+              {selectedAppt.appointment_services?.some((as: any) => as.commission_detail) && (() => {
+                const totalArtist = selectedAppt.appointment_services.reduce(
+                  (sum: number, as: any) => sum + Number(as.commission_detail?.artist_commission || 0), 0
+                );
+                const totalFounder = selectedAppt.appointment_services.reduce(
+                  (sum: number, as: any) => sum + Number(as.commission_detail?.founder_share || 0), 0
+                );
+                if (totalArtist === 0 && totalFounder === 0) return null;
+                return (
+                  <>
+                    <div className="border-t border-gray-100" />
+                    <div className="flex items-center justify-between text-xs text-gray-400">
+                      <span>Artistas: <span className="text-emerald-600 font-semibold">{formatCurrency(totalArtist)}</span></span>
+                      <span>Founder: <span className="text-salon-600 font-semibold">{formatCurrency(totalFounder)}</span></span>
+                    </div>
+                  </>
+                );
+              })()}
 
-               <div className="space-y-2 pt-2">
-                 {selectedAppt.status === 'programada' && (
-                   <button
-                     onClick={() => advanceStatus(selectedAppt)}
-                     className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium text-white bg-amber-500 hover:bg-amber-600 transition-colors"
-                   >
-                     <Clock className="w-4 h-4" /> Iniciar cita
-                   </button>
-                 )}
-                 {selectedAppt.status === 'en_curso' && (
-                   <button
-                     onClick={() => advanceStatus(selectedAppt)}
-                     className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium text-white bg-emerald-500 hover:bg-emerald-600 transition-colors"
-                   >
-                     <Check className="w-4 h-4" /> Completar cita
-                   </button>
-                 )}
-                 
-                 <div className="flex gap-2">
-                   {selectedAppt.status !== 'cancelada' && selectedAppt.status !== 'completada' && selectedAppt.status !== 'no_show' && (
-                     <>
-                       <button
-                         onClick={() => { cancelAppt(selectedAppt); setShowDetail(false); }}
-                         className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
-                       >
-                         <XCircle className="w-4 h-4" /> Cancelar
-                       </button>
-                       <button
-                         onClick={() => markAsNoShow(selectedAppt)}
-                         className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 transition-colors"
-                       >
-                         <AlertTriangle className="w-4 h-4" /> No Show
-                       </button>
-                     </>
-                   )}
-                   <button
-                     onClick={() => { openEdit(selectedAppt); setShowDetail(false); }}
-                     className={cn(
-                       "flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium text-white bg-salon-600 hover:bg-salon-700 transition-colors",
-                       selectedAppt.status !== 'cancelada' && selectedAppt.status !== 'completada' && selectedAppt.status !== 'no_show' ? "flex-1" : "w-full"
-                     )}
-                   >
-                     <Pencil className="w-4 h-4" /> Editar
-                   </button>
-                 </div>
-               </div>
+              {/* Notas */}
+              {selectedAppt.notes && (
+                <p className="text-xs text-gray-500 italic border-l-2 border-gray-200 pl-3">
+                  {selectedAppt.notes}
+                </p>
+              )}
+            </div>
+
+            {/* Acciones — separadas del ticket */}
+            <div className="px-5 pb-5 space-y-2 border-t border-gray-100 pt-4">
+              {selectedAppt.status === 'programada' && (
+                <button
+                  onClick={() => advanceStatus(selectedAppt)}
+                  className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium text-white bg-amber-500 hover:bg-amber-600 transition-colors"
+                >
+                  <Clock className="w-4 h-4" /> Iniciar cita
+                </button>
+              )}
+              {selectedAppt.status === 'en_curso' && (
+                <button
+                  onClick={() => advanceStatus(selectedAppt)}
+                  className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium text-white bg-emerald-500 hover:bg-emerald-600 transition-colors"
+                >
+                  <Check className="w-4 h-4" /> Completar cita
+                </button>
+              )}
+              <div className="flex gap-2">
+                {selectedAppt.status === 'programada' && (
+                  <>
+                    <button
+                      onClick={() => { cancelAppt(selectedAppt); setShowDetail(false); }}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
+                    >
+                      <XCircle className="w-4 h-4" /> Cancelar
+                    </button>
+                    <button
+                      onClick={() => markAsNoShow(selectedAppt)}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 transition-colors"
+                    >
+                      <AlertTriangle className="w-4 h-4" /> No Show
+                    </button>
+                  </>
+                )}
+                <button
+                  onClick={() => { openEdit(selectedAppt); setShowDetail(false); }}
+                  className={cn(
+                    "flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium transition-colors",
+                    selectedAppt.status === 'programada'
+                      ? "flex-1 text-white bg-salon-600 hover:bg-salon-700"
+                      : selectedAppt.status === 'en_curso'
+                        ? "w-full text-salon-700 bg-salon-50 hover:bg-salon-100"
+                        : "w-full text-gray-600 bg-gray-100 hover:bg-gray-200"
+                  )}
+                >
+                  <Pencil className="w-4 h-4" /> Editar
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1008,78 +987,89 @@ export default function CitasPage() {
                    </span>
                  </div>
                  
-                 <div className="space-y-2">
-                   {selectedServices.map((svcId) => {
-                     const svc = services.find(s => s.id === svcId);
-                     if (!svc) return null;
-                     
-                     const availableArtists = getAvailableArtistsForService(svc.id, svc.category_id, staff, services);
-                     const isVariablePrice = svc.price_type === 'variable';
-                     const catIcon = svc.category?.icon || '📋';
-                     
-                     const suggestedArtistIds = availableArtists.map(a => a.id);
-                     const selectedArtistId = serviceArtists[svcId];
-                     const selectedArtist = staff.find(s => s.id === selectedArtistId);
-                     const isSelectedArtistSuggested = selectedArtistId && suggestedArtistIds.includes(selectedArtistId);
-                     
-                     const currentPrice = customPrices[svcId] ?? (isVariablePrice ? (svc.price_from || 0) : (svc.price || 0));
-                     
-                     function openConfigModal() {
-                       setConfiguringServiceId(svcId);
-                       setTempArtistId(selectedArtistId || '');
-                       setTempCustomPrice(customPrices[svcId] ?? null);
-                       setShowServiceConfig(true);
-                     }
-                     
-                     return (
-                       <div key={svcId} className="border border-gray-200 rounded-xl p-3 bg-gray-50">
-                         <div className="flex items-center gap-3">
-                           <span className="text-xl">{catIcon}</span>
-                           
-                           <div className="flex-1 min-w-0">
-                             <p className="text-sm font-medium text-gray-900 truncate">{svc.name}</p>
-                             
-                             <div className="flex items-center gap-3 mt-1 flex-wrap">
-                               {selectedArtist ? (
-                                 <span className={cn(
-                                   "text-xs",
-                                   isSelectedArtistSuggested ? "text-salon-600" : "text-gray-500"
-                                 )}>
-                                   {selectedArtist.name}
-                                   {isSelectedArtistSuggested && (
-                                     <span className="ml-1 text-salon-500">(sugerida)</span>
-                                   )}
-                                 </span>
-                               ) : (
-                                 <span className="text-xs text-amber-600 flex items-center gap-1">
-                                   <AlertTriangle className="w-3 h-3" /> Sin artista
-                                 </span>
-                               )}
-                               
-                               <span className="text-xs text-gray-400">{svc.duration_min} min</span>
-                               
-                               <span className={cn(
-                                 "text-sm font-semibold",
-                                 isVariablePrice ? "text-amber-600" : "text-gray-700"
-                               )}>
-                                 {formatCurrency(currentPrice)}
-                               </span>
-                             </div>
-                           </div>
-                           
-                           <button
-                             type="button"
-                             onClick={openConfigModal}
-                             className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-sm text-salon-600 hover:bg-salon-100 transition-colors"
-                           >
-                             <Settings2 className="w-4 h-4" />
-                             Configurar
-                           </button>
-                         </div>
-                       </div>
-                     );
-                   })}
-                 </div>
+                  <div className="space-y-2">
+                    {selectedServices.map((svcId) => {
+                      const svc = services.find(s => s.id === svcId);
+                      if (!svc) return null;
+                      
+                      const availableArtists = getAvailableArtistsForService(svc.id, svc.category_id, staff, services);
+                      const isVariablePrice = svc.price_type === 'variable';
+                      const catIcon = svc.category?.icon || '📋';
+                      const isInactive = svc.active === false;
+                      
+                      const suggestedArtistIds = availableArtists.map(a => a.id);
+                      const selectedArtistId = serviceArtists[svcId];
+                      const selectedArtist = staff.find(s => s.id === selectedArtistId);
+                      const isSelectedArtistSuggested = selectedArtistId && suggestedArtistIds.includes(selectedArtistId);
+                      
+                      const currentPrice = customPrices[svcId] ?? (isVariablePrice ? (svc.price_from || 0) : (svc.price || 0));
+                      
+                      function openConfigModal() {
+                        setConfiguringServiceId(svcId);
+                        setTempArtistId(selectedArtistId || '');
+                        setTempCustomPrice(customPrices[svcId] ?? null);
+                        setShowServiceConfig(true);
+                      }
+                      
+                      return (
+                        <div key={svcId} className={cn(
+                          "border border-gray-200 rounded-xl p-3 bg-gray-50",
+                          isInactive && "opacity-60"
+                        )}>
+                          <div className="flex items-center gap-3">
+                            <span className="text-xl">{catIcon}</span>
+                            
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm font-medium text-gray-900 truncate">{svc.name}</p>
+                                {isInactive && (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-200 text-gray-500 font-medium">
+                                    Inactivo
+                                  </span>
+                                )}
+                              </div>
+                              
+                              <div className="flex items-center gap-3 mt-1 flex-wrap">
+                                {selectedArtist ? (
+                                  <span className={cn(
+                                    "text-xs",
+                                    isSelectedArtistSuggested ? "text-salon-600" : "text-gray-500"
+                                  )}>
+                                    {selectedArtist.name}
+                                    {isSelectedArtistSuggested && (
+                                      <span className="ml-1 text-salon-500">(sugerida)</span>
+                                    )}
+                                  </span>
+                                ) : (
+                                  <span className="text-xs text-amber-600 flex items-center gap-1">
+                                    <AlertTriangle className="w-3 h-3" /> Sin artista
+                                  </span>
+                                )}
+                                
+                                <span className="text-xs text-gray-400">{svc.duration_min} min</span>
+                                
+                                <span className={cn(
+                                  "text-sm font-semibold",
+                                  isVariablePrice ? "text-amber-600" : "text-gray-700"
+                                )}>
+                                  {formatCurrency(currentPrice)}
+                                </span>
+                              </div>
+                            </div>
+                            
+                            <button
+                              type="button"
+                              onClick={openConfigModal}
+                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-sm text-salon-600 hover:bg-salon-100 transition-colors"
+                            >
+                              <Settings2 className="w-4 h-4" />
+                              Configurar
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                </div>
 
                {/* Summary */}
@@ -1100,8 +1090,6 @@ export default function CitasPage() {
               {overlapWarning}
             </div>
           )}
-
-           <Select label="Estado" value={form.status} onChange={(value) => setForm({ ...form, status: value as AppointmentInsert['status'] })} options={Object.entries(APPOINTMENT_STATUS_LABELS).map(([v, l]) => ({ value: v, label: l }))} />
 
           {/* Color picker */}
           <div className="space-y-2">

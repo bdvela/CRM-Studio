@@ -145,3 +145,16 @@ export function calculateServiceCommission(params: {
     founderShare: price - artistCommission,
   };
 }
+
+export function isAppointmentPastOrCompleted(appt: any): boolean {
+  if (appt.status === 'completada' || appt.status === 'cancelada' || appt.status === 'no_show') {
+    return true;
+  }
+  const endTime = new Date(appt.end_time || appt.start_time);
+  return endTime < new Date();
+}
+
+export function getApptServiceEmoji(appt: any): string {
+  const svc = appt.appointment_services?.[0]?.service;
+  return svc?.category?.icon || '📋';
+}
