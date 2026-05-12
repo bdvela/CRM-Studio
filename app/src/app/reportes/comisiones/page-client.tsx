@@ -107,50 +107,42 @@ export default function ReportesComisionesPage({ initialData }: {
         </div>
 
         <Card>
-          <CardContent className="py-5">
-            <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
-              <div className="flex flex-wrap gap-2">
-                <Button size="sm" variant="outline" onClick={() => setQuickRange(7)}>
-                  Últimos 7 días
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => setQuickRange(30)}>
-                  Últimos 30 días
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => setQuickRange(90)}>
-                  Últimos 90 días
-                </Button>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-3 ml-auto">
-                <div className="flex items-center gap-2">
-                  <Calendar className="size-4 text-zinc-400" />
-                  <Input 
-                    type="date" 
-                    value={dateRange.from} 
-                    onChange={(e) => setDateRange(prev => ({ ...prev, from: e.target.value }))} 
-                    className="w-40 text-sm" 
-                  />
-                  <span className="text-zinc-400 text-sm">al</span>
-                  <Input 
-                    type="date" 
-                    value={dateRange.to} 
-                    onChange={(e) => setDateRange(prev => ({ ...prev, to: e.target.value }))} 
-                    className="w-40 text-sm" 
-                  />
-                </div>
-
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-zinc-400" />
+          <CardContent className="py-4 space-y-4">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-zinc-400" />
                   <input
                     type="text"
                     placeholder="Buscar artista..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="w-full md:w-64 pl-10 pr-4 py-2 rounded-lg border border-zinc-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-salon-500"
+                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-zinc-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-salon-500"
+                  />
+                </div>
+                <div className="w-full sm:w-auto flex items-center gap-2">
+                  <Input
+                    type="date"
+                    value={dateRange.from}
+                    onChange={(e) => setDateRange(prev => ({ ...prev, from: e.target.value }))}
+                    className="text-sm h-full"
+                  />
+                  <span className="text-zinc-400 text-sm">al</span>
+                  <Input
+                    type="date"
+                    value={dateRange.to}
+                    onChange={(e) => setDateRange(prev => ({ ...prev, to: e.target.value }))}
+                    className="text-sm h-full"
                   />
                 </div>
               </div>
-            </div>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                <span className="text-xs text-zinc-500">Rangos rápidos:</span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button size="sm" variant="outline" onClick={() => setQuickRange(7)}>7 días</Button>
+                  <Button size="sm" variant="outline" onClick={() => setQuickRange(30)}>30 días</Button>
+                  <Button size="sm" variant="outline" onClick={() => setQuickRange(90)}>90 días</Button>
+                </div>
+              </div>
           </CardContent>
         </Card>
 
@@ -168,11 +160,11 @@ export default function ReportesComisionesPage({ initialData }: {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {filtered.map((row) => {
-              const isFounder = row.artist_name === 'Sofía Castillo';
+              const isFounder = row.artist_role_name === 'Dueña' || row.artist_role_name === 'Founder';
               return (
-                <Card key={row.artist_id || 'no-artist'} className={isFounder ? 'border-amber-200' : ''}>
+                <Card key={row.artist_id || 'no-artist'} className="hover:shadow-md transition-all cursor-pointer">
                   <CardContent className="py-5">
                     <div className="flex items-start gap-4">
                       <div className={`size-12 rounded-full flex items-center justify-center text-lg font-bold flex-shrink-0 ${
@@ -189,8 +181,7 @@ export default function ReportesComisionesPage({ initialData }: {
                             </span>
                           )}
                         </div>
-
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 text-sm">
                           <div>
                             <p className="text-xs text-zinc-400">Servicios</p>
                             <p className="font-semibold text-zinc-900">{row.total_services}</p>
@@ -200,22 +191,20 @@ export default function ReportesComisionesPage({ initialData }: {
                             <p className="font-semibold text-zinc-900">{formatCurrency(row.total_service_revenue)}</p>
                           </div>
                           <div>
-                            <p className="text-xs text-zinc-400">Comisión Artista</p>
+                            <p className="text-xs text-zinc-400">Comisión</p>
                             <p className="font-semibold text-accent-600">{formatCurrency(row.total_artist_commission)}</p>
                           </div>
                           <div>
-                            <p className="text-xs text-zinc-400">Share Founder</p>
+                            <p className="text-xs text-zinc-400">Share</p>
                             <p className="font-semibold text-emerald-600">{formatCurrency(row.total_founder_share)}</p>
                           </div>
                         </div>
-
                         {row.total_service_revenue > 0 && (
                           <div className="mt-3 pt-3 border-t border-zinc-100">
                             <div className="flex items-center justify-between text-xs text-zinc-400 mb-1.5">
                               <span>Distribución</span>
                               <span>
-                                Artista: {Math.round((row.total_artist_commission / row.total_service_revenue) * 100)}% | 
-                                Founder: {Math.round((row.total_founder_share / row.total_service_revenue) * 100)}%
+                                Artista: {Math.round((row.total_artist_commission / row.total_service_revenue) * 100)}% | Founder: {Math.round((row.total_founder_share / row.total_service_revenue) * 100)}%
                               </span>
                             </div>
                             <div className="w-full h-2 bg-zinc-100 rounded-full overflow-hidden">

@@ -856,12 +856,14 @@ export async function deleteCommissionOverride(staffId: string, serviceId: strin
 // ─── COMMISSION REPORT ──────────────────────────────────────────────────────
 
 export async function getCommissionReport(dateFrom: string, dateTo: string) {
-  if (USE_MOCK) {
-    await delay();
-    return [
-      {
+  return cachedQuery(cacheKey('commissionReport', { dateFrom, dateTo }), 15_000, async () => {
+    if (USE_MOCK) {
+      await delay();
+      return [
+        {
         artist_id: 'staff-1',
         artist_name: 'Valentina Ríos',
+        artist_role_name: 'Nail Artist',
         total_services: 1,
         total_service_revenue: 70,
         total_artist_commission: 49,
@@ -870,66 +872,78 @@ export async function getCommissionReport(dateFrom: string, dateTo: string) {
       {
         artist_id: 'staff-founder',
         artist_name: 'Sofía Castillo',
+        artist_role_name: 'Founder',
         total_services: 1,
         total_service_revenue: 120,
         total_artist_commission: 120,
         total_founder_share: 0,
       },
-    ];
-  }
-  try {
-    const endOfTo = new Date(dateTo);
-    endOfTo.setHours(23, 59, 59, 999);
-    
-    const { data: apptIdsData, error: apptErr } = await supabase
-      .from('appointments')
-      .select('id')
-      .gte('start_time', dateFrom)
-      .lte('start_time', endOfTo.toISOString())
-      .eq('status', 'completada');
-    
-    if (apptErr) throw apptErr;
-    if (!apptIdsData || apptIdsData.length === 0) return [];
-    
-    const apptIds = apptIdsData.map(a => a.id);
-    
-    const { data: details, error: detErr } = await supabase
-      .from('commission_details')
-      .select('*')
-      .in('appointment_id', apptIds);
-    
-    if (detErr) throw detErr;
-    if (!details) return [];
-    
-    const map = new Map<string, {
-      artist_id: string | null;
-      artist_name: string | null;
-      total_services: number;
-      total_service_revenue: number;
-      total_artist_commission: number;
-      total_founder_share: number;
-    }>();
-    
-    for (const d of details) {
-      const key = d.artist_id || 'NO_ARTIST';
-      const existing = map.get(key) || {
-        artist_id: d.artist_id,
-        artist_name: d.artist_name || (d.artist_id ? null : 'Sin artista'),
-        total_services: 0,
-        total_service_revenue: 0,
-        total_artist_commission: 0,
-        total_founder_share: 0,
-      };
-      existing.total_services += 1;
-      existing.total_service_revenue += Number(d.service_price) || 0;
-      existing.total_artist_commission += Number(d.artist_commission) || 0;
-      existing.total_founder_share += Number(d.founder_share) || 0;
-      map.set(key, existing);
+      ];
     }
-    
-    return Array.from(map.values());
-  } catch (e) {
-    console.error('getCommissionReport error:', e);
-    return [];
-  }
+    try {
+      const endOfTo = new Date(dateTo);
+      endOfTo.setHours(23, 59, 59, 999);
+      
+      const { data: apptIdsData, error: apptErr } = await supabase
+        .from('appointments')
+        .select('id')
+        .gte('start_time', dateFrom)
+        .lte('start_time', endOfTo.toISOString())
+        .eq('status', 'completada');
+      
+      if (apptErr) throw apptErr;
+      if (!apptIdsData || apptIdsData.length === 0) return [];
+      
+      const apptIds = apptIdsData.map(a => a.id);
+      
+      const { data: details, error: detErr } = await supabase
+        .from('commission_details')
+        .select('*')
+        .in('appointment_id', apptIds);
+      
+      if (detErr) throw detErr;
+      if (!details) return [];
+
+      const staffIds = [...new Set(details.map(d => d.artist_id).filter(Boolean))];
+      const { data: staffRoles } = await supabase
+        .from('staff')
+        .select('id, role:roles(name)')
+        .in('id', staffIds);
+      
+      const roleMap = new Map(staffRoles?.map(s => [s.id, (s.role as any)?.name]));
+      
+      const map = new Map<string, {
+        artist_id: string | null;
+        artist_name: string | null;
+        artist_role_name: string | null;
+        total_services: number;
+        total_service_revenue: number;
+        total_artist_commission: number;
+        total_founder_share: number;
+      }>();
+      
+      for (const d of details) {
+        const key = d.artist_id || 'NO_ARTIST';
+        const existing = map.get(key) || {
+          artist_id: d.artist_id,
+          artist_name: d.artist_name || (d.artist_id ? null : 'Sin artista'),
+          artist_role_name: d.artist_id ? roleMap.get(d.artist_id) || null : null,
+          total_services: 0,
+          total_service_revenue: 0,
+          total_artist_commission: 0,
+          total_founder_share: 0,
+        };
+        existing.total_services += 1;
+        existing.total_service_revenue += Number(d.service_price) || 0;
+        existing.total_artist_commission += Number(d.artist_commission) || 0;
+        existing.total_founder_share += Number(d.founder_share) || 0;
+        map.set(key, existing);
+      }
+      
+      return Array.from(map.values());
+    } catch (e) {
+      console.error('getCommissionReport error:', e);
+      return [];
+    }
+  });
 }

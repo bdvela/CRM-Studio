@@ -1,20 +1,22 @@
 'use client';
 
-import { useEffect, useState, useRef, useReducer } from 'react';
+import { useEffect, useState, useRef, useReducer, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { getPayments, createPayment, getAppointments, getClients } from '@/lib/db/queries';
-import type { Payment, PaymentInsert, PaymentType, PaymentKind, PaymentMethod, PaymentCategory } from '@/types/database';
+import type { Payment, PaymentInsert, PaymentType, PaymentKind, PaymentMethod, PaymentCategory, Client } from '@/types/database';
 import { Header } from '@/components/layout/shell';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Modal } from '@/components/ui/modal';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatDate, formatTime, cn } from '@/lib/utils';
 import {
   PAYMENT_KIND_LABELS, PAYMENT_METHOD_LABELS,
+  APPOINTMENT_STATUS_LABELS,
 } from '@/types/database';
-import { DollarSign, Plus, Search, TrendingUp, TrendingDown, Receipt } from 'lucide-react';
+import { DollarSign, Plus, Search, TrendingUp, TrendingDown, Receipt, ArrowRight, CalendarDays, UserRound, Link2, ClipboardList } from 'lucide-react';
 import { toast } from 'sonner';
 
 const typeIcons: Record<string, React.ReactNode> = {
@@ -53,6 +55,138 @@ function uiReducer(state: PagosUIState, action: Partial<PagosUIState>): PagosUIS
   return { ...state, ...action };
 }
 
+function getPaymentLabel(payment: Payment) {
+  return payment.type === 'ingreso' ? 'Ingreso' : 'Egreso';
+}
+
+function PaymentDetailModal({
+  payment,
+  appointment,
+  client,
+  onClose,
+  onGoToAppointment,
+  onGoToClient,
+}: {
+  payment: Payment;
+  appointment: any | null;
+  client: Client | null;
+  onClose: () => void;
+  onGoToAppointment: () => void;
+  onGoToClient: () => void;
+}) {
+  return (
+    <Modal open={!!payment} onClose={onClose} title="Detalle del movimiento">
+      <div className="space-y-4">
+        <div className="rounded-2xl border border-zinc-100 bg-zinc-50 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant={payment.type === 'ingreso' ? 'success' : 'danger'}>{getPaymentLabel(payment)}</Badge>
+                {payment.payment_kind && <Badge variant="default">{PAYMENT_KIND_LABELS[payment.payment_kind]}</Badge>}
+                {payment.payment_method && <Badge variant="default">{PAYMENT_METHOD_LABELS[payment.payment_method]}</Badge>}
+              </div>
+              <h3 className="mt-3 text-lg font-semibold text-zinc-900 break-words">{payment.concept}</h3>
+              <p className="text-sm text-zinc-500 mt-1">{formatDate(payment.date)} · {payment.type === 'ingreso' ? 'Entrada de dinero' : 'Salida de dinero'}</p>
+            </div>
+            <div className="text-right flex-shrink-0">
+              <p className={cn('text-2xl font-bold tabular-nums', payment.type === 'ingreso' ? 'text-green-600' : 'text-red-600')}>
+                {payment.type === 'ingreso' ? '+' : '-'}{formatCurrency(payment.amount)}
+              </p>
+              <p className="text-xs text-zinc-400 mt-1">{payment.paid ? 'Registrado' : 'Pendiente'}</p>
+            </div>
+          </div>
+        </div>
+
+        {client && (
+          <div className="rounded-2xl border border-violet-100 bg-violet-50/60 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 text-violet-700">
+                  <UserRound className="size-4" />
+                  <p className="text-sm font-semibold">Clienta relacionada</p>
+                </div>
+                <p className="mt-2 text-base font-medium text-zinc-900">{client.name}</p>
+                <p className="text-xs text-zinc-500 mt-0.5">{client.phone || client.instagram || client.email || 'Sin contacto'}</p>
+              </div>
+              <Button variant="outline" size="sm" onClick={onGoToClient} className="shrink-0">
+                Ver clienta
+                <ArrowRight className="size-4 ml-1" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {appointment && (
+          <div className="rounded-2xl border border-salon-100 bg-salon-50/60 p-4 space-y-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 text-salon-700">
+                  <CalendarDays className="size-4" />
+                  <p className="text-sm font-semibold">Cita relacionada</p>
+                </div>
+                <p className="mt-2 text-base font-medium text-zinc-900">{appointment.title}</p>
+                <p className="text-xs text-zinc-500 mt-0.5">{formatDate(appointment.start_time)} · {formatTime(appointment.start_time)}{appointment.end_time ? ` - ${formatTime(appointment.end_time)}` : ''}</p>
+              </div>
+              <Button variant="outline" size="sm" onClick={onGoToAppointment} className="shrink-0">
+                Ver cita
+                <ArrowRight className="size-4 ml-1" />
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="rounded-xl bg-white p-3 border border-salon-100">
+                <p className="text-xs text-zinc-400">Estado</p>
+                <p className="font-medium text-zinc-900">{APPOINTMENT_STATUS_LABELS[appointment.status as keyof typeof APPOINTMENT_STATUS_LABELS]}</p>
+              </div>
+              <div className="rounded-xl bg-white p-3 border border-salon-100">
+                <p className="text-xs text-zinc-400">Total cita</p>
+                <p className="font-medium text-zinc-900">{formatCurrency(appointment.total_price || 0)}</p>
+              </div>
+              <div className="rounded-xl bg-white p-3 border border-salon-100">
+                <p className="text-xs text-zinc-400">Pagado</p>
+                <p className="font-medium text-zinc-900">{formatCurrency(appointment.appointment_balance?.total_paid || 0)}</p>
+              </div>
+              <div className="rounded-xl bg-white p-3 border border-salon-100">
+                <p className="text-xs text-zinc-400">Saldo</p>
+                <p className="font-medium text-zinc-900">{formatCurrency(appointment.appointment_balance?.pending_balance || 0)}</p>
+              </div>
+            </div>
+
+            {appointment.appointment_services?.length > 0 && (
+              <div className="space-y-2 pt-1">
+                <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider flex items-center gap-1">
+                  <ClipboardList className="size-3.5" /> Servicios
+                </p>
+                <div className="space-y-1.5">
+                  {appointment.appointment_services.map((as: any) => (
+                    <div key={as.service_id || as.id} className="flex items-center justify-between rounded-xl bg-white border border-salon-100 px-3 py-2 text-sm">
+                      <div className="min-w-0">
+                        <p className="font-medium text-zinc-900 truncate">{as.service?.name}</p>
+                        <p className="text-xs text-zinc-400 truncate">{as.artist?.name || 'Sin artista'}</p>
+                      </div>
+                      <span className="font-semibold text-zinc-700 flex-shrink-0">{formatCurrency(Number(as.service_price ?? as.service?.price) || 0)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {!appointment && !client && (
+          <div className="rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-500">
+            Este movimiento no está vinculado a una cita o clienta.
+          </div>
+        )}
+
+        <div className="flex justify-end">
+          <Button type="button" variant="outline" onClick={onClose}>Cerrar</Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 export default function PagosPage({ initialData }: {
   initialData?: {
     payments: Payment[];
@@ -60,6 +194,7 @@ export default function PagosPage({ initialData }: {
     clients: any[];
   };
 }) {
+  const { push } = useRouter();
   const [payments, setPayments] = useState<Payment[]>(initialData?.payments || []);
   const appointmentsRef = useRef<any[]>(initialData?.appointments || []);
   const clientsRef = useRef<any[]>(initialData?.clients || []);
@@ -69,6 +204,7 @@ export default function PagosPage({ initialData }: {
   );
   const [form, dispatchForm] = useReducer(formReducer, { ...FORM_INIT, date: new Date().toISOString().split('T')[0] });
   const skipInitialLoad = useRef(!!initialData);
+  const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(null);
 
   async function load() {
     dispatchUI({ loading: true });
@@ -127,6 +263,15 @@ export default function PagosPage({ initialData }: {
 
   const totalIngresos = payments.filter(p => p.type === 'ingreso').reduce((sum, p) => sum + Number(p.amount), 0);
   const totalEgresos = payments.filter(p => p.type === 'egreso').reduce((sum, p) => sum + Number(p.amount), 0);
+  const selectedPayment = useMemo(() => payments.find((p) => p.id === selectedPaymentId) || null, [payments, selectedPaymentId]);
+  const selectedAppointment = useMemo(() => {
+    if (!selectedPayment?.appointment_id) return null;
+    return appointmentsRef.current.find((a) => a.id === selectedPayment.appointment_id) || null;
+  }, [selectedPayment]);
+  const selectedClient = useMemo(() => {
+    if (!selectedPayment?.client_id) return null;
+    return clientsRef.current.find((c) => c.id === selectedPayment.client_id) || null;
+  }, [selectedPayment]);
 
   return (
     <>
@@ -216,7 +361,11 @@ export default function PagosPage({ initialData }: {
         ) : (
           <div className="space-y-2">
             {filtered.map((payment) => (
-              <Card key={payment.id}>
+              <Card
+                key={payment.id}
+                className="cursor-pointer hover:shadow-sm transition-all"
+                onClick={() => setSelectedPaymentId(payment.id)}
+              >
                 <CardContent className="flex items-center gap-4 py-3.5">
                   <div className={`size-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
                     payment.type === 'ingreso' ? 'bg-green-100' : 'bg-red-100'
@@ -224,14 +373,18 @@ export default function PagosPage({ initialData }: {
                     {typeIcons[payment.type]}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{payment.concept}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-sm truncate">{payment.concept}</p>
+                      {payment.payment_kind && (
+                        <Badge variant="default" className="text-xs">
+                          {PAYMENT_KIND_LABELS[payment.payment_kind]}
+                        </Badge>
+                      )}
+                    </div>
                     <div className="flex items-center gap-2 text-xs text-zinc-400 mt-0.5">
                       <span>{formatDate(payment.date)}</span>
                       {payment.payment_method && (
                         <span>· {PAYMENT_METHOD_LABELS[payment.payment_method]}</span>
-                      )}
-                      {payment.payment_kind && (
-                        <span>· {PAYMENT_KIND_LABELS[payment.payment_kind]}</span>
                       )}
                     </div>
                   </div>
@@ -242,6 +395,12 @@ export default function PagosPage({ initialData }: {
                     <Badge variant={payment.type === 'ingreso' ? 'success' : 'danger'} className="text-xs mt-1">
                       {payment.type === 'ingreso' ? 'Ingreso' : 'Egreso'}
                     </Badge>
+                    {(payment.appointment_id || payment.client_id) && (
+                      <p className="text-[10px] text-zinc-400 mt-1 flex items-center gap-1 justify-end">
+                        <Link2 className="size-3" />
+                        Vinculado
+                      </p>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -299,6 +458,21 @@ export default function PagosPage({ initialData }: {
            </div>
         </form>
       </Modal>
+
+      {selectedPayment && (
+        <PaymentDetailModal
+          payment={selectedPayment}
+          appointment={selectedAppointment}
+          client={selectedClient}
+          onClose={() => setSelectedPaymentId(null)}
+          onGoToAppointment={() => { setSelectedPaymentId(null); push('/citas'); }}
+          onGoToClient={() => {
+            if (!selectedClient) return;
+            setSelectedPaymentId(null);
+            push(`/clientes/${selectedClient.id}`);
+          }}
+        />
+      )}
     </>
   );
 }
