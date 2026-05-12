@@ -3,7 +3,8 @@ import type { DataState, DataAction, UiState, UiAction } from './types';
 export function dataReducer(state: DataState, action: DataAction): DataState {
   switch (action.type) {
     case 'LOAD_START': return { ...state, loading: true };
-    case 'LOAD_COMPLETE': return { ...state, loading: false, appointments: action.appointments, staff: action.staff, services: action.services };
+    case 'LOAD_COMPLETE': return { ...state, loading: false, appointments: action.appointments, staff: action.staff, services: action.services, clients: action.clients };
+    case 'SET_APPOINTMENTS': return { ...state, loading: false, appointments: action.appointments };
     case 'SET_SUBMITTING': return { ...state, submitting: action.submitting };
     default: return state;
   }

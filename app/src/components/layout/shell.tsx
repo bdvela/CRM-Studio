@@ -1,6 +1,7 @@
 'use client';
 
-import { usePathname, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard, Users, Palette, UserRound,
@@ -21,7 +22,6 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { push } = useRouter();
   const [collapsed, setCollapsed] = useState(false);
 
   return (
@@ -47,9 +47,10 @@ export function Sidebar() {
         {navItems.map((item) => {
           const isActive = pathname === item.href;
           return (
-            <button
+            <Link
               key={item.href}
-              onClick={() => push(item.href)}
+              href={item.href}
+              prefetch
               className={cn(
                 'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
                 isActive
@@ -60,7 +61,7 @@ export function Sidebar() {
             >
               <item.icon className="size-5 flex-shrink-0" />
               {!collapsed && <span>{item.label}</span>}
-            </button>
+            </Link>
           );
         })}
       </nav>
@@ -81,7 +82,6 @@ export function Sidebar() {
 
 export function MobileNav() {
   const pathname = usePathname();
-  const { push } = useRouter();
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-zinc-200 z-40 safe-area-bottom">
@@ -89,9 +89,10 @@ export function MobileNav() {
         {navItems.slice(0, 5).map((item) => {
           const isActive = pathname === item.href;
           return (
-            <button
+            <Link
               key={item.href}
-              onClick={() => push(item.href)}
+              href={item.href}
+              prefetch
               className={cn(
                 'flex flex-col items-center gap-0.5 py-1.5 px-3 rounded-lg min-w-0',
                 isActive ? 'text-salon-600' : 'text-zinc-400'
@@ -99,7 +100,7 @@ export function MobileNav() {
             >
               <item.icon className="size-5" />
               <span className="text-[10px] font-medium truncate">{item.label}</span>
-            </button>
+            </Link>
           );
         })}
       </div>

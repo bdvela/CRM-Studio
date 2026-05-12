@@ -1,6 +1,6 @@
 'use client';
 
-import { useReducer } from 'react';
+import { useEffect, useMemo, useReducer } from 'react';
 import type { ServiceConfigModalContentProps } from './types';
 import { getAvailableArtistsForService } from './helpers';
 import { formatCurrency, cn } from '@/lib/utils';
@@ -11,12 +11,14 @@ import { Clock, Sparkles, Trash2 } from 'lucide-react';
 type ConfigState = { artistId: string; customPrice: number | null };
 type ConfigAction =
   | { type: 'SET_ARTIST'; artistId: string }
-  | { type: 'SET_PRICE'; price: number | null };
+  | { type: 'SET_PRICE'; price: number | null }
+  | { type: 'RESET'; state: ConfigState };
 
 function configReducer(state: ConfigState, action: ConfigAction): ConfigState {
   switch (action.type) {
     case 'SET_ARTIST': return { ...state, artistId: action.artistId };
     case 'SET_PRICE': return { ...state, customPrice: action.price };
+    case 'RESET': return action.state;
     default: return state;
   }
 }
@@ -26,14 +28,22 @@ export function ServiceConfigModalContent({
   currentArtistId, currentPrice,
   onSave, onRemove, onClose,
 }: ServiceConfigModalContentProps) {
-  const [configState, dispatchConfig] = useReducer(configReducer, { artistId: currentArtistId, customPrice: currentPrice });
+  const initialState = useMemo(() => ({ artistId: currentArtistId, customPrice: currentPrice }), [currentArtistId, currentPrice]);
+  const [configState, dispatchConfig] = useReducer(configReducer, initialState);
+  const svc = useMemo(() => services.find(s => s.id === serviceId), [services, serviceId]);
+
+  useEffect(() => {
+    if (!open || !serviceId) return;
+    dispatchConfig({ type: 'RESET', state: initialState });
+  }, [open, serviceId, initialState]);
 
   if (!open || !serviceId) return null;
-
-  const svc = services.find(s => s.id === serviceId);
   if (!svc) return null;
 
-  const availableArtists = getAvailableArtistsForService(svc.id, svc.category_id, staff, services);
+  const availableArtists = useMemo(
+    () => getAvailableArtistsForService(svc.id, svc.category_id, staff, services),
+    [svc.id, svc.category_id, staff, services],
+  );
   const isVariablePrice = svc.price_type === 'variable';
   const suggestedArtistIds = availableArtists.map(a => a.id);
   const isSelectedArtistSuggested = configState.artistId && suggestedArtistIds.includes(configState.artistId);

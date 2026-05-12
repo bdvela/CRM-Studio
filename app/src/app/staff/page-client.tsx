@@ -768,9 +768,27 @@ function staffUIReducer(state: StaffUIState, action: Partial<StaffUIState>): Sta
   return { ...state, ...action };
 }
 
-export default function StaffPage() {
+export default function StaffPage({ initialData }: {
+  initialData?: {
+    members: StaffMember[];
+    roles: Role[];
+    categories: Category[];
+    services: Service[];
+  };
+}) {
   const { confirm } = useConfirm();
-  const [data, dispatchData] = useReducer(dataReducer, DATA_INIT);
+  const [data, dispatchData] = useReducer(
+    dataReducer,
+    initialData
+      ? {
+          members: initialData.members,
+          roles: initialData.roles,
+          categories: initialData.categories,
+          services: initialData.services,
+          loading: false,
+        }
+      : DATA_INIT,
+  );
   const [ui, dispatchUI] = useReducer(staffUIReducer, UI_INIT);
 
   const [form, dispatch] = useReducer(formReducer, {
@@ -782,6 +800,7 @@ export default function StaffPage() {
   const initialFormRef = useRef<any>(null);
   const initialSpecialtiesRef = useRef<string[]>([]);
   const initialOverridesRef = useRef<Record<string, number | null>>({});
+  const skipInitialLoad = useRef(!!initialData);
 
   async function load() {
     try {
@@ -803,7 +822,14 @@ export default function StaffPage() {
     }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    if (skipInitialLoad.current) {
+      skipInitialLoad.current = false;
+      return;
+    }
+
+    load();
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

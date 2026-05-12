@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import type { AppointmentFormModalContentProps } from './types';
 import { getAvailableArtistsForService } from './helpers';
 import { formatCurrency, cn } from '@/lib/utils';
@@ -9,18 +10,36 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Clock, Plus, AlertTriangle, Settings2, Trash2 } from 'lucide-react';
 
+const COLOR_OPTIONS = [
+  { value: '', label: 'Auto', bg: 'bg-gradient-to-br from-zinc-200 to-zinc-300' },
+  { value: 'rose', label: 'Rosa', bg: 'bg-rose-500' },
+  { value: 'violet', label: 'Violeta', bg: 'bg-violet-500' },
+  { value: 'blue', label: 'Azul', bg: 'bg-blue-500' },
+  { value: 'emerald', label: 'Verde', bg: 'bg-emerald-500' },
+  { value: 'amber', label: 'Ámbar', bg: 'bg-amber-500' },
+  { value: 'cyan', label: 'Cian', bg: 'bg-cyan-500' },
+  { value: 'pink', label: 'Fucsia', bg: 'bg-pink-500' },
+  { value: 'teal', label: 'Teal', bg: 'bg-teal-500' },
+  { value: 'red', label: 'Rojo', bg: 'bg-red-500' },
+  { value: 'orange', label: 'Naranja', bg: 'bg-orange-500' },
+  { value: 'indigo', label: 'Índigo', bg: 'bg-indigo-500' },
+];
+
 export function AppointmentFormModalContent({
-  open, editingAppt, form, selectedServices, serviceArtists, customPrices,
+  open, editingAppt, form, clients, selectedServices, serviceArtists, customPrices,
   services, staff, overlapWarning, advancePaid, submitting, canDelete,
   totalDuration, haveChanges, calculateTotalPrice,
   onFormChange, onStartTimeChange, onSubmit, onDelete, onClose,
   onOpenServiceSelector, onOpenServiceConfig, onToggleAdvancePaid,
 }: AppointmentFormModalContentProps) {
+  const serviceById = useMemo(() => new Map(services.map((svc) => [svc.id, svc])), [services]);
+  const totalPrice = calculateTotalPrice();
+
   if (!open) return null;
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
-      <ClientCombobox value={form.client_id} onChange={(id) => onFormChange({ client_id: id })} />
+      <ClientCombobox value={form.client_id} onChange={(id) => onFormChange({ client_id: id })} initialClients={clients} />
       <DateTimePicker value={form.start_time} onChange={onStartTimeChange} />
 
       <div className="space-y-2">
@@ -45,7 +64,7 @@ export function AppointmentFormModalContent({
             </div>
             <div className="space-y-2">
               {selectedServices.map((svcId) => {
-                const svc = services.find(s => s.id === svcId);
+                const svc = serviceById.get(svcId);
                 if (!svc) return null;
 
                 const availableArtists = getAvailableArtistsForService(svc.id, svc.category_id, staff, services);
@@ -109,7 +128,7 @@ export function AppointmentFormModalContent({
               <Clock className="size-4" /> {totalDuration} min
             </div>
             <div className="text-sm font-semibold text-salon-700">
-              {formatCurrency(calculateTotalPrice())}
+              {formatCurrency(totalPrice)}
             </div>
           </div>
         </>
@@ -125,20 +144,7 @@ export function AppointmentFormModalContent({
       <div className="space-y-2">
         <span className="block text-sm font-medium text-zinc-700">Color</span>
         <div className="flex flex-wrap gap-2">
-          {[
-            { value: '', label: 'Auto', bg: 'bg-gradient-to-br from-zinc-200 to-zinc-300' },
-            { value: 'rose', label: 'Rosa', bg: 'bg-rose-500' },
-            { value: 'violet', label: 'Violeta', bg: 'bg-violet-500' },
-            { value: 'blue', label: 'Azul', bg: 'bg-blue-500' },
-            { value: 'emerald', label: 'Verde', bg: 'bg-emerald-500' },
-            { value: 'amber', label: 'Ámbar', bg: 'bg-amber-500' },
-            { value: 'cyan', label: 'Cian', bg: 'bg-cyan-500' },
-            { value: 'pink', label: 'Fucsia', bg: 'bg-pink-500' },
-            { value: 'teal', label: 'Teal', bg: 'bg-teal-500' },
-            { value: 'red', label: 'Rojo', bg: 'bg-red-500' },
-            { value: 'orange', label: 'Naranja', bg: 'bg-orange-500' },
-            { value: 'indigo', label: 'Índigo', bg: 'bg-indigo-500' },
-          ].map((c) => (
+          {COLOR_OPTIONS.map((c) => (
             <button
               key={c.value}
               type="button"

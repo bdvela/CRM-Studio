@@ -159,9 +159,9 @@ function MonthView({ monthDays, formattedAppts, currentDate, isMobile, now, onEm
   );
 }
 
-function WeekView({ weekDays, formattedAppts, now, onEmptyDayClick, onApptClick, onDragStart, onDragOver, onDrop }: {
+function WeekView({ weekDays, formattedApptsByHour, now, onEmptyDayClick, onApptClick, onDragStart, onDragOver, onDrop }: {
   weekDays: Date[];
-  formattedAppts: Map<string, any[]>;
+  formattedApptsByHour: Map<string, Map<number, any[]>>;
   now: Date;
   onEmptyDayClick: (day: Date) => void;
   onApptClick: (appt: any, e: React.MouseEvent) => void;
@@ -212,8 +212,7 @@ function WeekView({ weekDays, formattedAppts, now, onEmptyDayClick, onApptClick,
             </div>
             {weekDays.map((day, dayIdx) => {
               const key = format(day, 'yyyy-MM-dd');
-              const dayAppts = formattedAppts.get(key) || [];
-              const hourAppts = dayAppts.filter(a => a._hour === hour);
+              const hourAppts = formattedApptsByHour.get(key)?.get(hour) || [];
               const isPastDay = isPastCalendarDay(day, now);
 
               return (
@@ -300,9 +299,9 @@ function WeekView({ weekDays, formattedAppts, now, onEmptyDayClick, onApptClick,
   );
 }
 
-function DayView({ currentDate, formattedAppts, now, onEmptyDayClick, onApptClick, onDragStart, onDragOver, onDrop }: {
+function DayView({ currentDate, formattedApptsByHour, now, onEmptyDayClick, onApptClick, onDragStart, onDragOver, onDrop }: {
   currentDate: Date;
-  formattedAppts: Map<string, any[]>;
+  formattedApptsByHour: Map<string, Map<number, any[]>>;
   now: Date;
   onEmptyDayClick: (day: Date) => void;
   onApptClick: (appt: any, e: React.MouseEvent) => void;
@@ -312,7 +311,6 @@ function DayView({ currentDate, formattedAppts, now, onEmptyDayClick, onApptClic
 }) {
   const day = currentDate;
   const key = format(day, 'yyyy-MM-dd');
-  const dayAppts = formattedAppts.get(key) || [];
 
   return (
     <div className="border border-zinc-100 rounded-2xl overflow-hidden bg-white">
@@ -351,7 +349,7 @@ function DayView({ currentDate, formattedAppts, now, onEmptyDayClick, onApptClic
               {String(hour).padStart(2, '0')}:00
             </div>
             {(() => {
-              const hourAppts = dayAppts.filter(a => a._hour === hour);
+              const hourAppts = formattedApptsByHour.get(key)?.get(hour) || [];
               const isPastDay = isPastCalendarDay(day, now);
               return (
                 <div
@@ -499,6 +497,23 @@ export function CalendarView({ appointments, staff, onEdit, onCancel, onNew, onU
     ]));
   }, [apptsByDay]);
 
+  const formattedApptsByHour = useMemo(() => {
+    const dayHourMap = new Map<string, Map<number, any[]>>();
+
+    formattedAppts.forEach((dayAppts, dayKey) => {
+      const hourMap = new Map<number, any[]>();
+      dayAppts.forEach((appt) => {
+        const hour = appt._hour;
+        const list = hourMap.get(hour) || [];
+        list.push(appt);
+        hourMap.set(hour, list);
+      });
+      dayHourMap.set(dayKey, hourMap);
+    });
+
+    return dayHourMap;
+  }, [formattedAppts]);
+
   function goToToday() {
     setCurrentDate(new Date());
   }
@@ -617,7 +632,7 @@ export function CalendarView({ appointments, staff, onEdit, onCancel, onNew, onU
       ) : ui.view === 'week' ? (
         <WeekView
           weekDays={weekDays}
-          formattedAppts={formattedAppts}
+          formattedApptsByHour={formattedApptsByHour}
           now={now}
           onEmptyDayClick={handleEmptyDayClick}
           onApptClick={handleApptClick}
@@ -628,7 +643,7 @@ export function CalendarView({ appointments, staff, onEdit, onCancel, onNew, onU
       ) : (
         <DayView
           currentDate={currentDate}
-          formattedAppts={formattedAppts}
+          formattedApptsByHour={formattedApptsByHour}
           now={now}
           onEmptyDayClick={handleEmptyDayClick}
           onApptClick={handleApptClick}

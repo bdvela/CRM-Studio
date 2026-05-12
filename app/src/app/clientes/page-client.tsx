@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useReducer } from 'react';
+import { useEffect, useState, useReducer, useRef } from 'react';
 import { getClients, createClient, updateClient, deleteClient } from '@/lib/db/queries';
 import type { Client, ClientInsert, ClientStatus } from '@/types/database';
 import { Header } from '@/components/layout/shell';
@@ -84,12 +84,13 @@ function clientesUIReducer(state: ClientesUIState, action: Partial<ClientesUISta
   return { ...state, ...action };
 }
 
-export default function ClientesPage() {
+export default function ClientesPage({ initialClients }: { initialClients?: Client[] }) {
   const { push } = useRouter();
   const { confirm } = useConfirm();
-  const [clients, setClients] = useState<Client[]>([]);
-  const [ui, dispatchUI] = useReducer(clientesUIReducer, CLIENTS_UI_INIT);
+  const [clients, setClients] = useState<Client[]>(initialClients || []);
+  const [ui, dispatchUI] = useReducer(clientesUIReducer, { ...CLIENTS_UI_INIT, loading: !initialClients });
   const [form, dispatchForm] = useReducer(formReducer, FORM_INIT);
+  const skipInitialLoad = useRef(!!initialClients);
 
   async function load() {
     try {
@@ -102,7 +103,13 @@ export default function ClientesPage() {
     }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    if (skipInitialLoad.current) {
+      skipInitialLoad.current = false;
+      return;
+    }
+    load();
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

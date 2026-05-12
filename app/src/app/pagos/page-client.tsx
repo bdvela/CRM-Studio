@@ -53,12 +53,22 @@ function uiReducer(state: PagosUIState, action: Partial<PagosUIState>): PagosUIS
   return { ...state, ...action };
 }
 
-export default function PagosPage() {
-  const [payments, setPayments] = useState<Payment[]>([]);
-  const appointmentsRef = useRef<any[]>([]);
-  const clientsRef = useRef<any[]>([]);
-  const [ui, dispatchUI] = useReducer(uiReducer, UI_INIT);
+export default function PagosPage({ initialData }: {
+  initialData?: {
+    payments: Payment[];
+    appointments: any[];
+    clients: any[];
+  };
+}) {
+  const [payments, setPayments] = useState<Payment[]>(initialData?.payments || []);
+  const appointmentsRef = useRef<any[]>(initialData?.appointments || []);
+  const clientsRef = useRef<any[]>(initialData?.clients || []);
+  const [ui, dispatchUI] = useReducer(
+    uiReducer,
+    initialData ? { ...UI_INIT, loading: false } : UI_INIT,
+  );
   const [form, dispatchForm] = useReducer(formReducer, { ...FORM_INIT, date: new Date().toISOString().split('T')[0] });
+  const skipInitialLoad = useRef(!!initialData);
 
   async function load() {
     dispatchUI({ loading: true });
@@ -78,7 +88,14 @@ export default function PagosPage() {
     }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    if (skipInitialLoad.current) {
+      skipInitialLoad.current = false;
+      return;
+    }
+
+    load();
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

@@ -1,6 +1,6 @@
 'use client';
 
-import { useReducer } from 'react';
+import { useEffect, useMemo, useReducer } from 'react';
 import type { ServiceSelectorModalContentProps } from './types';
 import { getAvailableArtistsForService } from './helpers';
 import { formatCurrency, cn } from '@/lib/utils';
@@ -23,7 +23,8 @@ type SelectorAction =
   | { type: 'REMOVE_ARTIST'; serviceId: string }
   | { type: 'SET_PRICE'; serviceId: string; price: number }
   | { type: 'SET_SEARCH'; search: string }
-  | { type: 'SET_CATEGORY_FILTER'; categoryFilter: string };
+  | { type: 'SET_CATEGORY_FILTER'; categoryFilter: string }
+  | { type: 'RESET'; state: SelectorState };
 
 function selectorReducer(state: SelectorState, action: SelectorAction): SelectorState {
   switch (action.type) {
@@ -56,6 +57,7 @@ function selectorReducer(state: SelectorState, action: SelectorAction): Selector
     }
     case 'SET_SEARCH': return { ...state, search: action.search };
     case 'SET_CATEGORY_FILTER': return { ...state, categoryFilter: action.categoryFilter };
+    case 'RESET': return action.state;
     default: return state;
   }
 }
@@ -134,17 +136,26 @@ export function ServiceSelectorModalContent({
   initialSelectedIds, initialArtists, initialPrices,
   onConfirm, onClose,
 }: ServiceSelectorModalContentProps) {
-  const [selectorState, dispatchSelector] = useReducer(selectorReducer, {
+  const initialState = useMemo<SelectorState>(() => ({
     selectedIds: initialSelectedIds,
     artists: initialArtists,
     prices: initialPrices,
     search: '',
     categoryFilter: '',
-  });
+  }), [initialSelectedIds, initialArtists, initialPrices]);
 
-  const activeServices = services.filter(s => s.active);
+  const [selectorState, dispatchSelector] = useReducer(selectorReducer, initialState);
 
-  const categoriesForFilter = (() => {
+  useEffect(() => {
+    if (!open) return;
+    dispatchSelector({ type: 'RESET', state: initialState });
+  }, [open, initialState]);
+
+  const activeServices = useMemo(() => services.filter(s => s.active), [services]);
+
+  const serviceById = useMemo(() => new Map(services.map((s) => [s.id, s])), [services]);
+
+  const categoriesForFilter = useMemo(() => {
     const byCategory: Record<string, { id: string; name: string; icon: string; sort_order: number }> = {};
     activeServices.forEach(s => {
       if (s.category_id && !byCategory[s.category_id]) {
@@ -157,9 +168,9 @@ export function ServiceSelectorModalContent({
       }
     });
     return Object.values(byCategory).sort((a, b) => a.sort_order - b.sort_order);
-  })();
+  }, [activeServices]);
 
-  const filteredServices = activeServices.filter(s => {
+  const filteredServices = useMemo(() => activeServices.filter(s => {
     if (selectorState.search) {
       const searchLower = selectorState.search.toLowerCase();
       const matchesSearch = s.name.toLowerCase().includes(searchLower);
@@ -170,10 +181,10 @@ export function ServiceSelectorModalContent({
       return false;
     }
     return true;
-  });
+  }), [activeServices, selectorState.search, selectorState.categoryFilter]);
 
   function handleToggleService(serviceId: string) {
-    const svc = services.find(s => s.id === serviceId);
+    const svc = serviceById.get(serviceId);
 
     if (selectorState.selectedIds.includes(serviceId)) {
       dispatchSelector({ type: 'TOGGLE', serviceId });

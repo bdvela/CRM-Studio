@@ -44,16 +44,22 @@ function detailUIReducer(state: ClientDetailUIState, action: Partial<ClientDetai
   return { ...state, ...action };
 }
 
-export default function ClientDetailPage() {
+export default function ClientDetailPage({ initialData }: {
+  initialData?: {
+    client: Client | null;
+    appointments: any[];
+  };
+}) {
   const params = useParams();
   const { push, back } = useRouter();
   const { confirm } = useConfirm();
-  const [client, setClient] = useState<Client | null>(null);
-  const [appointments, setAppointments] = useState<any[]>([]);
-  const loadingRef = useRef(true);
+  const [client, setClient] = useState<Client | null>(initialData?.client || null);
+  const [appointments, setAppointments] = useState<any[]>(initialData?.appointments || []);
+  const loadingRef = useRef(!initialData);
   const [ui, dispatchUI] = useReducer(detailUIReducer, DETAIL_UI_INIT);
   const [editForm, setEditForm] = useState<ClientInsert | null>(null);
   const initialEditFormRef = useRef<ClientInsert | null>(null);
+  const skipInitialLoad = useRef(!!initialData);
 
   async function load() {
     try {
@@ -70,7 +76,14 @@ export default function ClientDetailPage() {
     }
   }
 
-  useEffect(() => { load(); }, [params.id]);
+  useEffect(() => {
+    if (skipInitialLoad.current) {
+      skipInitialLoad.current = false;
+      return;
+    }
+
+    load();
+  }, [params.id]);
 
   function openEditModal() {
     if (!client) return;

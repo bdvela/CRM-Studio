@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { ChevronLeft, ChevronRight, CalendarDays, Clock } from 'lucide-react';
 import { format } from 'date-fns';
@@ -41,8 +41,12 @@ export function DateTimePicker({ value, onChange }: DateTimePickerProps) {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-  const daysInMonth = getDaysInMonth(month.getFullYear(), month.getMonth());
-  const firstDay = getFirstDayOfWeek(month.getFullYear(), month.getMonth());
+  useEffect(() => {
+    setMonth(value ? new Date(value) : new Date());
+  }, [value]);
+
+  const daysInMonth = useMemo(() => getDaysInMonth(month.getFullYear(), month.getMonth()), [month]);
+  const firstDay = useMemo(() => getFirstDayOfWeek(month.getFullYear(), month.getMonth()), [month]);
 
   useEffect(() => {
     if (panel !== 'time' || !timeRef.current) return;
@@ -52,7 +56,7 @@ export function DateTimePicker({ value, onChange }: DateTimePickerProps) {
       return () => clearTimeout(id);
     }
     const nowH = new Date().getHours();
-        const targetHour = Math.max(5, Math.min(nowH, 23));
+    const targetHour = Math.max(5, Math.min(nowH, 23));
     const targetRow = timeRef.current.querySelector(`[data-hour="${targetHour}"]`);
     if (targetRow) {
       const id = setTimeout(() => targetRow.scrollIntoView({ block: 'center', behavior: 'smooth' }), 60);
@@ -97,29 +101,35 @@ export function DateTimePicker({ value, onChange }: DateTimePickerProps) {
     setPanel('time');
   }
 
-  const calDays: { day: number; curr: boolean; isToday: boolean; isSel: boolean; isPast: boolean }[] = [];
-  for (let i = firstDay - 1; i >= 0; i--) {
-    calDays.push({ day: getDaysInMonth(month.getFullYear(), month.getMonth() - 1) - i, curr: false, isToday: false, isSel: false, isPast: false });
-  }
-  for (let d = 1; d <= daysInMonth; d++) {
-    const date = new Date(month.getFullYear(), month.getMonth(), d);
-    calDays.push({
-      day: d, curr: true,
-      isToday: date.getTime() === today.getTime(),
-      isSel: !!parsed && d === parsed.getDate() && month.getMonth() === parsed.getMonth() && month.getFullYear() === parsed.getFullYear(),
-      isPast: date < today,
-    });
-  }
-  while (calDays.length < 42) {
-    calDays.push({ day: calDays.length - firstDay - daysInMonth + 1, curr: false, isToday: false, isSel: false, isPast: false });
-  }
-
-  const timeSlots: { h: number; m: number }[] = [];
-  for (let h = 5; h <= 23; h++) {
-    for (let m = 0; m < 60; m += 15) {
-      timeSlots.push({ h, m });
+  const calDays = useMemo(() => {
+    const next: { day: number; curr: boolean; isToday: boolean; isSel: boolean; isPast: boolean }[] = [];
+    for (let i = firstDay - 1; i >= 0; i--) {
+      next.push({ day: getDaysInMonth(month.getFullYear(), month.getMonth() - 1) - i, curr: false, isToday: false, isSel: false, isPast: false });
     }
-  }
+    for (let d = 1; d <= daysInMonth; d++) {
+      const date = new Date(month.getFullYear(), month.getMonth(), d);
+      next.push({
+        day: d, curr: true,
+        isToday: date.getTime() === today.getTime(),
+        isSel: !!parsed && d === parsed.getDate() && month.getMonth() === parsed.getMonth() && month.getFullYear() === parsed.getFullYear(),
+        isPast: date < today,
+      });
+    }
+    while (next.length < 42) {
+      next.push({ day: next.length - firstDay - daysInMonth + 1, curr: false, isToday: false, isSel: false, isPast: false });
+    }
+    return next;
+  }, [daysInMonth, firstDay, month, parsed, today]);
+
+  const timeSlots = useMemo(() => {
+    const slots: { h: number; m: number }[] = [];
+    for (let h = 5; h <= 23; h++) {
+      for (let m = 0; m < 60; m += 15) {
+        slots.push({ h, m });
+      }
+    }
+    return slots;
+  }, []);
 
   const dateLabel = parsed ? format(parsed, "EEE d 'de' MMM", { locale: es }) : 'Seleccionar fecha';
   const timeLabel = parsed ? format(parsed, 'HH:mm') : '--:--';

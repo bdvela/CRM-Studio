@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useReducer, useEffect, useRef } from 'react';
+import { useState, useReducer, useEffect, useRef, useMemo } from 'react';
 import { getClients, createClient } from '@/lib/db/queries';
+import type { Client } from '@/types/database';
 import { cn, normalizePeruPhone } from '@/lib/utils';
 import { Search, Plus, X, Sparkles, Clock } from 'lucide-react';
 import { toast } from 'sonner';
@@ -11,20 +12,7 @@ import { Button } from '@/components/ui/button';
 interface ClientComboboxProps {
   value: string;
   onChange: (id: string) => void;
-}
-
-interface Client {
-  id: string;
-  name: string;
-  phone?: string | null;
-  instagram?: string | null;
-  email?: string | null;
-  status: string;
-  client_stats?: {
-    total_appointments: number;
-    total_spent: number;
-    last_visit: string | null;
-  };
+  initialClients?: Client[];
 }
 
 type ComboboxState = {
@@ -225,8 +213,13 @@ const RECENT_LIMIT = 20;
 
 // ---- Main component ----
 
-export function ClientCombobox({ value, onChange }: ClientComboboxProps) {
-  const [state, dispatch] = useReducer(comboboxReducer, initialState);
+export function ClientCombobox({ value, onChange, initialClients }: ClientComboboxProps) {
+  const [state, dispatch] = useReducer(
+    comboboxReducer,
+    initialClients
+      ? { ...initialState, allClients: initialClients, loading: false }
+      : initialState,
+  );
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -234,11 +227,12 @@ export function ClientCombobox({ value, onChange }: ClientComboboxProps) {
   const justCreatedRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    if (initialClients) return;
     getClients().then(data => {
       dispatch({ type: 'SET_CLIENTS', payload: data as Client[] });
       dispatch({ type: 'SET_LOADING', payload: false });
     });
-  }, []);
+  }, [initialClients]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -255,7 +249,7 @@ export function ClientCombobox({ value, onChange }: ClientComboboxProps) {
     return () => { if (justCreatedRef.current) clearTimeout(justCreatedRef.current); };
   }, []);
 
-  const recentClients = state.allClients
+  const recentClients = useMemo(() => state.allClients
     .toSorted((a, b) => {
       const aDate = a.client_stats?.last_visit;
       const bDate = b.client_stats?.last_visit;
@@ -264,23 +258,27 @@ export function ClientCombobox({ value, onChange }: ClientComboboxProps) {
       if (!bDate) return -1;
       return new Date(bDate).getTime() - new Date(aDate).getTime();
     })
-    .slice(0, RECENT_LIMIT);
+    .slice(0, RECENT_LIMIT), [state.allClients]);
 
-  const filtered = state.search.length === 0
-    ? recentClients
-    : state.allClients.filter(c =>
-        c.name.toLowerCase().includes(state.search.toLowerCase()) ||
-        (c.phone || '').includes(state.search) ||
-        (c.instagram || '').toLowerCase().includes(state.search.toLowerCase())
-      );
+  const searchLower = state.search.toLowerCase();
 
-  const hasExactMatch = state.allClients.some(c =>
-    c.name.toLowerCase() === state.search.toLowerCase()
-  );
+  const filtered = useMemo(() => (
+    state.search.length === 0
+      ? recentClients
+      : state.allClients.filter(c =>
+          c.name.toLowerCase().includes(searchLower) ||
+          (c.phone || '').includes(state.search) ||
+          (c.instagram || '').toLowerCase().includes(searchLower)
+        )
+  ), [state.search, state.allClients, recentClients, searchLower]);
+
+  const hasExactMatch = useMemo(() => state.allClients.some(c =>
+    c.name.toLowerCase() === searchLower
+  ), [state.allClients, searchLower]);
 
   const showCreateOption = state.search.length > 0 && !hasExactMatch;
 
-  const selectedClient = state.allClients.find(c => c.id === value);
+  const selectedClient = useMemo(() => state.allClients.find(c => c.id === value), [state.allClients, value]);
 
   function handleSelect(client: Client) {
     onChange(client.id);
@@ -314,8 +312,7 @@ export function ClientCombobox({ value, onChange }: ClientComboboxProps) {
         notes: '',
       });
 
-      const updated = await getClients();
-      dispatch({ type: 'SET_CLIENTS', payload: updated as Client[] });
+      dispatch({ type: 'SET_CLIENTS', payload: [newClient as Client, ...state.allClients] });
 
       onChange(newClient.id);
 

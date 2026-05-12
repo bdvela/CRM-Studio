@@ -1,4 +1,4 @@
-import type { AppointmentInsert, Service, StaffMember } from '@/types/database';
+import type { AppointmentInsert, Client, Service, StaffMember } from '@/types/database';
 
 type ListFilter = 'list' | 'day' | 'week';
 export type ViewMode = 'list' | 'calendar';
@@ -61,6 +61,7 @@ export interface AppointmentFormModalContentProps {
   open: boolean;
   editingAppt: any;
   form: AppointmentFormData;
+  clients: Client[];
   selectedServices: string[];
   serviceArtists: Record<string, string>;
   customPrices: Record<string, number>;
@@ -95,13 +96,15 @@ export type DataState = {
   appointments: any[];
   staff: StaffMember[];
   services: Service[];
+  clients: Client[];
   loading: boolean;
   submitting: boolean;
 };
 
 export type DataAction =
   | { type: 'LOAD_START' }
-  | { type: 'LOAD_COMPLETE'; appointments: any[]; staff: StaffMember[]; services: Service[] }
+  | { type: 'LOAD_COMPLETE'; appointments: any[]; staff: StaffMember[]; services: Service[]; clients: Client[] }
+  | { type: 'SET_APPOINTMENTS'; appointments: any[] }
   | { type: 'SET_SUBMITTING'; submitting: boolean };
 
 export type UiState = {

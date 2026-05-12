@@ -3,41 +3,114 @@ import { supabase } from '@/lib/supabase/client';
 
 const USE_MOCK = process.env.NEXT_PUBLIC_SUPABASE_URL === 'https://placeholder.supabase.co' || !process.env.NEXT_PUBLIC_SUPABASE_URL;
 
+type CacheEntry = { value: any; expiresAt: number };
+const queryCache = new Map<string, CacheEntry>();
+const pendingQueries = new Map<string, Promise<any>>();
+
+function cacheKey(name: string, params?: unknown) {
+  return params === undefined ? name : `${name}:${JSON.stringify(params)}`;
+}
+
+function clearQueryCache(prefix?: string) {
+  if (!prefix) {
+    queryCache.clear();
+    pendingQueries.clear();
+    return;
+  }
+
+  for (const key of queryCache.keys()) {
+    if (key.startsWith(prefix)) queryCache.delete(key);
+  }
+  for (const key of pendingQueries.keys()) {
+    if (key.startsWith(prefix)) pendingQueries.delete(key);
+  }
+}
+
+async function cachedQuery<T>(key: string, ttlMs: number, fetcher: () => Promise<T>): Promise<T> {
+  const now = Date.now();
+  const hit = queryCache.get(key);
+  if (hit && hit.expiresAt > now) return hit.value as T;
+
+  const pending = pendingQueries.get(key);
+  if (pending) return pending as Promise<T>;
+
+  const promise = fetcher()
+    .then((value) => {
+      queryCache.set(key, { value, expiresAt: Date.now() + ttlMs });
+      pendingQueries.delete(key);
+      return value;
+    })
+    .catch((error) => {
+      pendingQueries.delete(key);
+      throw error;
+    });
+
+  pendingQueries.set(key, promise);
+  return promise;
+}
+
 function delay(ms = 300) {
   return new Promise(r => setTimeout(r, ms));
 }
 
+function getUpcomingBirthdays(staff: any[], limit = 3, windowDays = 45) {
+  const today = new Date();
+  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const items = staff
+    .filter((member) => member.birthday_date)
+    .map((member) => {
+      const birthday = new Date(member.birthday_date);
+      const next = new Date(start.getFullYear(), birthday.getMonth(), birthday.getDate());
+      if (next < start) next.setFullYear(next.getFullYear() + 1);
+      const daysLeft = Math.ceil((next.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+      return {
+        id: member.id,
+        name: member.name,
+        birthday_date: member.birthday_date,
+        next_birthday: next.toISOString(),
+        days_left: daysLeft,
+        is_today: daysLeft === 0,
+      };
+    })
+    .filter((item) => item.days_left >= 0 && item.days_left <= windowDays)
+    .sort((a, b) => a.days_left - b.days_left);
+
+  return items.slice(0, limit);
+}
+
 export async function getClients() {
-  if (USE_MOCK) { await delay(); return mockData.clients; }
-  try {
-    
-    const { data, error } = await supabase.from('clients').select('*').order('name');
-    if (error) throw error;
-    const { data: stats } = await supabase.from('client_stats').select('*');
-    if (stats) {
-      const statsMap = new Map(stats.map((s: any) => [s.id, s]));
-      data?.forEach((c: any) => { c.client_stats = statsMap.get(c.id); });
+  return cachedQuery(cacheKey('clients'), 15_000, async () => {
+    if (USE_MOCK) { await delay(); return mockData.clients; }
+    try {
+      const { data, error } = await supabase.from('clients').select('*').order('name');
+      if (error) throw error;
+      const { data: stats } = await supabase.from('client_stats').select('*');
+      if (stats) {
+        const statsMap = new Map(stats.map((s: any) => [s.id, s]));
+        data?.forEach((c: any) => { c.client_stats = statsMap.get(c.id); });
+      }
+      return data;
+    } catch (e) {
+      console.error('getClients error:', e);
+      return [];
     }
-    return data;
-  } catch (e) {
-    console.error('getClients error:', e);
-    return [];
-  }
+  });
 }
 
 export async function getClientById(id: string) {
-  if (USE_MOCK) { await delay(); return mockData.clients.find(c => c.id === id); }
-  try {
-    
-    const { data, error } = await supabase.from('clients').select('*').eq('id', id).single();
-    if (error) throw error;
-    const { data: stats } = await supabase.from('client_stats').select('*').eq('id', id).single();
-    if (stats) (data as any).client_stats = stats;
-    return data;
-  } catch (e) {
-    console.error('getClientById error:', e);
-    return null;
-  }
+  return cachedQuery(cacheKey('client', id), 15_000, async () => {
+    if (USE_MOCK) { await delay(); return mockData.clients.find(c => c.id === id); }
+    try {
+      const { data, error } = await supabase.from('clients').select('*').eq('id', id).single();
+      if (error) throw error;
+      const { data: stats } = await supabase.from('client_stats').select('*').eq('id', id).single();
+      if (stats) (data as any).client_stats = stats;
+      return data;
+    } catch (e) {
+      console.error('getClientById error:', e);
+      return null;
+    }
+  });
 }
 
 export async function createClient(input: any) {
@@ -45,6 +118,7 @@ export async function createClient(input: any) {
   
   const { data, error } = await supabase.from('clients').insert(input).select().single();
   if (error) throw error;
+  clearQueryCache();
   return data;
 }
 
@@ -53,6 +127,7 @@ export async function updateClient(id: string, input: any) {
   
   const { data, error } = await supabase.from('clients').update(input).eq('id', id).select().single();
   if (error) throw error;
+  clearQueryCache();
   return data;
 }
 
@@ -61,79 +136,84 @@ export async function deleteClient(id: string) {
   
   const { error } = await supabase.from('clients').delete().eq('id', id);
   if (error) throw error;
+  clearQueryCache();
   return true;
 }
 
 // ─── CATEGORIES ─────────────────────────────────────────────────────────────
 
 export async function getCategories(activeOnly = true) {
-  if (USE_MOCK) { await delay(); return activeOnly ? mockData.categories?.filter((c: any) => c.active) || [] : mockData.categories || []; }
-  try {
-    let q = supabase.from('categories').select('*').order('sort_order').order('name');
-    if (activeOnly) q = q.eq('active', true);
-    const { data, error } = await q;
-    if (error) throw error;
-    return data;
-  } catch (e) {
-    console.error('getCategories error:', e);
-    return [];
-  }
+  return cachedQuery(cacheKey('categories', activeOnly), 60_000, async () => {
+    if (USE_MOCK) { await delay(); return activeOnly ? mockData.categories?.filter((c: any) => c.active) || [] : mockData.categories || []; }
+    try {
+      let q = supabase.from('categories').select('*').order('sort_order').order('name');
+      if (activeOnly) q = q.eq('active', true);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data;
+    } catch (e) {
+      console.error('getCategories error:', e);
+      return [];
+    }
+  });
 }
 
 // ─── SERVICES ───────────────────────────────────────────────────────────────
 
 export async function getServices(activeOnly = true) {
-  if (USE_MOCK) { 
-    await delay(); 
-    let result = activeOnly ? mockData.services.filter(s => s.active) : mockData.services;
-    return result.map(svc => ({
-      ...svc,
-      staff_services: (mockData.staffServices || []).filter((ss: any) => ss.service_id === svc.id)
-    }));
-  }
-  try {
-    let q = supabase.from('services').select(`
-      *,
-      category:categories(*)
-    `).order('category_id').order('name');
-    if (activeOnly) q = q.eq('active', true);
-    const { data: servicesData, error: servicesErr } = await q;
-    if (servicesErr) throw servicesErr;
-    
-    if (!servicesData || servicesData.length === 0) return [];
-    
-    try {
-      const serviceIds = servicesData.map((s: any) => s.id);
-      const { data: staffServicesData, error: ssErr } = await supabase
-        .from('staff_services')
-        .select('*')
-        .in('service_id', serviceIds);
-      
-      if (!ssErr && staffServicesData) {
-        const ssMap = new Map<string, any[]>();
-        for (const ss of staffServicesData) {
-          const existing = ssMap.get(ss.service_id) || [];
-          existing.push(ss);
-          ssMap.set(ss.service_id, existing);
-        }
-        
-        return servicesData.map((svc: any) => ({
-          ...svc,
-          staff_services: ssMap.get(svc.id) || []
-        }));
-      }
-    } catch (ssE) {
-      console.log('staff_services table may not exist yet, skipping:', ssE);
+  return cachedQuery(cacheKey('services', activeOnly), 60_000, async () => {
+    if (USE_MOCK) { 
+      await delay(); 
+      let result = activeOnly ? mockData.services.filter(s => s.active) : mockData.services;
+      return result.map(svc => ({
+        ...svc,
+        staff_services: (mockData.staffServices || []).filter((ss: any) => ss.service_id === svc.id)
+      }));
     }
-    
-    return servicesData.map((svc: any) => ({
-      ...svc,
-      staff_services: []
-    }));
-  } catch (e) {
-    console.error('getServices error:', e);
-    return [];
-  }
+    try {
+      let q = supabase.from('services').select(`
+        *,
+        category:categories(*)
+      `).order('category_id').order('name');
+      if (activeOnly) q = q.eq('active', true);
+      const { data: servicesData, error: servicesErr } = await q;
+      if (servicesErr) throw servicesErr;
+      
+      if (!servicesData || servicesData.length === 0) return [];
+      
+      try {
+        const serviceIds = servicesData.map((s: any) => s.id);
+        const { data: staffServicesData, error: ssErr } = await supabase
+          .from('staff_services')
+          .select('*')
+          .in('service_id', serviceIds);
+        
+        if (!ssErr && staffServicesData) {
+          const ssMap = new Map<string, any[]>();
+          for (const ss of staffServicesData) {
+            const existing = ssMap.get(ss.service_id) || [];
+            existing.push(ss);
+            ssMap.set(ss.service_id, existing);
+          }
+          
+          return servicesData.map((svc: any) => ({
+            ...svc,
+            staff_services: ssMap.get(svc.id) || []
+          }));
+        }
+      } catch (ssE) {
+        console.log('staff_services table may not exist yet, skipping:', ssE);
+      }
+      
+      return servicesData.map((svc: any) => ({
+        ...svc,
+        staff_services: []
+      }));
+    } catch (e) {
+      console.error('getServices error:', e);
+      return [];
+    }
+  });
 }
 
 export async function createService(input: any) {
@@ -141,6 +221,7 @@ export async function createService(input: any) {
   
   const { data, error } = await supabase.from('services').insert(input).select().single();
   if (error) throw error;
+  clearQueryCache();
   return data;
 }
 
@@ -149,6 +230,7 @@ export async function updateService(id: string, input: any) {
   
   const { data, error } = await supabase.from('services').update(input).eq('id', id).select().single();
   if (error) throw error;
+  clearQueryCache();
   return data;
 }
 
@@ -170,6 +252,7 @@ export async function deleteService(id: string) {
   await supabase.from('appointment_services').delete().eq('service_id', id);
   const { error } = await supabase.from('services').delete().eq('id', id);
   if (error) throw error;
+  clearQueryCache();
   return true;
 }
 
@@ -299,29 +382,31 @@ export async function getStaffForService(serviceId: string, categoryId?: string,
 }
 
 export async function getStaff(activeOnly = true) {
-  if (USE_MOCK) { await delay(); return activeOnly ? mockData.staff.filter(s => s.active) : mockData.staff; }
-  try {
-    let q = supabase.from('staff').select(`
-      *,
-      role:roles(name, color),
-      staff_specialties(
+  return cachedQuery(cacheKey('staff', activeOnly), 60_000, async () => {
+    if (USE_MOCK) { await delay(); return activeOnly ? mockData.staff.filter(s => s.active) : mockData.staff; }
+    try {
+      let q = supabase.from('staff').select(`
         *,
-        category:categories(*)
-      )
-    `).order('name');
-    if (activeOnly) q = q.eq('active', true);
-    const { data, error } = await q;
-    if (error) throw error;
-    const { data: stats } = await supabase.from('staff_stats').select('*');
-    if (stats) {
-      const statsMap = new Map(stats.map((s: any) => [s.id, s]));
-      data?.forEach((s: any) => { s.staff_stats = statsMap.get(s.id); });
+        role:roles(name, color),
+        staff_specialties(
+          *,
+          category:categories(*)
+        )
+      `).order('name');
+      if (activeOnly) q = q.eq('active', true);
+      const { data, error } = await q;
+      if (error) throw error;
+      const { data: stats } = await supabase.from('staff_stats').select('*');
+      if (stats) {
+        const statsMap = new Map(stats.map((s: any) => [s.id, s]));
+        data?.forEach((s: any) => { s.staff_stats = statsMap.get(s.id); });
+      }
+      return data;
+    } catch (e) {
+      console.error('getStaff error:', e);
+      return [];
     }
-    return data;
-  } catch (e) {
-    console.error('getStaff error:', e);
-    return [];
-  }
+  });
 }
 
 export async function updateStaffSpecialties(staffId: string, categoryIds: string[]) {
@@ -335,6 +420,7 @@ export async function updateStaffSpecialties(staffId: string, categoryIds: strin
       const rows = categoryIds.map(cid => ({ staff_id: staffId, category_id: cid }));
       await supabase.from('staff_specialties').insert(rows);
     }
+    clearQueryCache();
     return true;
   } catch (e) {
     console.error('updateStaffSpecialties error:', e);
@@ -347,6 +433,7 @@ export async function createStaff(input: any) {
   
   const { data, error } = await supabase.from('staff').insert(input).select().single();
   if (error) throw error;
+  clearQueryCache();
   return data;
 }
 
@@ -355,6 +442,7 @@ export async function updateStaff(id: string, input: any) {
   
   const { data, error } = await supabase.from('staff').update(input).eq('id', id).select().single();
   if (error) throw error;
+  clearQueryCache();
   return data;
 }
 
@@ -362,134 +450,139 @@ export async function deleteStaff(id: string) {
   if (USE_MOCK) { await delay(); mockData.staff = mockData.staff.filter(s => s.id !== id); return true; }
   const { error } = await supabase.from('staff').delete().eq('id', id);
   if (error) throw error;
+  clearQueryCache();
   return true;
 }
 
 // ─── ROLES ──────────────────────────────────────────────────────────────────
 
 export async function getRoles(activeOnly = true) {
-  if (USE_MOCK) { await delay(); return activeOnly ? mockData.roles?.filter((r: any) => r.active) || [] : mockData.roles || []; }
-  try {
-    let q = supabase.from('roles').select('*').order('name');
-    if (activeOnly) q = q.eq('active', true);
-    const { data, error } = await q;
-    if (error) throw error;
-    return data;
-  } catch (e) {
-    console.error('getRoles error:', e);
-    return [];
-  }
+  return cachedQuery(cacheKey('roles', activeOnly), 60_000, async () => {
+    if (USE_MOCK) { await delay(); return activeOnly ? mockData.roles?.filter((r: any) => r.active) || [] : mockData.roles || []; }
+    try {
+      let q = supabase.from('roles').select('*').order('name');
+      if (activeOnly) q = q.eq('active', true);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data;
+    } catch (e) {
+      console.error('getRoles error:', e);
+      return [];
+    }
+  });
 }
 
 export async function getAppointments(filters?: any) {
-  if (USE_MOCK) { await delay(); return mockData.appointments; }
-  try {
-    
-    let q = supabase.from('appointments').select(`
-      *,
-      client:clients(name, phone, instagram),
-      artist:staff(name, photo_url, role:roles(name, color))
-    `).order('start_time', { ascending: true });
-    if (filters?.dateFrom) q = q.gte('start_time', filters.dateFrom);
-    if (filters?.dateTo) {
-      const endOfDay = new Date(filters.dateTo);
-      endOfDay.setHours(23, 59, 59, 999);
-      q = q.lte('start_time', endOfDay.toISOString());
-    }
-    if (filters?.status) q = q.eq('status', filters.status);
-    if (filters?.artistId) q = q.eq('artist_id', filters.artistId);
-    if (filters?.clientId) q = q.eq('client_id', filters.clientId);
-    const { data, error } = await q;
-    if (error) throw error;
+  return cachedQuery(cacheKey('appointments', filters || {}), 5_000, async () => {
+    if (USE_MOCK) { await delay(); return mockData.appointments; }
+    try {
+      
+      let q = supabase.from('appointments').select(`
+        *,
+        client:clients(name, phone, instagram),
+        artist:staff(name, photo_url, role:roles(name, color))
+      `).order('start_time', { ascending: true });
+      if (filters?.dateFrom) q = q.gte('start_time', filters.dateFrom);
+      if (filters?.dateTo) {
+        const endOfDay = new Date(filters.dateTo);
+        endOfDay.setHours(23, 59, 59, 999);
+        q = q.lte('start_time', endOfDay.toISOString());
+      }
+      if (filters?.status) q = q.eq('status', filters.status);
+      if (filters?.artistId) q = q.eq('artist_id', filters.artistId);
+      if (filters?.clientId) q = q.eq('client_id', filters.clientId);
+      const { data, error } = await q;
+      if (error) throw error;
 
-    let filtered = data || [];
-    if (filters?.clientSearch) {
-      const search = filters.clientSearch.toLowerCase();
-      filtered = filtered.filter(a =>
-        a.client?.name?.toLowerCase().includes(search)
-      );
-    }
+      let filtered = data || [];
+      if (filters?.clientSearch) {
+        const search = filters.clientSearch.toLowerCase();
+        filtered = filtered.filter(a =>
+          a.client?.name?.toLowerCase().includes(search)
+        );
+      }
 
-     if (filtered && filtered.length > 0) {
-       const apptIds = filtered.map(a => a.id);
-       const { data: svcDataResult, error: svcError } = await supabase
-         .from('appointment_services')
-         .select('id, appointment_id, service_id, artist_id, service_price, service:services(name, price, duration_min, category_id, category:categories(*)), artist:staff(name, photo_url)')
-         .in('appointment_id', apptIds);
-
-       let svcData: any[] | null = null;
-       if (!svcError && svcDataResult) {
-         svcData = svcDataResult;
-       } else if (svcError) {
-         console.error('Error loading appointment services:', svcError);
-       }
-       
-       let commissionMap = new Map<string, any[]>();
-       try {
-         const { data: commData } = await supabase
-           .from('commission_details')
-           .select('*')
+       if (filtered && filtered.length > 0) {
+         const apptIds = filtered.map(a => a.id);
+         const { data: svcDataResult, error: svcError } = await supabase
+           .from('appointment_services')
+           .select('id, appointment_id, service_id, artist_id, service_price, service:services(name, price, duration_min, category_id, category:categories(*)), artist:staff(name, photo_url)')
            .in('appointment_id', apptIds);
-         if (commData) {
-           for (const cd of commData) {
-             const existing = commissionMap.get(cd.appointment_id) || [];
-             existing.push(cd);
-             commissionMap.set(cd.appointment_id, existing);
-           }
+
+         let svcData: any[] | null = null;
+         if (!svcError && svcDataResult) {
+           svcData = svcDataResult;
+         } else if (svcError) {
+           console.error('Error loading appointment services:', svcError);
          }
-       } catch (e) {
-         console.log('commission details view may not exist yet', e);
-       }
-       
-       let balanceMap = new Map<string, any>();
-       try {
-         const { data: balanceData } = await supabase
-           .from('appointment_balance')
-           .select('*')
-           .in('id', apptIds);
-         if (balanceData) {
-           for (const b of balanceData) {
-             balanceMap.set(b.id, b);
-           }
-         }
-       } catch (e) {
-         console.log('appointment_balance view may not exist yet', e);
-       }
-       
-       if (svcData) {
-         filtered.forEach((appt: any) => {
-           const apptServices = svcData
-             .filter(s => s.appointment_id === appt.id);
-           
-           appt.appointment_services = apptServices.map(s => {
-             const svc: any = { 
-               id: s.id,
-               service_id: s.service_id, 
-               artist_id: s.artist_id || null,
-               service_price: s.service_price,
-               service: s.service 
-             };
-             if (s.artist) svc.artist = s.artist;
-             
-             const comms = commissionMap.get(appt.id) || [];
-             const cd = comms.find((c: any) => c.appointment_service_id === s.id);
-             if (cd) svc.commission_detail = cd;
-             
-             return svc;
-           });
-           
-           const balance = balanceMap.get(appt.id);
-           if (balance) {
-             appt.appointment_balance = balance;
-           }
-         });
-       }
+          
+          let commissionMap = new Map<string, any[]>();
+          try {
+            const { data: commData } = await supabase
+              .from('commission_details')
+              .select('*')
+              .in('appointment_id', apptIds);
+            if (commData) {
+              for (const cd of commData) {
+                const existing = commissionMap.get(cd.appointment_id) || [];
+                existing.push(cd);
+                commissionMap.set(cd.appointment_id, existing);
+              }
+            }
+          } catch (e) {
+            console.log('commission details view may not exist yet', e);
+          }
+          
+          let balanceMap = new Map<string, any>();
+          try {
+            const { data: balanceData } = await supabase
+              .from('appointment_balance')
+              .select('*')
+              .in('id', apptIds);
+            if (balanceData) {
+              for (const b of balanceData) {
+                balanceMap.set(b.id, b);
+              }
+            }
+          } catch (e) {
+            console.log('appointment_balance view may not exist yet', e);
+          }
+          
+          if (svcData) {
+            filtered.forEach((appt: any) => {
+              const apptServices = svcData
+                .filter(s => s.appointment_id === appt.id);
+              
+              appt.appointment_services = apptServices.map(s => {
+                const svc: any = { 
+                  id: s.id,
+                  service_id: s.service_id, 
+                  artist_id: s.artist_id || null,
+                  service_price: s.service_price,
+                  service: s.service 
+                };
+                if (s.artist) svc.artist = s.artist;
+                
+                const comms = commissionMap.get(appt.id) || [];
+                const cd = comms.find((c: any) => c.appointment_service_id === s.id);
+                if (cd) svc.commission_detail = cd;
+                
+                return svc;
+              });
+              
+              const balance = balanceMap.get(appt.id);
+              if (balance) {
+                appt.appointment_balance = balance;
+              }
+            });
+          }
+        }
+       return filtered;
+     } catch (e) {
+       console.error('getAppointments error:', e);
+       return [];
      }
-    return filtered;
-  } catch (e) {
-    console.error('getAppointments error:', e);
-    return [];
-  }
+  });
 }
 
 export async function createAppointment(input: any) {
@@ -509,7 +602,8 @@ export async function createAppointment(input: any) {
       }));
       const { error: svcErr } = await supabase.from('appointment_services').insert(svcRows);
       if (svcErr) throw svcErr;
-    }
+  }
+  clearQueryCache();
   return data;
 }
 
@@ -536,6 +630,7 @@ export async function updateAppointment(id: string, input: any) {
       }
     }
 
+  clearQueryCache();
   return data;
 }
 
@@ -550,35 +645,37 @@ export async function checkOverlap(artistId: string, startTime: string, endTime:
 }
 
 export async function getPayments(filters?: any) {
-  if (USE_MOCK) { await delay(); return mockData.payments; }
-  try {
-    
-    let q = supabase.from('payments').select('*').order('date', { ascending: false });
-    if (filters?.dateFrom) q = q.gte('date', filters.dateFrom);
-    if (filters?.dateTo) q = q.lte('date', filters.dateTo);
-    if (filters?.type) q = q.eq('type', filters.type);
-    if (filters?.category) q = q.eq('category', filters.category);
-    const { data, error } = await q;
-    if (error) throw error;
-    if (data && data.length > 0) {
-      const clientIds = [...new Set(data.flatMap(p => p.client_id ? [p.client_id] : []))];
-      const apptIds = [...new Set(data.flatMap(p => p.appointment_id ? [p.appointment_id] : []))];
-      const [clients, appts] = await Promise.all([
-        clientIds.length > 0 ? supabase.from('clients').select('id, name').in('id', clientIds) : { data: [] },
-        apptIds.length > 0 ? supabase.from('appointments').select('id, title').in('id', apptIds) : { data: [] },
-      ]);
-      const clientMap = new Map(clients.data?.map((c: any) => [c.id, c.name]) || []);
-      const apptMap = new Map(appts.data?.map((a: any) => [a.id, a.title]) || []);
-      data.forEach(p => {
-        p.client = p.client_id ? { name: clientMap.get(p.client_id) } : null;
-        p.appointment = p.appointment_id ? { title: apptMap.get(p.appointment_id) } : null;
-      });
+  return cachedQuery(cacheKey('payments', filters || {}), 10_000, async () => {
+    if (USE_MOCK) { await delay(); return mockData.payments; }
+    try {
+      
+      let q = supabase.from('payments').select('*').order('date', { ascending: false });
+      if (filters?.dateFrom) q = q.gte('date', filters.dateFrom);
+      if (filters?.dateTo) q = q.lte('date', filters.dateTo);
+      if (filters?.type) q = q.eq('type', filters.type);
+      if (filters?.category) q = q.eq('category', filters.category);
+      const { data, error } = await q;
+      if (error) throw error;
+      if (data && data.length > 0) {
+        const clientIds = [...new Set(data.flatMap(p => p.client_id ? [p.client_id] : []))];
+        const apptIds = [...new Set(data.flatMap(p => p.appointment_id ? [p.appointment_id] : []))];
+        const [clients, appts] = await Promise.all([
+          clientIds.length > 0 ? supabase.from('clients').select('id, name').in('id', clientIds) : { data: [] },
+          apptIds.length > 0 ? supabase.from('appointments').select('id, title').in('id', apptIds) : { data: [] },
+        ]);
+        const clientMap = new Map(clients.data?.map((c: any) => [c.id, c.name]) || []);
+        const apptMap = new Map(appts.data?.map((a: any) => [a.id, a.title]) || []);
+        data.forEach(p => {
+          p.client = p.client_id ? { name: clientMap.get(p.client_id) } : null;
+          p.appointment = p.appointment_id ? { title: apptMap.get(p.appointment_id) } : null;
+        });
+      }
+      return data;
+    } catch (e) {
+      console.error('getPayments error:', e);
+      return [];
     }
-    return data;
-  } catch (e) {
-    console.error('getPayments error:', e);
-    return [];
-  }
+  });
 }
 
 export async function createPayment(input: any) {
@@ -586,88 +683,89 @@ export async function createPayment(input: any) {
   
   const { data, error } = await supabase.from('payments').insert(input).select().single();
   if (error) throw error;
+  clearQueryCache();
   return data;
 }
 
 export async function getDashboardMetrics() {
-  if (USE_MOCK) {
-    await delay();
-    const today = new Date().toISOString().split('T')[0];
-    return {
-      todayAppointments: mockData.appointments.filter(a => a.start_time.startsWith(today)),
-      monthIncome: mockData.payments.filter(p => p.type === 'ingreso').reduce((s, p) => s + Number(p.amount), 0),
-      monthExpenses: mockData.payments.filter(p => p.type === 'egreso').reduce((s, p) => s + Number(p.amount), 0),
-      netProfit: mockData.payments.filter(p => p.type === 'ingreso').reduce((s, p) => s + Number(p.amount), 0) - mockData.payments.filter(p => p.type === 'egreso').reduce((s, p) => s + Number(p.amount), 0),
-      activeClients: mockData.clients.filter(c => c.status === 'activa').length,
-      pendingPayments: mockData.appointments.filter(a => a.appointment_balance?.pending_balance > 0),
-      toReactivates: mockData.clients.filter(c => c.status === 'inactiva'),
-    };
-  }
-  
-  try {
-    
-    const now = new Date();
-    const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).toISOString();
-
-    const [todayAppts, monthIncome, monthExpenses, activeClients, toReactivates, completedAppts] = await Promise.all([
-      supabase.from('appointments').select(`
-        *,
-        client:clients(name),
-        artist:staff(name, role:roles(name))
-      `).gte('start_time', todayStart).lt('start_time', todayEnd).order('start_time'),
-      supabase.from('payments').select('amount').eq('type', 'ingreso').gte('date', firstOfMonth).lte('date', endOfMonth),
-      supabase.from('payments').select('amount').eq('type', 'egreso').gte('date', firstOfMonth).lte('date', endOfMonth),
-      supabase.from('clients').select('id', { count: 'exact', head: true }).eq('status', 'activa'),
-      supabase.from('clients').select('id, name, phone, instagram, email').eq('status', 'inactiva'),
-      supabase.from('appointments').select('id, title, total_price, client_id').eq('status', 'completada'),
-    ]);
-
-    const pendingPayments: any[] = [];
-    if (completedAppts.data) {
-      const clientIds = [...new Set(completedAppts.data.map((a: any) => a.client_id))].filter(Boolean);
-      if (clientIds.length > 0) {
-        const { data: clients } = await supabase.from('clients').select('id, name').in('id', clientIds);
-        const clientMap = new Map(clients?.map((c: any) => [c.id, c.name]) || []);
-        const { data: incomePayments } = await supabase
-          .from('payments')
-          .select('appointment_id, amount')
-          .eq('type', 'ingreso')
-          .in('appointment_id', completedAppts.data.map((appt: any) => appt.id));
-
-        const paymentMap = new Map<string, number>();
-        for (const payment of incomePayments || []) {
-          const current = paymentMap.get(payment.appointment_id) || 0;
-          paymentMap.set(payment.appointment_id, current + Number(payment.amount || 0));
-        }
-
-        completedAppts.data.forEach((appt: any, i: number) => {
-          const totalPaid = paymentMap.get(appt.id) || 0;
-          if (totalPaid < Number(appt.total_price)) {
-            pendingPayments.push({ ...appt, client: { name: clientMap.get(appt.client_id) || 'Sin clienta' } });
-          }
-        });
-      }
+  return cachedQuery(cacheKey('dashboard'), 10_000, async () => {
+    if (USE_MOCK) {
+      await delay();
+      const today = new Date().toISOString().split('T')[0];
+      return {
+        todayAppointments: mockData.appointments.filter(a => a.start_time.startsWith(today)),
+        monthIncome: mockData.payments.filter(p => p.type === 'ingreso').reduce((s, p) => s + Number(p.amount), 0),
+        monthExpenses: mockData.payments.filter(p => p.type === 'egreso').reduce((s, p) => s + Number(p.amount), 0),
+        netProfit: mockData.payments.filter(p => p.type === 'ingreso').reduce((s, p) => s + Number(p.amount), 0) - mockData.payments.filter(p => p.type === 'egreso').reduce((s, p) => s + Number(p.amount), 0),
+        activeClients: mockData.clients.filter(c => c.status === 'activa').length,
+        pendingPayments: mockData.appointments.filter(a => a.appointment_balance?.pending_balance > 0),
+        toReactivates: mockData.clients.filter(c => c.status === 'inactiva'),
+        upcomingBirthdays: getUpcomingBirthdays(mockData.staff || []),
+      };
     }
-
-    const totalIncome = monthIncome.data?.reduce((sum: number, p: any) => sum + Number(p.amount), 0) || 0;
-    const totalExpenses = monthExpenses.data?.reduce((sum: number, p: any) => sum + Number(p.amount), 0) || 0;
     
-    return {
-      todayAppointments: todayAppts.data || [],
-      monthIncome: totalIncome,
-      monthExpenses: totalExpenses,
-      netProfit: totalIncome - totalExpenses,
-      activeClients: activeClients.count || 0,
-      pendingPayments,
-      toReactivates: toReactivates.data || [],
-    };
-  } catch (e) {
-    console.error('getDashboardMetrics error:', e);
-    return { todayAppointments: [], monthIncome: 0, monthExpenses: 0, netProfit: 0, activeClients: 0, pendingPayments: [], toReactivates: [] };
-  }
+    try {
+      
+      const now = new Date();
+      const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+      const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).toISOString();
+
+      const [todayAppts, monthIncome, monthExpenses, activeClients, toReactivates, completedAppts, staffData] = await Promise.all([
+        supabase.from('appointments').select(`
+          *,
+          client:clients(name),
+          artist:staff(name, role:roles(name))
+        `).gte('start_time', todayStart).lt('start_time', todayEnd).order('start_time'),
+        supabase.from('payments').select('amount').eq('type', 'ingreso').gte('date', firstOfMonth).lte('date', endOfMonth),
+        supabase.from('payments').select('amount').eq('type', 'egreso').gte('date', firstOfMonth).lte('date', endOfMonth),
+        supabase.from('clients').select('id', { count: 'exact', head: true }).eq('status', 'activa'),
+        supabase.from('clients').select('id, name, phone, instagram, email').eq('status', 'inactiva'),
+        supabase.from('appointments').select('id, title, total_price, client_id').eq('status', 'completada'),
+        supabase.from('staff').select('id, name, birthday_date'),
+      ]);
+
+      const pendingPayments: any[] = [];
+      if (completedAppts.data) {
+        const clientIds = [...new Set(completedAppts.data.map((a: any) => a.client_id))].filter(Boolean);
+        if (clientIds.length > 0) {
+          const [clients, incomePayments] = await Promise.all([
+            supabase.from('clients').select('id, name').in('id', clientIds),
+            supabase.from('payments').select('appointment_id, amount').eq('type', 'ingreso').in('appointment_id', completedAppts.data.map((appt: any) => appt.id)),
+          ]);
+          const clientMap = new Map(clients.data?.map((c: any) => [c.id, c.name]) || []);
+          const paymentMap = new Map<string, number>();
+          for (const payment of incomePayments.data || []) {
+            paymentMap.set(payment.appointment_id, (paymentMap.get(payment.appointment_id) || 0) + Number(payment.amount || 0));
+          }
+          completedAppts.data.forEach((appt: any) => {
+            const totalPaid = paymentMap.get(appt.id) || 0;
+            if (totalPaid < Number(appt.total_price)) {
+              pendingPayments.push({ ...appt, client: { name: clientMap.get(appt.client_id) || 'Sin clienta' } });
+            }
+          });
+        }
+      }
+
+      const totalIncome = monthIncome.data?.reduce((sum: number, p: any) => sum + Number(p.amount), 0) || 0;
+      const totalExpenses = monthExpenses.data?.reduce((sum: number, p: any) => sum + Number(p.amount), 0) || 0;
+      
+      return {
+        todayAppointments: todayAppts.data || [],
+        monthIncome: totalIncome,
+        monthExpenses: totalExpenses,
+        netProfit: totalIncome - totalExpenses,
+        activeClients: activeClients.count || 0,
+        pendingPayments,
+        toReactivates: toReactivates.data || [],
+        upcomingBirthdays: getUpcomingBirthdays(staffData.data || []),
+      };
+    } catch (e) {
+      console.error('getDashboardMetrics error:', e);
+      return { todayAppointments: [], monthIncome: 0, monthExpenses: 0, netProfit: 0, activeClients: 0, pendingPayments: [], toReactivates: [], upcomingBirthdays: [] };
+    }
+  });
 }
 
 // ─── COMMISSION OVERRIDES ───────────────────────────────────────────────────

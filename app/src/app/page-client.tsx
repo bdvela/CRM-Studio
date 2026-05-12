@@ -1,14 +1,14 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { getDashboardMetrics, getAppointments } from '@/lib/db/queries';
+import { getDashboardMetrics } from '@/lib/db/queries';
 import { Header } from '@/components/layout/shell';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatCurrency, formatTime } from '@/lib/utils';
 import { APPOINTMENT_STATUS_LABELS } from '@/types/database';
 import {
   CalendarDays, Users, DollarSign, TrendingUp, TrendingDown,
-  ArrowRight, RefreshCw, Clock, Sparkles,
+  ArrowRight, RefreshCw, Clock, Sparkles, Cake,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -27,6 +27,8 @@ const avatarColors = [
   'from-emerald-400 to-teal-500',
   'from-amber-400 to-orange-500',
 ];
+
+const DAY_CAPACITY_MINUTES = 12 * 60;
 
 function getAvatarColor(name: string) {
   let hash = 0;
@@ -140,9 +142,83 @@ function TodayAppointments({ appointments, onNavigate }: { appointments: any[]; 
   );
 }
 
-export default function DashboardPage() {
+function UpcomingBirthdays({ birthdays }: { birthdays: Array<{ id: string; name: string; next_birthday: string; days_left: number; is_today: boolean }> }) {
+  if (birthdays.length === 0) return null;
+
+  function label(daysLeft: number, isToday: boolean) {
+    if (isToday) return 'Hoy';
+    if (daysLeft === 1) return 'Mañana';
+    return `En ${daysLeft} días`;
+  }
+
+  return (
+    <div className="rounded-2xl bg-white border border-zinc-100 shadow-sm overflow-hidden">
+      <div className="px-6 py-4 border-b border-zinc-50 flex items-center gap-2">
+        <div className="size-8 rounded-lg bg-pink-50 flex items-center justify-center">
+          <Cake className="size-4 text-pink-500" />
+        </div>
+        <div>
+          <h2 className="text-base font-semibold text-zinc-900">Próximos cumpleaños</h2>
+          <p className="text-xs text-zinc-400">Para un saludo bonito a tiempo</p>
+        </div>
+      </div>
+      <div className="p-4 space-y-2">
+        {birthdays.map((birthday) => (
+          <div key={birthday.id} className="flex items-center gap-3 p-2.5 rounded-xl bg-pink-50/60">
+            <div className="size-8 rounded-full bg-gradient-to-br from-pink-400 to-rose-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+              {birthday.name[0]?.toUpperCase()}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-zinc-900 truncate">{birthday.name}</p>
+              <p className="text-xs text-zinc-500">
+                {label(birthday.days_left, birthday.is_today)}
+              </p>
+            </div>
+            <span className="text-xs font-medium text-pink-600 bg-white px-2 py-1 rounded-full border border-pink-100 flex-shrink-0">
+              {new Date(birthday.next_birthday).toLocaleDateString('es-PE', { day: 'numeric', month: 'short' })}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default function DashboardPage({ initialMetrics }: { initialMetrics?: any }) {
   const { push } = useRouter();
-  const [metrics, setMetrics] = useState<any>(null);
+  const [metrics, setMetrics] = useState<any>(initialMetrics || null);
+
+  const bannerData = useMemo(() => {
+    const todayAppointments = metrics?.todayAppointments || [];
+    const bookedMinutes = todayAppointments.reduce(
+      (sum: number, appt: any) => sum + Number(appt.total_duration_min || 0),
+      0,
+    );
+    const occupancy = bookedMinutes > 0
+      ? Math.min(100, Math.round((bookedMinutes / DAY_CAPACITY_MINUTES) * 100))
+      : 0;
+    const count = todayAppointments.length;
+
+    let headline = 'Hoy viene suave';
+    let detail = 'Aprovecha para avanzar con seguimiento y organización.';
+
+    if (count === 0) {
+      headline = 'Hoy tienes el día libre';
+      detail = 'Perfecto para ordenar pendientes y preparar la semana.';
+    } else if (count === 1) {
+      headline = 'Tienes 1 clienta programada';
+      detail = `Tu estudio va al ${occupancy}% de capacidad estimada hoy.`;
+    } else {
+      headline = `Hoy tienes ${count} clientas programadas`;
+      detail = `Tu estudio va al ${occupancy}% de capacidad estimada hoy.`;
+    }
+
+    return { headline, detail };
+  }, [metrics]);
+
+  useEffect(() => {
+    if (!initialMetrics) loadMetrics();
+  }, [initialMetrics]);
 
   async function loadMetrics() {
     try {
@@ -152,8 +228,6 @@ export default function DashboardPage() {
       console.error(e);
     }
   }
-
-  useEffect(() => { loadMetrics(); }, []);
 
   if (!metrics) {
     return (
@@ -259,12 +333,10 @@ export default function DashboardPage() {
           <div className="relative">
             <div className="flex items-center gap-2 mb-2">
               <Sparkles className="size-5 text-salon-200" />
-              <span className="text-sm font-medium text-salon-200">Bienvenida al CRM</span>
+              <span className="text-sm font-medium text-salon-200">Hola de nuevo, Ara</span>
             </div>
-            <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">Tu salón, organizado ✨</h2>
-            <p className="text-salon-200 mt-2 text-sm md:text-base max-w-lg">
-              Gestiona clientas, citas, servicios y finanzas desde un solo lugar. Todo conectado.
-            </p>
+            <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">{bannerData.headline}</h2>
+            <p className="text-salon-200 mt-2 text-sm md:text-base max-w-lg">{bannerData.detail}</p>
           </div>
         </div>
 
@@ -309,6 +381,8 @@ export default function DashboardPage() {
                 ))}
               </div>
             </div>
+
+            <UpcomingBirthdays birthdays={metrics.upcomingBirthdays || []} />
 
             {/* Pending Payments */}
             {metrics.pendingPayments.length > 0 && (

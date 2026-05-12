@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getCommissionReport } from '@/lib/db/queries';
 import type { CommissionReportRow } from '@/types/database';
 import { Header } from '@/components/layout/shell';
@@ -20,15 +20,21 @@ import {
   PiggyBank
 } from 'lucide-react';
 
-export default function ReportesComisionesPage() {
-  const [rows, setRows] = useState<CommissionReportRow[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function ReportesComisionesPage({ initialData }: {
+  initialData?: {
+    rows: CommissionReportRow[];
+    dateRange: { from: string; to: string };
+  };
+}) {
+  const [rows, setRows] = useState<CommissionReportRow[]>(initialData?.rows || []);
+  const [loading, setLoading] = useState(!initialData);
   const [search, setSearch] = useState('');
   
   const today = new Date().toISOString().split('T')[0];
   const monthStart = startOfMonth().split('T')[0];
   
-  const [dateRange, setDateRange] = useState({ from: monthStart, to: today });
+  const [dateRange, setDateRange] = useState(initialData?.dateRange || { from: monthStart, to: today });
+  const skipInitialLoad = useRef(!!initialData);
 
   async function load() {
     setLoading(true);
@@ -42,7 +48,14 @@ export default function ReportesComisionesPage() {
     }
   }
 
-  useEffect(() => { load(); }, [dateRange]);
+  useEffect(() => {
+    if (skipInitialLoad.current) {
+      skipInitialLoad.current = false;
+      return;
+    }
+
+    load();
+  }, [dateRange]);
 
   const filtered = rows.filter((r) => {
     const s = search.toLowerCase();

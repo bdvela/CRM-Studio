@@ -611,9 +611,25 @@ function getFilterOptions(services: Service[], categories: Category[]) {
   return options;
 }
 
-export default function ServiciosPage() {
+export default function ServiciosPage({ initialData }: {
+  initialData?: {
+    services: Service[];
+    categories: Category[];
+    allStaff: StaffMember[];
+  };
+}) {
   const { confirm } = useConfirm();
-  const [data, dispatchData] = useReducer(serviciosDataReducer, SERVICIOS_DATA_INIT);
+  const [data, dispatchData] = useReducer(
+    serviciosDataReducer,
+    initialData
+      ? {
+          services: initialData.services,
+          categories: initialData.categories,
+          allStaff: initialData.allStaff,
+          loading: false,
+        }
+      : SERVICIOS_DATA_INIT,
+  );
   const [ui, dispatchUI] = useReducer(serviciosUIReducer, SERVICIOS_UI_INIT);
   
   const [form, dispatch] = useReducer(formReducer, {
@@ -631,6 +647,7 @@ export default function ServiciosPage() {
   
   const initialFormRef = useRef<ServiceForm | null>(null);
   const initialStaffIdsRef = useRef<string[]>([]);
+  const skipInitialLoad = useRef(!!initialData);
 
   async function load() {
     try {
@@ -650,7 +667,14 @@ export default function ServiciosPage() {
     }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    if (skipInitialLoad.current) {
+      skipInitialLoad.current = false;
+      return;
+    }
+
+    load();
+  }, []);
 
   const filteredBySearch = data.services.filter((s) =>
     s.name.toLowerCase().includes(ui.search.toLowerCase()) ||
