@@ -98,16 +98,27 @@ export async function getClients() {
 }
 
 export async function getClientById(id: string) {
+  if (!id || id === 'undefined' || id === 'null') {
+    console.warn('getClientById: invalid id', id);
+    return null;
+  }
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(id)) {
+    console.warn('getClientById: not a valid UUID:', id);
+    return null;
+  }
   return cachedQuery(cacheKey('client', id), 15_000, async () => {
     if (USE_MOCK) { await delay(); return mockData.clients.find(c => c.id === id); }
     try {
-      const { data, error } = await supabase.from('clients').select('*').eq('id', id).single();
-      if (error) throw error;
-      const { data: stats } = await supabase.from('client_stats').select('*').eq('id', id).single();
+      const { data, error } = await supabase.from('clients').select('*').eq('id', id).maybeSingle();
+      if (error && error.code !== 'PGRST116') throw error;
+      if (!data) return null;
+      
+      const { data: stats } = await supabase.from('client_stats').select('*').eq('id', id).maybeSingle();
       if (stats) (data as any).client_stats = stats;
       return data;
     } catch (e) {
-      console.error('getClientById error:', e);
+      console.error('getClientById error:', (e as any).message || e);
       return null;
     }
   });

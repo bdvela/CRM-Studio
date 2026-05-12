@@ -32,7 +32,7 @@ export function Sidebar() {
       {/* Logo */}
       <div className="flex items-center gap-3 p-5 border-b border-zinc-100">
         <div className="size-10 rounded-xl bg-gradient-to-br from-salon-500 to-accent-600 flex items-center justify-center flex-shrink-0">
-          <span className="text-white text-lg">💆</span>
+          <span className="text-white text-lg">🌸</span>
         </div>
         {!collapsed && (
           <div className="overflow-hidden">
