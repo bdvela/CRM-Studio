@@ -266,21 +266,21 @@ export default function ClientDetailPage({ initialData }: {
       </div>
 
       {/* Edit Modal */}
-      <Modal open={ui.showEditModal} onClose={() => { dispatchUI({ showEditModal: false }); }} title="Editar Clienta">
+<Modal open={ui.showEditModal} onClose={() => { dispatchUI({ showEditModal: false }); }} title="Editar Clienta">
          <form onSubmit={handleEditFormSubmit} className="space-y-4">
-          {editForm && (
-            <>
-              <Input label="Nombre *" value={editForm.name} onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value } as ClientInsert))} placeholder="Nombre completo" />
-              <Input label="Teléfono" value={editForm.phone || ''} onChange={(e) => setEditForm(prev => ({ ...prev, phone: e.target.value } as ClientInsert))} placeholder="Teléfono" />
-              <Input label="Email" type="email" value={editForm.email || ''} onChange={(e) => setEditForm(prev => ({ ...prev, email: e.target.value } as ClientInsert))} placeholder="email@ejemplo.com" />
-              <Input label="Instagram" value={editForm.instagram || ''} onChange={(e) => setEditForm(prev => ({ ...prev, instagram: e.target.value } as ClientInsert))} placeholder="@usuario" />
-               <Select label="Estado" value={editForm.status} onChange={(value) => setEditForm(prev => ({ ...prev, status: value as ClientInsert['status'] } as ClientInsert))} options={[
-                 { value: 'prospecto', label: 'Prospecto' },
-                 { value: 'activa', label: 'Activa' },
-                 { value: 'inactiva', label: 'Inactiva' },
-                 { value: 'vip', label: 'VIP' },
-               ]} />
-              <Textarea label="Notas" value={editForm.notes || ''} onChange={(e) => setEditForm(prev => ({ ...prev, notes: e.target.value } as ClientInsert))} placeholder="Preferencias, alergias, notas..." />
+           {editForm && (
+             <>
+               <Input label="Nombre *" value={editForm.name} onChange={(value) => setEditForm(prev => ({ ...prev, name: value } as ClientInsert))} placeholder="Nombre completo" minLength={2} maxLength={100} />
+               <Input label="Teléfono" value={editForm.phone || ''} onChange={(value) => setEditForm(prev => ({ ...prev, phone: value } as ClientInsert))} placeholder="Teléfono" maxLength={11} />
+               <Input label="Email" type="email" value={editForm.email || ''} onChange={(value) => setEditForm(prev => ({ ...prev, email: value } as ClientInsert))} placeholder="email@ejemplo.com" maxLength={100} />
+               <Input label="Instagram" value={editForm.instagram || ''} onChange={(value) => setEditForm(prev => ({ ...prev, instagram: value } as ClientInsert))} placeholder="@usuario" maxLength={50} />
+                <Select label="Estado" value={editForm.status} onChange={(value) => setEditForm(prev => ({ ...prev, status: value as ClientInsert['status'] } as ClientInsert))} options={[
+                  { value: 'prospecto', label: 'Prospecto' },
+                  { value: 'activa', label: 'Activa' },
+                  { value: 'inactiva', label: 'Inactiva' },
+                  { value: 'vip', label: 'VIP' },
+                ]} />
+               <Textarea label="Notas" value={editForm.notes || ''} onChange={(value) => setEditForm(prev => ({ ...prev, notes: value } as ClientInsert))} placeholder="Preferencias, alergias, notas..." maxLength={500} />
 
               {/* Botones de acción */}
               <div className="flex flex-wrap gap-2 sm:gap-3 pt-4 sm:pt-6 mt-2 border-t border-zinc-100">

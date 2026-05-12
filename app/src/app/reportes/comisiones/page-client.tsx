@@ -123,14 +123,14 @@ export default function ReportesComisionesPage({ initialData }: {
                   <Input
                     type="date"
                     value={dateRange.from}
-                    onChange={(e) => setDateRange(prev => ({ ...prev, from: e.target.value }))}
+                    onChange={(value) => setDateRange(prev => ({ ...prev, from: value }))}
                     className="text-sm h-full"
                   />
                   <span className="text-zinc-400 text-sm">al</span>
                   <Input
                     type="date"
                     value={dateRange.to}
-                    onChange={(e) => setDateRange(prev => ({ ...prev, to: e.target.value }))}
+                    onChange={(value) => setDateRange(prev => ({ ...prev, to: value }))}
                     className="text-sm h-full"
                   />
                 </div>
@@ -164,19 +164,19 @@ export default function ReportesComisionesPage({ initialData }: {
             {filtered.map((row) => {
               const isFounder = row.artist_role_name === 'Dueña' || row.artist_role_name === 'Founder';
               return (
-                <Card key={row.artist_id || 'no-artist'} className="hover:shadow-md transition-all cursor-pointer">
-                  <CardContent className="py-5">
-                    <div className="flex items-start gap-4">
-                      <div className={`size-12 rounded-full flex items-center justify-center text-lg font-bold flex-shrink-0 ${
+                <Card key={row.artist_id || 'no-artist'} className="hover:shadow-md transition-all cursor-pointer w-full box-border">
+                  <CardContent className="py-4 sm:py-5 px-3 sm:px-4">
+                    <div className="flex items-start gap-3 sm:gap-4">
+                      <div className={`size-10 sm:size-12 rounded-full flex items-center justify-center text-base sm:text-lg font-bold flex-shrink-0 ${
                         isFounder ? 'bg-amber-100 text-amber-600' : 'bg-accent-100 text-accent-600'
                       }`}>
                         {(row.artist_name || 'S')[0].toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="font-semibold text-zinc-900">{row.artist_name || 'Sin artista'}</p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-semibold text-zinc-900 truncate max-w-[120px] sm:max-w-none">{row.artist_name || 'Sin artista'}</p>
                           {isFounder && (
-                            <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-xs font-medium">
+                            <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-xs font-medium flex-shrink-0">
                               Founder
                             </span>
                           )}

@@ -9,7 +9,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "db:seed": "node ./scripts/seed-db.mjs"
+    "db:seed": "node ./scripts/seed-db.mjs",
+    "db:backup": "node ./scripts/backup-db.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.47.0",

@@ -226,17 +226,17 @@ export default function ClientesPage({ initialClients }: { initialClients?: Clie
       {/* Create Modal */}
       <Modal open={ui.showModal} onClose={() => dispatchUI({ showModal: false })} title="Nueva Clienta">
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Input label="Nombre *" value={form.name} onChange={(e) => dispatchForm({ name: e.target.value })} placeholder="Nombre completo" />
-          <Input label="Teléfono" leftPrefix={<FlagPeru className="size-5" />} value={form.phone || ''} onChange={(e) => dispatchForm({ phone: formatPeruPhoneForInput(e.target.value) })} placeholder="987 654 321" maxLength={11} />
-          <Input label="Email" type="email" value={form.email || ''} onChange={(e) => dispatchForm({ email: e.target.value })} placeholder="email@ejemplo.com" />
-          <Input label="Instagram" value={form.instagram || ''} onChange={(e) => dispatchForm({ instagram: e.target.value })} placeholder="@usuario" />
+          <Input label="Nombre *" value={form.name} onChange={(value) => dispatchForm({ name: value })} placeholder="Nombre completo" minLength={2} maxLength={100} />
+          <Input label="Teléfono" leftPrefix={<FlagPeru className="size-5" />} value={form.phone || ''} onChange={(value) => dispatchForm({ phone: formatPeruPhoneForInput(value) })} placeholder="987 654 321" maxLength={11} />
+          <Input label="Email" type="email" value={form.email || ''} onChange={(value) => dispatchForm({ email: value })} placeholder="email@ejemplo.com" maxLength={100} />
+          <Input label="Instagram" value={form.instagram || ''} onChange={(value) => dispatchForm({ instagram: value })} placeholder="@usuario" maxLength={50} />
            <Select label="Estado" value={form.status} onChange={(value) => dispatchForm({ status: value as ClientInsert['status'] })} options={[
              { value: 'prospecto', label: 'Prospecto' },
              { value: 'activa', label: 'Activa' },
              { value: 'inactiva', label: 'Inactiva' },
              { value: 'vip', label: 'VIP' },
            ]} />
-          <Textarea label="Notas" value={form.notes || ''} onChange={(e) => dispatchForm({ notes: e.target.value })} placeholder="Preferencias, alergias, etc." />
+          <Textarea label="Notas" value={form.notes || ''} onChange={(value) => dispatchForm({ notes: value })} placeholder="Preferencias, alergias, etc." maxLength={500} />
            <div className="flex gap-3 pt-2">
               <Button type="button" variant="outline" className="flex-1" onClick={() => dispatchUI({ showModal: false })}>Cancelar</Button>
               <Button type="submit" className="flex-1" loading={ui.submitting}>
@@ -252,30 +252,30 @@ export default function ClientesPage({ initialClients }: { initialClients?: Clie
 function ClientCard({ client, onClick }: { client: Client; onClick: () => void }) {
   return (
     <Card
-      className="cursor-pointer hover:shadow-md transition-all"
+      className="cursor-pointer hover:shadow-md transition-all w-full box-border"
       onClick={onClick}
     >
-      <CardContent className="flex items-center gap-4 py-4">
-        <div className="size-12 rounded-full bg-accent-100 flex items-center justify-center text-accent-600 font-bold flex-shrink-0">
+      <CardContent className="flex items-center gap-3 sm:gap-4 py-3 sm:py-4 px-3 sm:px-4">
+        <div className="size-10 sm:size-12 rounded-full bg-accent-100 flex items-center justify-center text-accent-600 font-bold flex-shrink-0">
           {client.name[0].toUpperCase()}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <p className="font-medium truncate">{client.name}</p>
-            <Badge variant={statusBadge[client.status] || 'default'}>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="font-medium truncate max-w-[150px] sm:max-w-none">{client.name}</p>
+            <Badge variant={statusBadge[client.status] || 'default'} className="flex-shrink-0">
               {statusLabels[client.status]}
             </Badge>
           </div>
-          <div className="flex items-center gap-3 text-xs text-zinc-400 mt-1">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-zinc-400 mt-1">
             {client.phone && (
-              <span className="flex items-center gap-1"><Phone className="size-3" />{client.phone}</span>
+              <span className="flex items-center gap-1 break-all"><Phone className="size-3 flex-shrink-0" />{client.phone}</span>
             )}
             {client.instagram && (
-              <span className="flex items-center gap-1"><Instagram className="size-3" />{client.instagram}</span>
+              <span className="flex items-center gap-1 break-all overflow-wrap:anywhere"><Instagram className="size-3 flex-shrink-0" />{client.instagram}</span>
             )}
           </div>
         </div>
-        <div className="text-right hidden sm:block">
+        <div className="text-right hidden sm:block flex-shrink-0">
           {client.client_stats && (
             <>
               <p className="text-sm font-semibold">{formatCurrency(client.client_stats.total_spent)}</p>

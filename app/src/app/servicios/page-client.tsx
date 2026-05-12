@@ -363,8 +363,10 @@ function ServicioFormModal({
             <Input 
               label="Nombre *" 
               value={form.name} 
-              onChange={(e) => dispatch({ type: 'UPDATE', payload: { name: e.target.value } })} 
+              onChange={(value) => dispatch({ type: 'UPDATE', payload: { name: value } })} 
               placeholder="Ej: Manicure semipermanente" 
+              minLength={2}
+              maxLength={100}
             />
             
             <Select 
@@ -378,7 +380,9 @@ function ServicioFormModal({
               label="Duración (min) *" 
               type="number" 
               value={form.duration_min} 
-              onChange={(e) => dispatch({ type: 'UPDATE', payload: { duration_min: parseInt(e.target.value) || 0 } })} 
+              onChange={(value) => dispatch({ type: 'UPDATE', payload: { duration_min: parseInt(value) || 0 } })} 
+              min={5}
+              max={480}
             />
 
             <div className="space-y-1.5">
@@ -503,8 +507,9 @@ function ServicioFormModal({
             <Textarea 
               label="Descripción" 
               value={form.description || ''} 
-              onChange={(e) => dispatch({ type: 'UPDATE', payload: { description: e.target.value } })} 
+              onChange={(value) => dispatch({ type: 'UPDATE', payload: { description: value } })} 
               placeholder="Descripción del servicio..." 
+              maxLength={500}
             />
           </div>
         )}

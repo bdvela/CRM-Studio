@@ -197,8 +197,10 @@ function StaffComisionesTab({
               id="staff-comision"
               type="number"
               value={form.commission_pct}
-              onChange={(e) => dispatch({ type: 'UPDATE', payload: { commission_pct: parseFloat(e.target.value) || 0 } })}
+              onChange={(value) => dispatch({ type: 'UPDATE', payload: { commission_pct: parseFloat(value) || 0 } })}
               placeholder="Ej: 70"
+              min={0}
+              max={100}
             />
             <div className="bg-zinc-50 border border-zinc-200 rounded-xl p-3 space-y-1">
               <p className="text-sm text-zinc-700">
@@ -340,11 +342,10 @@ function StaffComisionesTab({
                             type="number"
                             placeholder="0"
                             value={fixedAmount ?? ''}
-                            onChange={(e) => {
-                              const val = e.target.value;
+                            onChange={(value) => {
                               setOverrides((prev: Record<string, number | null>) => ({
                                 ...prev,
-                                [serviceId]: val === '' ? null : parseFloat(val)
+                                [serviceId]: value === '' ? null : parseFloat(value)
                               }));
                             }}
                           />
@@ -547,9 +548,11 @@ function StaffFormModal({
                 <Input
                   id="staff-nombre"
                   value={form.name}
-                  onChange={(e) => dispatch({ type: 'UPDATE', payload: { name: e.target.value } })}
+                  onChange={(value) => dispatch({ type: 'UPDATE', payload: { name: value } })}
                   placeholder="Nombre completo"
                   disabled={isOwnerMember(editingMember)}
+                  minLength={2}
+                  maxLength={100}
                 />
               </div>
 
@@ -559,9 +562,11 @@ function StaffFormModal({
                   id="staff-telefono"
                   leftPrefix={<FlagPeru className="size-5" />}
                   value={form.phone || ''}
-                  onChange={(e) => dispatch({ type: 'UPDATE', payload: { phone: formatPeruPhoneForInput(e.target.value) } })}
+                  onChange={(value) => dispatch({ type: 'UPDATE', payload: { phone: formatPeruPhoneForInput(value) } })}
                   placeholder="987 654 321"
+                  numeric
                   maxLength={11}
+                  minLength={9}
                 />
               </div>
 
@@ -641,8 +646,9 @@ function StaffFormModal({
                 <Textarea
                   id="staff-horario"
                   value={form.schedule || ''}
-                  onChange={(e) => dispatch({ type: 'UPDATE', payload: { schedule: e.target.value } })}
+                  onChange={(value) => dispatch({ type: 'UPDATE', payload: { schedule: value } })}
                   placeholder="Ej: Lun-Sáb 9:00-18:00"
+                  maxLength={200}
                 />
                 <p className="text-xs text-zinc-400 mt-1">
                   Opcional: para saber cuándo trabaja

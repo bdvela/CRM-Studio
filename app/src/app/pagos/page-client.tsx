@@ -415,10 +415,10 @@ export default function PagosPage({ initialData }: {
              { value: 'ingreso', label: 'Ingreso' },
              { value: 'egreso', label: 'Egreso' },
            ]} />
-          <Input label="Concepto *" value={form.concept} onChange={(e) => dispatchForm({ concept: e.target.value })} placeholder="Ej: Pago de María García" />
+          <Input label="Concepto *" value={form.concept} onChange={(value) => dispatchForm({ concept: value })} placeholder="Ej: Pago de María García" maxLength={200} />
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Monto *" type="number" step="0.01" value={form.amount} onChange={(e) => dispatchForm({ amount: parseFloat(e.target.value) || 0 })} />
-            <Input label="Fecha" type="date" value={form.date} onChange={(e) => dispatchForm({ date: e.target.value })} />
+            <Input label="Monto *" type="number" step="0.01" value={form.amount} onChange={(value) => dispatchForm({ amount: parseFloat(value) || 0 })} />
+            <Input label="Fecha" type="date" value={form.date} onChange={(value) => dispatchForm({ date: value })} />
           </div>
 
           {form.type === 'ingreso' && (

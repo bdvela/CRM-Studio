@@ -172,29 +172,36 @@ function CreateClientForm({ state, dispatch, isCreating, onCreate, onCancel }: {
       <Input
         label="Nombre *"
         value={state.name}
-        onChange={(e) => dispatch({ type: 'SET_FIELD', payload: { field: 'name', value: e.target.value } })}
+        onChange={(value) => dispatch({ type: 'SET_FIELD', payload: { field: 'name', value } })}
         placeholder="Ej: Ana López"
+        minLength={2}
+        maxLength={100}
       />
       <Input
         label="Teléfono (opcional)"
         type="tel"
         value={state.phone}
-        onChange={(e) => dispatch({ type: 'SET_FIELD', payload: { field: 'phone', value: e.target.value } })}
+        onChange={(value) => dispatch({ type: 'SET_FIELD', payload: { field: 'phone', value } })}
         placeholder="987 654 321"
+        numeric
+        maxLength={11}
+        minLength={9}
       />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <Input
           label="Email (opcional)"
           type="email"
           value={state.email}
-          onChange={(e) => dispatch({ type: 'SET_FIELD', payload: { field: 'email', value: e.target.value } })}
+          onChange={(value) => dispatch({ type: 'SET_FIELD', payload: { field: 'email', value } })}
           placeholder="ana@email.com"
+          maxLength={100}
         />
         <Input
           label="Instagram (opcional)"
           value={state.instagram}
-          onChange={(e) => dispatch({ type: 'SET_FIELD', payload: { field: 'instagram', value: e.target.value } })}
+          onChange={(value) => dispatch({ type: 'SET_FIELD', payload: { field: 'instagram', value } })}
           placeholder="@analopez"
+          maxLength={50}
         />
       </div>
       <div className="flex gap-2 pt-1">

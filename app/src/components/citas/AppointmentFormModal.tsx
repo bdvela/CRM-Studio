@@ -184,7 +184,7 @@ export function AppointmentFormModalContent({
         </div>
       )}
 
-      <Textarea label="Notas" value={form.notes} onChange={(e) => onFormChange({ notes: e.target.value })} placeholder="Notas especiales..." />
+      <Textarea label="Notas" value={form.notes} onChange={(value) => onFormChange({ notes: value })} placeholder="Notas especiales..." maxLength={500} />
 
       <div className="flex flex-wrap gap-2 sm:gap-3 pt-4 sm:pt-6 mt-2 border-t border-zinc-100">
         {canDelete && (
