@@ -20,17 +20,26 @@ export function Checkbox({ checked, onChange, label, disabled, className }: Chec
       <div className="relative flex-shrink-0">
         <div
           className={cn(
-            'w-5 h-5 rounded-lg border-2 transition-all duration-200',
+            'size-5 rounded-lg border-2 transition-all duration-200',
             'flex items-center justify-center',
             checked 
               ? 'bg-salon-500 border-salon-500' 
-              : 'bg-white border-gray-300 hover:border-salon-400'
+              : 'bg-white border-zinc-300 hover:border-salon-400'
           )}
           onClick={() => !disabled && onChange(!checked)}
+          role="checkbox"
+          aria-checked={checked}
+          tabIndex={disabled ? -1 : 0}
+          onKeyDown={(e) => {
+            if (!disabled && (e.key === 'Enter' || e.key === ' ')) {
+              e.preventDefault();
+              onChange(!checked);
+            }
+          }}
         >
           {checked && (
             <svg 
-              className="w-3.5 h-3.5 text-white" 
+              className="size-3.5 text-white" 
               fill="none" 
               viewBox="0 0 24 24" 
               stroke="currentColor" 
@@ -42,7 +51,7 @@ export function Checkbox({ checked, onChange, label, disabled, className }: Chec
         </div>
       </div>
       {label && (
-        <span className="text-sm text-gray-700">
+        <span className="text-sm text-zinc-700">
           {label}
         </span>
       )}

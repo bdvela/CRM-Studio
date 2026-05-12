@@ -11,8 +11,8 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 const variants = {
   primary: 'bg-salon-600 text-white hover:bg-salon-700 active:bg-salon-800',
   secondary: 'bg-accent-600 text-white hover:bg-accent-700 active:bg-accent-800',
-  outline: 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 active:bg-gray-100',
-  ghost: 'text-gray-600 hover:bg-gray-100 active:bg-gray-200',
+  outline: 'border border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50 active:bg-zinc-100',
+  ghost: 'text-zinc-600 hover:bg-zinc-100 active:bg-zinc-200',
   danger: 'bg-red-600 text-white hover:bg-red-700 active:bg-red-800',
 };
 
@@ -23,9 +23,9 @@ const sizes = {
 };
 
 const spinnerSizes = {
-  sm: 'w-4 h-4',
-  md: 'w-5 h-5',
-  lg: 'w-6 h-6',
+  sm: 'size-4',
+  md: 'size-5',
+  lg: 'size-6',
 };
 
 export function Button({ variant = 'primary', size = 'md', className, children, loading, disabled, ...props }: ButtonProps) {

@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { createContext, use, useState, useCallback, ReactNode } from 'react';
 
 interface ConfirmDialogOptions {
   title: string;
@@ -75,21 +75,24 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
           <div 
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={handleCancel}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCancel(); }}
           />
           
           <div className="relative w-full max-w-sm mx-4 bg-white rounded-2xl shadow-2xl animate-in fade-in zoom-in-95 duration-200">
             <div className="p-6">
               <div className="flex items-start gap-4">
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 ${styles.icon}`}>
-                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <div className={`size-12 rounded-2xl flex items-center justify-center flex-shrink-0 ${styles.icon}`}>
+                  <svg className="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
                   </svg>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-lg font-semibold text-gray-900">
+                  <h3 className="text-lg font-semibold text-zinc-900">
                     {dialog.title}
                   </h3>
-                  <p className="mt-1 text-sm text-gray-500">
+                  <p className="mt-1 text-sm text-zinc-500">
                     {dialog.message}
                   </p>
                 </div>
@@ -99,7 +102,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                 <button
                   type="button"
                   onClick={handleCancel}
-                  className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors"
+                  className="flex-1 px-4 py-2.5 text-sm font-medium text-zinc-700 bg-white border border-zinc-300 rounded-xl hover:bg-zinc-50 transition-colors"
                 >
                   {dialog.cancelText || 'Cancelar'}
                 </button>
@@ -120,7 +123,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
 }
 
 export function useConfirm() {
-  const context = useContext(ConfirmContext);
+  const context = use(ConfirmContext);
   if (!context) {
     throw new Error('useConfirm must be used within a ConfirmProvider');
   }

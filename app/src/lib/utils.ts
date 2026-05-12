@@ -105,46 +105,7 @@ export function formatPeruPhoneForInput(phone: string | null | undefined): strin
   }
 }
 
-export function formatPeruPhone(phone: string | null | undefined): string {
-  if (!phone) return '';
-  const normalized = normalizePeruPhone(phone);
-  return normalized || phone;
-}
 
-export function calculateServiceCommission(params: {
-  servicePrice: number;
-  artistCommissionPct: number | null;
-  overrideFounderFixed: number | null;
-  artistRoleName: string | null;
-}): { artistCommission: number; founderShare: number } {
-  const price = params.servicePrice || 0;
-  const hasArtist = params.artistRoleName !== null && params.artistCommissionPct !== null;
-  
-  if (!hasArtist) {
-    return { artistCommission: 0, founderShare: price };
-  }
-  
-  const isFounder = params.artistRoleName === 'Dueña' || params.artistRoleName === 'Founder';
-  
-  if (isFounder) {
-    return { artistCommission: price, founderShare: 0 };
-  }
-  
-  if (params.overrideFounderFixed !== null) {
-    const founderFixed = Math.min(params.overrideFounderFixed, price);
-    return {
-      artistCommission: price - founderFixed,
-      founderShare: founderFixed,
-    };
-  }
-  
-  const pct = params.artistCommissionPct || 0;
-  const artistCommission = Math.round(price * pct) / 100;
-  return {
-    artistCommission,
-    founderShare: price - artistCommission,
-  };
-}
 
 export function isAppointmentPastOrCompleted(appt: any): boolean {
   if (appt.status === 'completada' || appt.status === 'cancelada' || appt.status === 'no_show') {
@@ -154,7 +115,3 @@ export function isAppointmentPastOrCompleted(appt: any): boolean {
   return endTime < new Date();
 }
 
-export function getApptServiceEmoji(appt: any): string {
-  const svc = appt.appointment_services?.[0]?.service;
-  return svc?.category?.icon || '📋';
-}

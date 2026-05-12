@@ -80,47 +80,6 @@ export async function getCategories(activeOnly = true) {
   }
 }
 
-export async function createCategory(input: any) {
-  if (USE_MOCK) {
-    await delay();
-    const newCat = { ...input, id: String(Date.now()), created_at: new Date().toISOString(), updated_at: new Date().toISOString(), active: true };
-    if (!mockData.categories) mockData.categories = [];
-    mockData.categories.push(newCat);
-    return newCat;
-  }
-  const { data, error } = await supabase.from('categories').insert(input).select().single();
-  if (error) throw error;
-  return data;
-}
-
-export async function updateCategory(id: string, input: any) {
-  if (USE_MOCK) {
-    await delay();
-    if (!mockData.categories) mockData.categories = [];
-    const idx = mockData.categories.findIndex((c: any) => c.id === id);
-    if (idx >= 0) mockData.categories[idx] = { ...mockData.categories[idx], ...input };
-    return mockData.categories[idx];
-  }
-  const { data, error } = await supabase.from('categories').update(input).eq('id', id).select().single();
-  if (error) throw error;
-  return data;
-}
-
-export async function deleteCategory(id: string) {
-  if (USE_MOCK) {
-    await delay();
-    if (!mockData.categories) mockData.categories = [];
-    mockData.categories = mockData.categories.filter((c: any) => c.id !== id);
-    return true;
-  }
-  const { data: servicesUsing, error: svcErr } = await supabase.from('services').select('id').eq('category_id', id).limit(1);
-  if (svcErr) throw svcErr;
-  if (servicesUsing && servicesUsing.length > 0) throw new Error('No se puede eliminar: hay servicios con esta categoría');
-  const { error } = await supabase.from('categories').delete().eq('id', id);
-  if (error) throw error;
-  return true;
-}
-
 // ─── SERVICES ───────────────────────────────────────────────────────────────
 
 export async function getServices(activeOnly = true) {
@@ -212,27 +171,6 @@ export async function deleteService(id: string) {
   const { error } = await supabase.from('services').delete().eq('id', id);
   if (error) throw error;
   return true;
-}
-
-export async function getStaffServicesByService(serviceId: string) {
-  if (USE_MOCK) {
-    await delay();
-    return (mockData.staffServices || []).filter((s: any) => s.service_id === serviceId);
-  }
-  try {
-    const { data, error } = await supabase
-      .from('staff_services')
-      .select('*')
-      .eq('service_id', serviceId);
-    if (error) {
-      console.log('staff_services table may not exist:', error);
-      return [];
-    }
-    return data || [];
-  } catch (e) {
-    console.log('getStaffServicesByService (table may not exist):', e);
-    return [];
-  }
 }
 
 export async function updateStaffServices(serviceId: string, staffIds: string[]) {
@@ -443,48 +381,6 @@ export async function getRoles(activeOnly = true) {
   }
 }
 
-export async function createRole(input: any) {
-  if (USE_MOCK) {
-    await delay();
-    const newR = { ...input, id: String(Date.now()), created_at: new Date().toISOString(), updated_at: new Date().toISOString(), active: true };
-    if (!mockData.roles) mockData.roles = [];
-    mockData.roles.push(newR);
-    return newR;
-  }
-  const { data, error } = await supabase.from('roles').insert(input).select().single();
-  if (error) throw error;
-  return data;
-}
-
-export async function updateRole(id: string, input: any) {
-  if (USE_MOCK) {
-    await delay();
-    if (!mockData.roles) mockData.roles = [];
-    const idx = mockData.roles.findIndex((r: any) => r.id === id);
-    if (idx >= 0) mockData.roles[idx] = { ...mockData.roles[idx], ...input };
-    return mockData.roles[idx];
-  }
-  const { data, error } = await supabase.from('roles').update(input).eq('id', id).select().single();
-  if (error) throw error;
-  return data;
-}
-
-export async function deleteRole(id: string) {
-  if (USE_MOCK) {
-    await delay();
-    if (!mockData.roles) mockData.roles = [];
-    mockData.roles = mockData.roles.filter((r: any) => r.id !== id);
-    return true;
-  }
-  // Check if any staff uses this role
-  const { data: staffUsing, error: staffErr } = await supabase.from('staff').select('id').eq('role_id', id).limit(1);
-  if (staffErr) throw staffErr;
-  if (staffUsing && staffUsing.length > 0) throw new Error('No se puede eliminar: hay staff asignado a este rol');
-  const { error } = await supabase.from('roles').delete().eq('id', id);
-  if (error) throw error;
-  return true;
-}
-
 export async function getAppointments(filters?: any) {
   if (USE_MOCK) { await delay(); return mockData.appointments; }
   try {
@@ -665,8 +561,8 @@ export async function getPayments(filters?: any) {
     const { data, error } = await q;
     if (error) throw error;
     if (data && data.length > 0) {
-      const clientIds = [...new Set(data.filter(p => p.client_id).map(p => p.client_id))];
-      const apptIds = [...new Set(data.filter(p => p.appointment_id).map(p => p.appointment_id))];
+      const clientIds = [...new Set(data.flatMap(p => p.client_id ? [p.client_id] : []))];
+      const apptIds = [...new Set(data.flatMap(p => p.appointment_id ? [p.appointment_id] : []))];
       const [clients, appts] = await Promise.all([
         clientIds.length > 0 ? supabase.from('clients').select('id, name').in('id', clientIds) : { data: [] },
         apptIds.length > 0 ? supabase.from('appointments').select('id, title').in('id', apptIds) : { data: [] },
@@ -735,13 +631,18 @@ export async function getDashboardMetrics() {
       if (clientIds.length > 0) {
         const { data: clients } = await supabase.from('clients').select('id, name').in('id', clientIds);
         const clientMap = new Map(clients?.map((c: any) => [c.id, c.name]) || []);
-        for (const appt of completedAppts.data) {
-          const { data: paid } = await supabase.from('payments').select('amount').eq('appointment_id', appt.id).eq('type', 'ingreso');
+        const paymentResults = await Promise.all(
+          completedAppts.data.map(appt =>
+            supabase.from('payments').select('amount').eq('appointment_id', appt.id).eq('type', 'ingreso')
+          )
+        );
+        completedAppts.data.forEach((appt: any, i: number) => {
+          const paid = paymentResults[i].data;
           const totalPaid = paid?.reduce((sum: number, p: any) => sum + Number(p.amount), 0) || 0;
           if (totalPaid < Number(appt.total_price)) {
             pendingPayments.push({ ...appt, client: { name: clientMap.get(appt.client_id) || 'Sin clienta' } });
           }
-        }
+        });
       }
     }
 
@@ -760,19 +661,6 @@ export async function getDashboardMetrics() {
   } catch (e) {
     console.error('getDashboardMetrics error:', e);
     return { todayAppointments: [], monthIncome: 0, monthExpenses: 0, netProfit: 0, activeClients: 0, pendingPayments: [], toReactivates: [] };
-  }
-}
-
-export async function getAllClientsForSelect() {
-  if (USE_MOCK) { await delay(); return mockData.clients.map(c => ({ id: c.id, name: c.name })); }
-  try {
-    
-    const { data, error } = await supabase.from('clients').select('id, name').order('name');
-    if (error) throw error;
-    return data;
-  } catch (e) {
-    console.error('getAllClientsForSelect error:', e);
-    return [];
   }
 }
 

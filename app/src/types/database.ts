@@ -39,8 +39,6 @@ export interface Category {
   updated_at: string;
 }
 
-export type CategoryInsert = Omit<Category, 'id' | 'created_at' | 'updated_at'>;
-
 export interface Role {
   id: string;
   name: string;
@@ -50,8 +48,6 @@ export interface Role {
   created_at: string;
   updated_at: string;
 }
-
-export type RoleInsert = Omit<Role, 'id' | 'created_at' | 'updated_at'>;
 
 export interface Client {
   id: string;
@@ -112,21 +108,7 @@ export interface StaffService {
   staff?: StaffMember;
 }
 
-export type StaffServiceInsert = Omit<StaffService, 'id' | 'created_at' | 'updated_at' | 'staff'>;
-
-export interface CommissionOverride {
-  id: string;
-  staff_id: string;
-  service_id: string;
-  founder_fixed_amount: number;
-  created_at: string;
-  updated_at: string;
-  service?: { name: string; price: number };
-}
-
-export type CommissionOverrideInsert = Omit<CommissionOverride, 'id' | 'created_at' | 'updated_at' | 'service'>;
-
-export interface CommissionDetail {
+interface CommissionDetail {
   appointment_service_id: string;
   appointment_id: string;
   service_id: string;
@@ -148,11 +130,6 @@ export interface CommissionReportRow {
   total_service_revenue: number;
   total_artist_commission: number;
   total_founder_share: number;
-}
-
-export interface AppointmentServiceInput {
-  service_id: string;
-  artist_id?: string | null;
 }
 
  export interface StaffMember {
@@ -179,7 +156,7 @@ export interface AppointmentServiceInput {
 
 export type StaffMemberInsert = Omit<StaffMember, 'id' | 'created_at' | 'updated_at' | 'staff_stats' | 'role' | 'staff_specialties'>;
 
-export interface Appointment {
+interface Appointment {
   id: string;
   client_id: string | null;
   artist_id: string | null;
@@ -247,9 +224,9 @@ export function getCategoryIcon(service: Service | null | undefined): string {
 }
 
 export function getStaffSpecialtyNames(staff: StaffMember | null | undefined): string[] {
-  return staff?.staff_specialties?.map(s => s.category?.name || '').filter(Boolean) || [];
+  return staff?.staff_specialties?.flatMap(s => s.category?.name ? [s.category.name] : []) || [];
 }
 
 export function getCategoryIdsFromStaffSpecialties(staff: StaffMember | null | undefined): string[] {
-  return staff?.staff_specialties?.map(s => s.category_id || '').filter(Boolean) || [];
+  return staff?.staff_specialties?.flatMap(s => s.category_id ? [s.category_id] : []) || [];
 }

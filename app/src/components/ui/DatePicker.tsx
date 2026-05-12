@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { X } from 'lucide-react';
 
 const MONTHS = [
@@ -35,14 +35,27 @@ interface DatePickerProps {
   placeholder?: string;
 }
 
-export function DatePicker({ value, onChange, label, placeholder = 'Seleccionar fecha' }: DatePickerProps) {
-  const date = value ? new Date(value + 'T00:00:00') : null;
+type DateParts = { day: number | null; month: number | null; year: number | null };
 
-  const [day, setDay] = useState<number | null>(date ? date.getDate() : null);
-  const [month, setMonth] = useState<number | null>(date ? date.getMonth() : null);
-  const [year, setYear] = useState<number | null>(date ? date.getFullYear() : null);
+function dateFromValue(value: string | null): DateParts {
+  if (!value) return { day: null, month: null, year: null };
+  const d = new Date(value + 'T00:00:00');
+  return { day: d.getDate(), month: d.getMonth(), year: d.getFullYear() };
+}
 
-  const [isModified, setIsModified] = useState(false);
+function toIsoDate(day: number, month: number, year: number): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${year}-${pad(month + 1)}-${pad(day)}`;
+}
+
+export function DatePicker({ value, onChange, label }: DatePickerProps) {
+  const [dp, setDp] = useState<DateParts>(() => dateFromValue(value));
+  const prevValue = useRef(value);
+
+  if (value !== prevValue.current) {
+    prevValue.current = value;
+    setDp(dateFromValue(value));
+  }
 
   const currentYear = new Date().getFullYear();
   const minYear = 1940;
@@ -52,90 +65,73 @@ export function DatePicker({ value, onChange, label, placeholder = 'Seleccionar 
     (_, i) => currentYear - i
   );
 
-  useEffect(() => {
-    if (value && date && !isModified) {
-      setDay(date.getDate());
-      setMonth(date.getMonth());
-      setYear(date.getFullYear());
-    }
-  }, [value, isModified]);
-
-  function applySelection() {
-    if (day !== null && month !== null && year !== null) {
-      const maxDays = getDaysInMonth(year, month);
-      const actualDay = Math.min(day, maxDays);
-      const newDate = new Date(year, month, actualDay);
-      const pad = (n: number) => String(n).padStart(2, '0');
-      const isoDate = `${newDate.getFullYear()}-${pad(newDate.getMonth() + 1)}-${pad(newDate.getDate())}`;
-      onChange(isoDate);
-      setIsModified(false);
+  function emitChange(updated: DateParts) {
+    if (updated.day !== null && updated.month !== null && updated.year !== null) {
+      const maxDays = getDaysInMonth(updated.year, updated.month);
+      const actualDay = Math.min(updated.day, maxDays);
+      onChange(toIsoDate(actualDay, updated.month, updated.year));
     }
   }
 
-  useEffect(() => {
-    if (isModified && day !== null && month !== null && year !== null) {
-      applySelection();
-    }
-  }, [day, month, year, isModified]);
-
   function handleDayChange(newDay: number | null) {
-    setDay(newDay);
-    setIsModified(true);
+    const updated = { ...dp, day: newDay };
+    setDp(updated);
+    emitChange(updated);
   }
 
   function handleMonthChange(newMonth: number | null) {
-    setMonth(newMonth);
-    if (newMonth !== null && year !== null && day !== null) {
-      const maxDays = getDaysInMonth(year, newMonth);
-      if (day > maxDays) {
-        setDay(maxDays);
+    let updated = { ...dp, month: newMonth };
+    if (newMonth !== null && dp.year !== null && dp.day !== null) {
+      const maxDays = getDaysInMonth(dp.year, newMonth);
+      if (dp.day > maxDays) {
+        updated = { ...updated, day: maxDays };
       }
     }
-    setIsModified(true);
+    setDp(updated);
+    emitChange(updated);
   }
 
   function handleYearChange(newYear: number | null) {
-    setYear(newYear);
-    if (newYear !== null && month !== null && day !== null) {
-      const maxDays = getDaysInMonth(newYear, month);
-      if (day > maxDays) {
-        setDay(maxDays);
+    let updated = { ...dp, year: newYear };
+    if (newYear !== null && dp.month !== null && dp.day !== null) {
+      const maxDays = getDaysInMonth(newYear, dp.month);
+      if (dp.day > maxDays) {
+        updated = { ...updated, day: maxDays };
       }
     }
-    setIsModified(true);
+    setDp(updated);
+    emitChange(updated);
   }
 
   function clearDate() {
+    const cleared: DateParts = { day: null, month: null, year: null };
+    setDp(cleared);
     onChange(null);
-    setDay(null);
-    setMonth(null);
-    setYear(null);
-    setIsModified(false);
   }
 
-  const maxDaysForSelection = month !== null && year !== null 
-    ? getDaysInMonth(year, month) 
+  const maxDaysForSelection = dp.month !== null && dp.year !== null 
+    ? getDaysInMonth(dp.year, dp.month) 
     : 31;
 
   const daysArray = Array.from({ length: maxDaysForSelection }, (_, i) => i + 1);
 
-  const hasValue = day !== null && month !== null && year !== null;
+  const hasValue = dp.day !== null && dp.month !== null && dp.year !== null;
 
   return (
     <div className="space-y-1.5">
       {label && (
-        <label className="block text-sm font-medium text-gray-700">{label}</label>
+        <label className="block text-sm font-medium text-zinc-700">{label}</label>
       )}
       
       {/* Dropdowns simples: Día / Mes / Año */}
       <div className="grid grid-cols-3 gap-2">
         {/* DÍA */}
         <div className="space-y-1">
-          <label className="text-xs text-gray-500 font-medium">Día</label>
-           <select
-             value={day ?? ''}
+          <label htmlFor="dp-day" className="text-xs text-zinc-500 font-medium">Día</label>
+           <select id="dp-day"
+             value={dp.day ?? ''}
              onChange={(e) => handleDayChange(e.target.value ? Number(e.target.value) : null)}
-             className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-base text-gray-900 bg-white focus:border-salon-500 focus:ring-2 focus:ring-salon-500/20 transition-all cursor-pointer"
+             className="w-full rounded-xl border border-zinc-300 px-3 py-2.5 text-base text-zinc-900 bg-white focus:border-salon-500 focus:ring-2 focus:ring-salon-500/20 transition-all cursor-pointer"
            >
             <option value="">--</option>
             {daysArray.map((d) => (
@@ -146,11 +142,11 @@ export function DatePicker({ value, onChange, label, placeholder = 'Seleccionar 
 
         {/* MES */}
         <div className="space-y-1">
-          <label className="text-xs text-gray-500 font-medium">Mes</label>
-           <select
-             value={month ?? ''}
+          <label htmlFor="dp-month" className="text-xs text-zinc-500 font-medium">Mes</label>
+           <select id="dp-month"
+             value={dp.month ?? ''}
              onChange={(e) => handleMonthChange(e.target.value !== '' ? Number(e.target.value) : null)}
-             className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-base text-gray-900 bg-white focus:border-salon-500 focus:ring-2 focus:ring-salon-500/20 transition-all cursor-pointer"
+             className="w-full rounded-xl border border-zinc-300 px-3 py-2.5 text-base text-zinc-900 bg-white focus:border-salon-500 focus:ring-2 focus:ring-salon-500/20 transition-all cursor-pointer"
            >
             <option value="">--</option>
             {MONTHS.map((m) => (
@@ -161,11 +157,11 @@ export function DatePicker({ value, onChange, label, placeholder = 'Seleccionar 
 
         {/* AÑO */}
         <div className="space-y-1">
-          <label className="text-xs text-gray-500 font-medium">Año</label>
-           <select
-             value={year ?? ''}
+          <label htmlFor="dp-year" className="text-xs text-zinc-500 font-medium">Año</label>
+           <select id="dp-year"
+             value={dp.year ?? ''}
              onChange={(e) => handleYearChange(e.target.value ? Number(e.target.value) : null)}
-             className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-base text-gray-900 bg-white focus:border-salon-500 focus:ring-2 focus:ring-salon-500/20 transition-all cursor-pointer"
+             className="w-full rounded-xl border border-zinc-300 px-3 py-2.5 text-base text-zinc-900 bg-white focus:border-salon-500 focus:ring-2 focus:ring-salon-500/20 transition-all cursor-pointer"
            >
             <option value="">--</option>
             {years.map((y) => (
@@ -181,9 +177,9 @@ export function DatePicker({ value, onChange, label, placeholder = 'Seleccionar 
           <button
             type="button"
             onClick={clearDate}
-            className="text-xs text-gray-500 hover:text-red-500 transition-colors flex items-center gap-1"
+            className="text-xs text-zinc-500 hover:text-red-500 transition-colors flex items-center gap-1"
           >
-            <X className="w-3 h-3" />
+            <X className="size-3" />
             Quitar fecha
           </button>
         </div>

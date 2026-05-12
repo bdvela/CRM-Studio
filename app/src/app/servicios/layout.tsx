@@ -1,10 +1,9 @@
 import type { Metadata } from 'next';
-import ClientPage from './page-client';
 
 export const metadata: Metadata = {
   title: 'Servicios',
 };
 
-export default function Page() {
-  return <ClientPage />;
+export default function Layout({ children }: { children: React.ReactNode }) {
+  return children;
 }

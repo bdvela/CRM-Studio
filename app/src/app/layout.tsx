@@ -4,7 +4,10 @@ import { Sidebar, MobileNav } from '@/components/layout/shell';
 import { Providers } from '@/components/providers';
 
 export const metadata: Metadata = {
-  title: 'CRM Salón de Belleza',
+  title: {
+    default: 'CRM Salón de Belleza',
+    template: '%s | Ara Zevallos Studio',
+  },
   description: 'Gestión integral para salón de belleza',
   manifest: '/manifest.json',
   appleWebApp: {
@@ -24,7 +27,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es">
-      <body className="bg-gray-50 text-gray-900">
+      <body className="bg-zinc-50 text-zinc-900">
         <Providers>
           <div className="flex h-screen overflow-hidden">
             <Sidebar />

@@ -16,6 +16,7 @@ interface SelectProps {
   disabled?: boolean;
   placeholder?: string;
   className?: string;
+  id?: string;
 }
 
 export function Select({ 
@@ -26,7 +27,8 @@ export function Select({
   error, 
   disabled, 
   placeholder = 'Seleccionar...',
-  className 
+  className,
+  id,
 }: SelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -50,24 +52,20 @@ export function Select({
 
   useEffect(() => {
     if (isOpen && dropdownRef.current && containerRef.current) {
-      const container = containerRef.current.getBoundingClientRect();
+      const rect = containerRef.current.getBoundingClientRect();
       const dropdown = dropdownRef.current;
       
-      const spaceBelow = window.innerHeight - container.bottom;
-      const spaceAbove = container.top;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
       const dropdownHeight = Math.min(dropdown.scrollHeight, 280);
+      const above = spaceBelow < dropdownHeight && spaceAbove > spaceBelow;
       
-      if (spaceBelow < dropdownHeight && spaceAbove > spaceBelow) {
-        dropdown.style.bottom = '100%';
-        dropdown.style.top = 'auto';
-        dropdown.style.marginBottom = '4px';
-        dropdown.style.marginTop = '0';
-      } else {
-        dropdown.style.top = '100%';
-        dropdown.style.bottom = 'auto';
-        dropdown.style.marginTop = '4px';
-        dropdown.style.marginBottom = '0';
-      }
+      Object.assign(dropdown.style, {
+        top: above ? 'auto' : '100%',
+        bottom: above ? '100%' : 'auto',
+        marginTop: above ? '0' : '4px',
+        marginBottom: above ? '4px' : '0',
+      });
     }
   }, [isOpen]);
 
@@ -79,34 +77,35 @@ export function Select({
    return (
      <div className={cn(label && 'space-y-1.5')} ref={containerRef}>
        {label && (
-         <label className="block text-sm font-medium text-gray-700">
+         <label className="block text-sm font-medium text-zinc-700">
            {label}
          </label>
        )}
        <div className="relative">
-         <button
-           type="button"
-           onClick={() => !disabled && setIsOpen(!isOpen)}
-           disabled={disabled}
+          <button
+            type="button"
+            id={id}
+            onClick={() => !disabled && setIsOpen(!isOpen)}
+            disabled={disabled}
             className={cn(
               'w-full rounded-xl border bg-white px-3 py-2.5 text-base text-left',
               'flex items-center justify-between gap-2',
               'focus:outline-none focus:ring-2 focus:ring-salon-500 focus:border-transparent',
-              'disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed',
-              error ? 'border-red-500 focus:ring-red-500' : 'border-gray-300',
+              'disabled:bg-zinc-50 disabled:text-zinc-400 disabled:cursor-not-allowed',
+              error ? 'border-red-500 focus:ring-red-500' : 'border-zinc-300',
               isOpen && 'ring-2 ring-salon-500 border-transparent',
               className
             )}
          >
            <span className={cn(
              'truncate',
-             !selectedOption && 'text-gray-400'
+             !selectedOption && 'text-zinc-400'
            )}>
              {selectedOption ? selectedOption.label : placeholder}
            </span>
            <ChevronDown 
              className={cn(
-               'w-4 h-4 text-gray-400 flex-shrink-0 transition-transform',
+               'size-4 text-zinc-400 flex-shrink-0 transition-transform',
                isOpen && 'rotate-180'
              )} 
            />
@@ -118,13 +117,13 @@ export function Select({
             className={cn(
               'absolute left-0 right-0 z-50',
               'max-h-70 overflow-y-auto',
-              'bg-white border border-gray-200 rounded-xl shadow-xl',
+              'bg-white border border-zinc-200 rounded-xl shadow-xl',
               'animate-in fade-in-0 zoom-in-95'
             )}
             style={{ maxHeight: '280px' }}
           >
             {options.length === 0 ? (
-              <div className="px-4 py-3 text-sm text-gray-400 text-center">
+              <div className="px-4 py-3 text-sm text-zinc-400 text-center">
                 No hay opciones
               </div>
             ) : (
@@ -138,12 +137,12 @@ export function Select({
                      'transition-colors',
                      opt.value === value 
                        ? 'bg-salon-50 text-salon-700' 
-                       : 'text-gray-700 hover:bg-gray-50'
+                       : 'text-zinc-700 hover:bg-zinc-50'
                    )}
                  >
                   <span className="truncate">{opt.label}</span>
                   {opt.value === value && (
-                    <Check className="w-4 h-4 text-salon-600 flex-shrink-0 ml-2" />
+                    <Check className="size-4 text-salon-600 flex-shrink-0 ml-2" />
                   )}
                 </button>
               ))
