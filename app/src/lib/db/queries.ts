@@ -617,7 +617,7 @@ export async function getDashboardMetrics() {
         *,
         client:clients(name),
         artist:staff(name, role:roles(name))
-      `).gte('start_time', todayStart).lt('start_time', todayEnd).in('status', ['programada', 'en_curso']).order('start_time'),
+      `).gte('start_time', todayStart).lt('start_time', todayEnd).order('start_time'),
       supabase.from('payments').select('amount').eq('type', 'ingreso').gte('date', firstOfMonth).lte('date', endOfMonth),
       supabase.from('payments').select('amount').eq('type', 'egreso').gte('date', firstOfMonth).lte('date', endOfMonth),
       supabase.from('clients').select('id', { count: 'exact', head: true }).eq('status', 'activa'),
@@ -631,14 +631,20 @@ export async function getDashboardMetrics() {
       if (clientIds.length > 0) {
         const { data: clients } = await supabase.from('clients').select('id, name').in('id', clientIds);
         const clientMap = new Map(clients?.map((c: any) => [c.id, c.name]) || []);
-        const paymentResults = await Promise.all(
-          completedAppts.data.map(appt =>
-            supabase.from('payments').select('amount').eq('appointment_id', appt.id).eq('type', 'ingreso')
-          )
-        );
+        const { data: incomePayments } = await supabase
+          .from('payments')
+          .select('appointment_id, amount')
+          .eq('type', 'ingreso')
+          .in('appointment_id', completedAppts.data.map((appt: any) => appt.id));
+
+        const paymentMap = new Map<string, number>();
+        for (const payment of incomePayments || []) {
+          const current = paymentMap.get(payment.appointment_id) || 0;
+          paymentMap.set(payment.appointment_id, current + Number(payment.amount || 0));
+        }
+
         completedAppts.data.forEach((appt: any, i: number) => {
-          const paid = paymentResults[i].data;
-          const totalPaid = paid?.reduce((sum: number, p: any) => sum + Number(p.amount), 0) || 0;
+          const totalPaid = paymentMap.get(appt.id) || 0;
           if (totalPaid < Number(appt.total_price)) {
             pendingPayments.push({ ...appt, client: { name: clientMap.get(appt.client_id) || 'Sin clienta' } });
           }

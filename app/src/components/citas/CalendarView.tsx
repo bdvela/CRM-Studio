@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef, useReducer } from 'react';
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, addMonths, subMonths, addWeeks, subWeeks, isToday, startOfDay, eachDayOfInterval, getHours, getMinutes, set } from 'date-fns';
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, addMonths, subMonths, addWeeks, subWeeks, isToday, startOfDay, eachDayOfInterval, getHours, getMinutes, set, isBefore } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -31,6 +31,10 @@ const APPT_COLORS: Record<string, ApptColor> = {
 const DEFAULT_COLOR: ApptColor = { bg: 'bg-salon-100', border: 'border-salon-300', text: 'text-salon-700', solid: 'bg-salon-500' };
 
 const HOURS = Array.from({ length: 14 }, (_, i) => i + 7); // 7:00 to 20:00
+
+function isPastCalendarDay(day: Date, now: Date) {
+  return isBefore(startOfDay(day), startOfDay(now));
+}
 
 interface CalendarViewProps {
   appointments: any[];
@@ -86,17 +90,19 @@ function MonthView({ monthDays, formattedAppts, currentDate, isMobile, now, onEm
           const dayAppts = formattedAppts.get(key) || [];
           const isCurrentMonth = isSameMonth(day, currentDate);
           const isTodayDate = isToday(day);
+          const isPastDay = isPastCalendarDay(day, now);
           const maxVisible = isMobile ? 2 : 4;
           return (
             <div
               key={key}
-              onClick={() => onEmptyDayClick(day)}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onEmptyDayClick(day); }}
-              role="button"
-              tabIndex={0}
+              onClick={() => { if (!isPastDay) onEmptyDayClick(day); }}
+              onKeyDown={(e) => { if (!isPastDay && (e.key === 'Enter' || e.key === ' ')) onEmptyDayClick(day); }}
+              role={isPastDay ? undefined : 'button'}
+              tabIndex={isPastDay ? -1 : 0}
               className={cn(
-                'min-h-[72px] sm:min-h-[100px] flex flex-col p-1 sm:p-1.5 transition-colors cursor-pointer',
-                isCurrentMonth ? 'bg-white hover:bg-zinc-50' : 'bg-zinc-50/50',
+                'min-h-[72px] sm:min-h-[100px] flex flex-col p-1 sm:p-1.5 transition-colors',
+                isPastDay ? 'opacity-45 cursor-not-allowed bg-zinc-50/50' : 'cursor-pointer',
+                isCurrentMonth ? (isPastDay ? 'bg-zinc-50/40' : 'bg-white hover:bg-zinc-50') : 'bg-zinc-50/50',
                 isTodayDate && 'bg-salon-50/30'
               )}
             >
@@ -208,24 +214,26 @@ function WeekView({ weekDays, formattedAppts, now, onEmptyDayClick, onApptClick,
               const key = format(day, 'yyyy-MM-dd');
               const dayAppts = formattedAppts.get(key) || [];
               const hourAppts = dayAppts.filter(a => a._hour === hour);
+              const isPastDay = isPastCalendarDay(day, now);
 
               return (
                 <div
                   key={key}
                   onClick={() => {
-                    onEmptyDayClick(set(day, { hours: hour, minutes: 0, seconds: 0, milliseconds: 0 }));
+                    if (!isPastDay) onEmptyDayClick(set(day, { hours: hour, minutes: 0, seconds: 0, milliseconds: 0 }));
                   }}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
+                    if (!isPastDay && (e.key === 'Enter' || e.key === ' ')) {
                       onEmptyDayClick(set(day, { hours: hour, minutes: 0, seconds: 0, milliseconds: 0 }));
                     }
                   }}
-                  role="button"
-                  tabIndex={0}
+                  role={isPastDay ? undefined : 'button'}
+                  tabIndex={isPastDay ? -1 : 0}
                   onDragOver={onDragOver}
-                  onDrop={(e) => onDrop(day, hour, e)}
+                  onDrop={(e) => { if (!isPastDay) onDrop(day, hour, e); }}
                   className={cn(
-                    'border-r border-zinc-50 last:border-r-0 min-h-[64px] hover:bg-salon-50/20 transition-colors cursor-pointer relative',
+                    'border-r border-zinc-50 last:border-r-0 min-h-[64px] transition-colors relative',
+                    isPastDay ? 'opacity-45 cursor-not-allowed bg-zinc-50/40' : 'hover:bg-salon-50/20 cursor-pointer',
                     isToday(day) && 'bg-salon-50/10'
                   )}
                 >
@@ -344,22 +352,24 @@ function DayView({ currentDate, formattedAppts, now, onEmptyDayClick, onApptClic
             </div>
             {(() => {
               const hourAppts = dayAppts.filter(a => a._hour === hour);
+              const isPastDay = isPastCalendarDay(day, now);
               return (
                 <div
                   onClick={() => {
-                    onEmptyDayClick(set(day, { hours: hour, minutes: 0, seconds: 0, milliseconds: 0 }));
+                    if (!isPastDay) onEmptyDayClick(set(day, { hours: hour, minutes: 0, seconds: 0, milliseconds: 0 }));
                   }}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
+                    if (!isPastDay && (e.key === 'Enter' || e.key === ' ')) {
                       onEmptyDayClick(set(day, { hours: hour, minutes: 0, seconds: 0, milliseconds: 0 }));
                     }
                   }}
-                  role="button"
-                  tabIndex={0}
+                  role={isPastDay ? undefined : 'button'}
+                  tabIndex={isPastDay ? -1 : 0}
                   onDragOver={onDragOver}
-                  onDrop={(e) => onDrop(day, hour, e)}
+                  onDrop={(e) => { if (!isPastDay) onDrop(day, hour, e); }}
                   className={cn(
-                    'min-h-[64px] hover:bg-salon-50/20 transition-colors cursor-pointer relative',
+                    'min-h-[64px] transition-colors relative',
+                    isPastDay ? 'opacity-45 cursor-not-allowed bg-zinc-50/40' : 'hover:bg-salon-50/20 cursor-pointer',
                     isToday(day) && 'bg-salon-50/10'
                   )}
                 >
@@ -511,6 +521,10 @@ export function CalendarView({ appointments, staff, onEdit, onCancel, onNew, onU
   }
 
   function handleEmptyDayClick(day: Date) {
+    if (isPastCalendarDay(day, now)) {
+      toast.error('No puedes agendar en un día pasado');
+      return;
+    }
     onNew(day);
   }
 

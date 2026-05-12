@@ -21,15 +21,12 @@ export function AppointmentCard({ appt, statusColors, onSelect }: AppointmentCar
       )}
       onClick={() => onSelect(appt)}
     >
-      <CardContent className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:gap-4 sm:py-3">
+      <CardContent className="flex items-start gap-3 p-3 sm:items-center sm:gap-4 sm:py-3">
         <div className="flex items-center justify-between gap-3 sm:block sm:text-center sm:w-14 sm:flex-shrink-0">
           <div>
             <p className="text-base sm:text-sm font-bold text-zinc-900 leading-tight">{timeDisplay}</p>
             <p className="text-xs text-zinc-400">{appt.total_duration_min} min</p>
           </div>
-          <Badge variant={statusColors[appt.status] || 'default'} className="text-[10px] sm:hidden shrink-0">
-            {APPOINTMENT_STATUS_LABELS[appt.status as AppointmentStatus]}
-          </Badge>
         </div>
         <div className="hidden sm:block w-px h-10 bg-zinc-200" />
         <div className="flex-1 min-w-0 space-y-1">
@@ -37,7 +34,6 @@ export function AppointmentCard({ appt, statusColors, onSelect }: AppointmentCar
             <p className="font-semibold text-sm text-zinc-900 truncate">
               {appt.client?.name || 'Sin clienta'}
             </p>
-            <p className="text-sm font-semibold shrink-0">{formatCurrency(appt.total_price)}</p>
           </div>
           {(() => {
             const names = [...new Set(appt.appointment_services?.map((as: any) => as.artist?.name).filter(Boolean))] as string[];
@@ -57,8 +53,11 @@ export function AppointmentCard({ appt, statusColors, onSelect }: AppointmentCar
             </div>
           )}
         </div>
-        <div className="hidden sm:block text-right flex-shrink-0">
-          <Badge variant={statusColors[appt.status] || 'default'} className="text-xs mt-1">
+        <div className="flex flex-col items-end justify-between gap-1.5 sm:gap-2 text-right flex-shrink-0 min-w-[88px]">
+          <p className="text-base sm:text-sm font-semibold text-zinc-900 tabular-nums leading-none whitespace-nowrap">
+            {formatCurrency(appt.total_price)}
+          </p>
+          <Badge variant={statusColors[appt.status] || 'default'} className="text-[10px] sm:text-xs whitespace-nowrap">
             {APPOINTMENT_STATUS_LABELS[appt.status as AppointmentStatus]}
           </Badge>
         </div>

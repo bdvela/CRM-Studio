@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { getDashboardMetrics, getAppointments } from '@/lib/db/queries';
 import { Header } from '@/components/layout/shell';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -59,6 +59,13 @@ function StatCard({ icon: Icon, value, label, badge, iconBgClass, iconClass }: {
 }
 
 function TodayAppointments({ appointments, onNavigate }: { appointments: any[]; onNavigate: (path: string) => void }) {
+  const activeAppointments = useMemo(
+    () => appointments.filter((appt) => appt.status === 'programada' || appt.status === 'en_curso'),
+    [appointments]
+  );
+  const visibleAppointments = activeAppointments.length > 0 ? activeAppointments : appointments;
+  const hasActive = activeAppointments.length > 0;
+
   return (
     <div className="lg:col-span-2">
       <div className="rounded-2xl bg-white border border-zinc-100 shadow-sm overflow-hidden">
@@ -67,7 +74,10 @@ function TodayAppointments({ appointments, onNavigate }: { appointments: any[]; 
             <div className="size-8 rounded-lg bg-salon-50 flex items-center justify-center">
               <CalendarDays className="size-4 text-salon-600" />
             </div>
-            <h2 className="text-base font-semibold text-zinc-900">Citas de hoy</h2>
+            <div>
+              <h2 className="text-base font-semibold text-zinc-900">Citas de hoy</h2>
+              <p className="text-xs text-zinc-400">Programadas y en curso</p>
+            </div>
           </div>
           <button onClick={() => onNavigate('/citas')} className="text-sm text-salon-600 hover:text-salon-700 font-medium flex items-center gap-1">
             Ver todas <ArrowRight className="size-4" />
@@ -87,7 +97,12 @@ function TodayAppointments({ appointments, onNavigate }: { appointments: any[]; 
             </div>
           ) : (
             <div className="space-y-2">
-              {appointments.map((appt: any) => (
+              {!hasActive && (
+                <div className="mb-3 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                  Hoy no hay citas activas; mostrando todas las citas del día.
+                </div>
+              )}
+              {visibleAppointments.map((appt: any) => (
                 <div
                   key={appt.id}
                   onClick={() => onNavigate('/citas')}
@@ -112,7 +127,7 @@ function TodayAppointments({ appointments, onNavigate }: { appointments: any[]; 
                       {appt.artist?.name || 'Sin artista'} · {appt.title}
                     </p>
                   </div>
-                  <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${statusColors[appt.status] || ''}`}>
+                  <span className={`text-[10px] sm:text-xs font-medium px-2.5 py-1 rounded-full border ${statusColors[appt.status] || ''}`}>
                     {APPOINTMENT_STATUS_LABELS[appt.status as keyof typeof APPOINTMENT_STATUS_LABELS] || appt.status}
                   </span>
                 </div>
