@@ -213,8 +213,8 @@ export function MobileNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-zinc-200 z-40 safe-area-bottom pb-[env(safe-area-inset-bottom)] shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
-      <div className="flex items-center justify-around px-1 py-1">
+    <nav className="md:hidden fixed bottom-4 left-4 right-4 z-40 safe-area-bottom pb-[env(safe-area-inset-bottom)]">
+      <div className="flex items-center justify-around px-2 py-2 bg-white/70 backdrop-blur-xl rounded-2xl border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.12)]">
         {mobileNavItems.map((item) => {
           const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
           return (
@@ -223,12 +223,17 @@ export function MobileNav() {
               href={item.href}
               prefetch
               className={cn(
-                'flex flex-col items-center justify-center gap-0.5 py-1.5 px-3 rounded-lg min-w-[60px]',
-                isActive ? 'text-salon-600 bg-salon-50' : 'text-zinc-400'
+                'flex flex-col items-center justify-center gap-0.5 py-1.5 px-3 rounded-xl min-w-[52px] transition-all duration-200',
+                isActive
+                  ? 'text-salon-600 bg-salon-100/60 shadow-inner'
+                  : 'text-zinc-400 hover:text-zinc-600'
               )}
             >
-              <item.icon className="size-5" />
-              <span className="text-[10px] font-medium truncate w-full text-center">{item.label}</span>
+              <item.icon className={cn('size-5 transition-all duration-200', isActive && 'scale-110')} />
+              <span className={cn(
+                'text-[10px] font-medium truncate w-full text-center transition-all duration-200',
+                isActive && 'font-semibold'
+              )}>{item.label}</span>
             </Link>
           );
         })}
