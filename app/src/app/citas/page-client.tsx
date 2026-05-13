@@ -23,13 +23,13 @@ import { useConfirm } from '@/context/confirm-context';
 
 function MobileViewTabs({ viewMode, onViewModeChange }: { viewMode: ViewMode; onViewModeChange: (mode: ViewMode) => void }) {
   return (
-    <div className="sticky top-0 z-20 md:hidden px-4 py-2 bg-white/95 backdrop-blur border-b border-zinc-100 space-y-2">
-      <div className="flex gap-1 p-1 bg-zinc-100 rounded-xl shadow-sm">
+    <div className="sticky top-0 z-20 md:hidden px-4 py-2 bg-white/40 backdrop-blur-xl border-b border-white/20 space-y-2">
+      <div className="flex gap-1 p-1 bg-white/20 backdrop-blur-sm rounded-xl border border-white/20 shadow-sm">
         <button
           onClick={() => onViewModeChange('list')}
           className={cn(
-            'flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-all',
-            viewMode === 'list' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500'
+            'flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-300',
+            viewMode === 'list' ? 'bg-white/60 backdrop-blur-sm text-zinc-900 shadow-[0_2px_8px_rgba(0,0,0,0.06)] border border-t-white/60 border-b-white/20' : 'text-zinc-500 hover:text-zinc-700'
           )}
         >
           Lista
@@ -37,8 +37,8 @@ function MobileViewTabs({ viewMode, onViewModeChange }: { viewMode: ViewMode; on
         <button
           onClick={() => onViewModeChange('calendar')}
           className={cn(
-            'flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-all',
-            viewMode === 'calendar' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500'
+            'flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-300',
+            viewMode === 'calendar' ? 'bg-white/60 backdrop-blur-sm text-zinc-900 shadow-[0_2px_8px_rgba(0,0,0,0.06)] border border-t-white/60 border-b-white/20' : 'text-zinc-500 hover:text-zinc-700'
           )}
         >
           Calendario
@@ -248,12 +248,12 @@ export default function CitasPage({ initialData }: { initialData?: { appointment
     <>
       <Header title="Citas" action={
         <div className="flex items-center gap-3">
-          <div className="hidden md:flex gap-1 p-1 bg-zinc-100 rounded-xl">
+          <div className="hidden md:flex gap-1 p-1 bg-white/20 backdrop-blur-sm rounded-xl border border-white/20 shadow-sm">
             <button
               onClick={() => dispatchUi({ type: 'SET_VIEW_MODE', viewMode: 'list' })}
               className={cn(
-                'px-4 py-1.5 text-sm font-medium rounded-lg transition-all flex items-center gap-1.5',
-                viewMode === 'list' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500'
+                'px-4 py-1.5 text-sm font-medium rounded-lg transition-all duration-300 flex items-center gap-1.5',
+                viewMode === 'list' ? 'bg-white/60 backdrop-blur-sm text-zinc-900 shadow-[0_2px_8px_rgba(0,0,0,0.06)] border border-t-white/60 border-b-white/20' : 'text-zinc-500 hover:text-zinc-700'
               )}
             >
               Lista
@@ -261,8 +261,8 @@ export default function CitasPage({ initialData }: { initialData?: { appointment
             <button
               onClick={() => dispatchUi({ type: 'SET_VIEW_MODE', viewMode: 'calendar' })}
               className={cn(
-                'px-4 py-1.5 text-sm font-medium rounded-lg transition-all flex items-center gap-1.5',
-                viewMode === 'calendar' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500'
+                'px-4 py-1.5 text-sm font-medium rounded-lg transition-all duration-300 flex items-center gap-1.5',
+                viewMode === 'calendar' ? 'bg-white/60 backdrop-blur-sm text-zinc-900 shadow-[0_2px_8px_rgba(0,0,0,0.06)] border border-t-white/60 border-b-white/20' : 'text-zinc-500 hover:text-zinc-700'
               )}
             >
               Calendario
