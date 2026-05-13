@@ -32,7 +32,7 @@ export function ServiceConfigModalContent({
   const [configState, dispatchConfig] = useReducer(configReducer, initialState);
   const svc = useMemo(() => services.find(s => s.id === serviceId), [services, serviceId]);
   const availableArtists = useMemo(
-    () => getAvailableArtistsForService(serviceId, svc?.category_id ?? '', staff, services),
+    () => serviceId ? getAvailableArtistsForService(serviceId, svc?.category_id, staff, services) : [],
     [serviceId, svc?.category_id, staff, services],
   );
 
