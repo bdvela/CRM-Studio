@@ -6,6 +6,8 @@ export const metadata: Metadata = {
   title: 'Clientas',
 };
 
+export const dynamic = 'force-dynamic';
+
 export default async function Page() {
   const initialClients = await getClients();
 

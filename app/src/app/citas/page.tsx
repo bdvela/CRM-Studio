@@ -7,6 +7,8 @@ export const metadata: Metadata = {
   title: 'Citas',
 };
 
+export const dynamic = 'force-dynamic';
+
 export default async function Page() {
   const [appointments, staff, services, clients] = await Promise.all([
     getAppointments({ dateFrom: startOfToday() }),

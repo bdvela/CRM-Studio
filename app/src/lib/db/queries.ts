@@ -1,7 +1,4 @@
-import { mockData } from './mock-data';
 import { supabase } from '@/lib/supabase/client';
-
-const USE_MOCK = process.env.NEXT_PUBLIC_SUPABASE_URL === 'https://placeholder.supabase.co' || !process.env.NEXT_PUBLIC_SUPABASE_URL;
 
 type CacheEntry = { value: any; expiresAt: number };
 const queryCache = new Map<string, CacheEntry>();
@@ -49,10 +46,6 @@ async function cachedQuery<T>(key: string, ttlMs: number, fetcher: () => Promise
   return promise;
 }
 
-function delay(ms = 300) {
-  return new Promise(r => setTimeout(r, ms));
-}
-
 function getUpcomingBirthdays(staff: any[], limit = 3, windowDays = 45) {
   const today = new Date();
   const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
@@ -82,7 +75,6 @@ function getUpcomingBirthdays(staff: any[], limit = 3, windowDays = 45) {
 
 export async function getClients() {
   return cachedQuery(cacheKey('clients'), 15_000, async () => {
-    if (USE_MOCK) { await delay(); return mockData.clients; }
     try {
       const { data, error } = await supabase.from('clients').select('*').order('name');
       if (error) throw error;
@@ -110,7 +102,6 @@ export async function getClientById(id: string) {
     return null;
   }
   return cachedQuery(cacheKey('client', id), 15_000, async () => {
-    if (USE_MOCK) { await delay(); return mockData.clients.find(c => c.id === id); }
     try {
       const { data, error } = await supabase.from('clients').select('*').eq('id', id).maybeSingle();
       if (error && error.code !== 'PGRST116') throw error;
@@ -127,8 +118,6 @@ export async function getClientById(id: string) {
 }
 
 export async function createClient(input: any) {
-  if (USE_MOCK) { await delay(); const newClient = { ...input, id: String(Date.now()), created_at: new Date().toISOString(), client_stats: { total_appointments: 0, total_spent: 0, last_visit: null } }; mockData.clients.push(newClient); return newClient; }
-  
   const { data, error } = await supabase.from('clients').insert(input).select().single();
   if (error) throw error;
   clearQueryCache();
@@ -136,8 +125,6 @@ export async function createClient(input: any) {
 }
 
 export async function updateClient(id: string, input: any) {
-  if (USE_MOCK) { await delay(); const idx = mockData.clients.findIndex(c => c.id === id); if (idx >= 0) mockData.clients[idx] = { ...mockData.clients[idx], ...input }; return mockData.clients[idx]; }
-  
   const { data, error } = await supabase.from('clients').update(input).eq('id', id).select().single();
   if (error) throw error;
   clearQueryCache();
@@ -145,8 +132,6 @@ export async function updateClient(id: string, input: any) {
 }
 
 export async function deleteClient(id: string) {
-  if (USE_MOCK) { await delay(); mockData.clients = mockData.clients.filter(c => c.id !== id); return true; }
-  
   const { error } = await supabase.from('clients').delete().eq('id', id);
   if (error) throw error;
   clearQueryCache();
@@ -157,7 +142,6 @@ export async function deleteClient(id: string) {
 
 export async function getCategories(activeOnly = true) {
   return cachedQuery(cacheKey('categories', activeOnly), 60_000, async () => {
-    if (USE_MOCK) { await delay(); return activeOnly ? mockData.categories?.filter((c: any) => c.active) || [] : mockData.categories || []; }
     try {
       let q = supabase.from('categories').select('*').order('sort_order').order('name');
       if (activeOnly) q = q.eq('active', true);
@@ -175,14 +159,6 @@ export async function getCategories(activeOnly = true) {
 
 export async function getServices(activeOnly = true) {
   return cachedQuery(cacheKey('services', activeOnly), 60_000, async () => {
-    if (USE_MOCK) { 
-      await delay(); 
-      let result = activeOnly ? mockData.services.filter(s => s.active) : mockData.services;
-      return result.map(svc => ({
-        ...svc,
-        staff_services: (mockData.staffServices || []).filter((ss: any) => ss.service_id === svc.id)
-      }));
-    }
     try {
       let q = supabase.from('services').select(`
         *,
@@ -230,8 +206,6 @@ export async function getServices(activeOnly = true) {
 }
 
 export async function createService(input: any) {
-  if (USE_MOCK) { await delay(); const newSvc = { ...input, id: String(Date.now()), created_at: new Date().toISOString(), updated_at: new Date().toISOString() }; mockData.services.push(newSvc); return newSvc; }
-  
   const { data, error } = await supabase.from('services').insert(input).select().single();
   if (error) throw error;
   clearQueryCache();
@@ -239,8 +213,6 @@ export async function createService(input: any) {
 }
 
 export async function updateService(id: string, input: any) {
-  if (USE_MOCK) { await delay(); const idx = mockData.services.findIndex(s => s.id === id); if (idx >= 0) mockData.services[idx] = { ...mockData.services[idx], ...input }; return mockData.services[idx]; }
-  
   const { data, error } = await supabase.from('services').update(input).eq('id', id).select().single();
   if (error) throw error;
   clearQueryCache();
@@ -248,15 +220,6 @@ export async function updateService(id: string, input: any) {
 }
 
 export async function deleteService(id: string) {
-  if (USE_MOCK) { 
-    await delay(); 
-    mockData.services = mockData.services.filter(s => s.id !== id); 
-    if (mockData.staffServices) {
-      mockData.staffServices = (mockData.staffServices as any[]).filter((s: any) => s.service_id !== id);
-    }
-    return true; 
-  }
-  
   try {
     await supabase.from('staff_services').delete().eq('service_id', id);
   } catch (e) {
@@ -270,21 +233,6 @@ export async function deleteService(id: string) {
 }
 
 export async function updateStaffServices(serviceId: string, staffIds: string[]) {
-  if (USE_MOCK) {
-    await delay();
-    if (!mockData.staffServices) mockData.staffServices = [];
-    mockData.staffServices = (mockData.staffServices as any[]).filter((s: any) => s.service_id !== serviceId);
-    for (const staffId of staffIds) {
-      (mockData.staffServices as any[]).push({
-        id: String(Date.now()),
-        service_id: serviceId,
-        staff_id: staffId,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      });
-    }
-    return true;
-  }
   try {
     await supabase.from('staff_services').delete().eq('service_id', serviceId);
     if (staffIds.length > 0) {
@@ -302,31 +250,6 @@ export async function updateStaffServices(serviceId: string, staffIds: string[])
 }
 
 export async function getStaffForService(serviceId: string, categoryId?: string, activeOnly = true) {
-  if (USE_MOCK) {
-    await delay();
-    
-    const explicitAssignments = (mockData.staffServices || []).filter((s: any) => s.service_id === serviceId);
-    
-    if (explicitAssignments.length > 0) {
-      const assignedStaffIds = explicitAssignments.map((s: any) => s.staff_id);
-      let staff = mockData.staff;
-      if (activeOnly) staff = staff.filter((s: any) => s.active);
-      return staff.filter((s: any) => assignedStaffIds.includes(s.id));
-    }
-    
-    if (categoryId) {
-      let staff = mockData.staff;
-      if (activeOnly) staff = staff.filter((s: any) => s.active);
-      return staff.filter((s: any) => 
-        (s.staff_specialties || []).some((sp: any) => sp.category_id === categoryId)
-      );
-    }
-    
-    let staff = mockData.staff;
-    if (activeOnly) staff = staff.filter((s: any) => s.active);
-    return staff;
-  }
-  
   try {
     let hasExplicitAssignments = false;
     let assignedStaffIds: string[] = [];
@@ -396,7 +319,6 @@ export async function getStaffForService(serviceId: string, categoryId?: string,
 
 export async function getStaff(activeOnly = true) {
   return cachedQuery(cacheKey('staff', activeOnly), 60_000, async () => {
-    if (USE_MOCK) { await delay(); return activeOnly ? mockData.staff.filter(s => s.active) : mockData.staff; }
     try {
       let q = supabase.from('staff').select(`
         *,
@@ -423,10 +345,6 @@ export async function getStaff(activeOnly = true) {
 }
 
 export async function updateStaffSpecialties(staffId: string, categoryIds: string[]) {
-  if (USE_MOCK) {
-    await delay();
-    return true;
-  }
   try {
     await supabase.from('staff_specialties').delete().eq('staff_id', staffId);
     if (categoryIds.length > 0) {
@@ -442,8 +360,6 @@ export async function updateStaffSpecialties(staffId: string, categoryIds: strin
 }
 
 export async function createStaff(input: any) {
-  if (USE_MOCK) { await delay(); const newS = { ...input, id: String(Date.now()), created_at: new Date().toISOString(), staff_stats: { total_appointments: 0, total_revenue: 0, last_appointment: null } }; mockData.staff.push(newS); return newS; }
-  
   const { data, error } = await supabase.from('staff').insert(input).select().single();
   if (error) throw error;
   clearQueryCache();
@@ -451,8 +367,6 @@ export async function createStaff(input: any) {
 }
 
 export async function updateStaff(id: string, input: any) {
-  if (USE_MOCK) { await delay(); const idx = mockData.staff.findIndex(s => s.id === id); if (idx >= 0) mockData.staff[idx] = { ...mockData.staff[idx], ...input }; return mockData.staff[idx]; }
-  
   const { data, error } = await supabase.from('staff').update(input).eq('id', id).select().single();
   if (error) throw error;
   clearQueryCache();
@@ -460,7 +374,6 @@ export async function updateStaff(id: string, input: any) {
 }
 
 export async function deleteStaff(id: string) {
-  if (USE_MOCK) { await delay(); mockData.staff = mockData.staff.filter(s => s.id !== id); return true; }
   const { error } = await supabase.from('staff').delete().eq('id', id);
   if (error) throw error;
   clearQueryCache();
@@ -471,7 +384,6 @@ export async function deleteStaff(id: string) {
 
 export async function getRoles(activeOnly = true) {
   return cachedQuery(cacheKey('roles', activeOnly), 60_000, async () => {
-    if (USE_MOCK) { await delay(); return activeOnly ? mockData.roles?.filter((r: any) => r.active) || [] : mockData.roles || []; }
     try {
       let q = supabase.from('roles').select('*').order('name');
       if (activeOnly) q = q.eq('active', true);
@@ -487,7 +399,6 @@ export async function getRoles(activeOnly = true) {
 
 export async function getAppointments(filters?: any) {
   return cachedQuery(cacheKey('appointments', filters || {}), 5_000, async () => {
-    if (USE_MOCK) { await delay(); return mockData.appointments; }
     try {
       
       let q = supabase.from('appointments').select(`
@@ -599,8 +510,6 @@ export async function getAppointments(filters?: any) {
 }
 
 export async function createAppointment(input: any) {
-  if (USE_MOCK) { await delay(); const newAppt = { ...input, id: String(Date.now()), created_at: new Date().toISOString(), overlap_detected: input.overlap_detected || false }; mockData.appointments.push(newAppt); return newAppt; }
-  
   const { serviceIds, services, ...apptData } = input;
   const { data, error } = await supabase.from('appointments').insert(apptData).select().single();
   if (error) throw error;
@@ -621,8 +530,6 @@ export async function createAppointment(input: any) {
 }
 
 export async function updateAppointment(id: string, input: any) {
-  if (USE_MOCK) { await delay(); const idx = mockData.appointments.findIndex(a => a.id === id); if (idx >= 0) mockData.appointments[idx] = { ...mockData.appointments[idx], ...input }; return mockData.appointments[idx]; }
-  
   const { serviceIds, services, ...rest } = input;
   const { data, error } = await supabase.from('appointments').update(rest).eq('id', id).select().single();
   if (error) throw error;
@@ -648,8 +555,6 @@ export async function updateAppointment(id: string, input: any) {
 }
 
 export async function checkOverlap(artistId: string, startTime: string, endTime: string, _excludeId?: string) {
-  if (USE_MOCK) { await delay(); return []; }
-  
   let q = supabase.from('appointments').select('id, title, start_time, end_time').eq('artist_id', artistId).in('status', ['programada', 'en_curso']).lt('start_time', endTime).gt('end_time', startTime);
   if (_excludeId) q = q.neq('id', _excludeId);
   const { data, error } = await q;
@@ -659,7 +564,6 @@ export async function checkOverlap(artistId: string, startTime: string, endTime:
 
 export async function getPayments(filters?: any) {
   return cachedQuery(cacheKey('payments', filters || {}), 10_000, async () => {
-    if (USE_MOCK) { await delay(); return mockData.payments; }
     try {
       
       let q = supabase.from('payments').select('*').order('date', { ascending: false });
@@ -692,8 +596,6 @@ export async function getPayments(filters?: any) {
 }
 
 export async function createPayment(input: any) {
-  if (USE_MOCK) { await delay(); const newP = { ...input, id: String(Date.now()), created_at: new Date().toISOString() }; mockData.payments.push(newP); return newP; }
-  
   const { data, error } = await supabase.from('payments').insert(input).select().single();
   if (error) throw error;
   clearQueryCache();
@@ -702,21 +604,6 @@ export async function createPayment(input: any) {
 
 export async function getDashboardMetrics() {
   return cachedQuery(cacheKey('dashboard'), 10_000, async () => {
-    if (USE_MOCK) {
-      await delay();
-      const today = new Date().toISOString().split('T')[0];
-      return {
-        todayAppointments: mockData.appointments.filter(a => a.start_time.startsWith(today)),
-        monthIncome: mockData.payments.filter(p => p.type === 'ingreso').reduce((s, p) => s + Number(p.amount), 0),
-        monthExpenses: mockData.payments.filter(p => p.type === 'egreso').reduce((s, p) => s + Number(p.amount), 0),
-        netProfit: mockData.payments.filter(p => p.type === 'ingreso').reduce((s, p) => s + Number(p.amount), 0) - mockData.payments.filter(p => p.type === 'egreso').reduce((s, p) => s + Number(p.amount), 0),
-        activeClients: mockData.clients.filter(c => c.status === 'activa').length,
-        pendingPayments: mockData.appointments.filter(a => a.appointment_balance?.pending_balance > 0),
-        toReactivates: mockData.clients.filter(c => c.status === 'inactiva'),
-        upcomingBirthdays: getUpcomingBirthdays(mockData.staff || []),
-      };
-    }
-    
     try {
       
       const now = new Date();
@@ -784,10 +671,6 @@ export async function getDashboardMetrics() {
 // ─── COMMISSION OVERRIDES ───────────────────────────────────────────────────
 
 export async function getCommissionOverrides(staffId: string) {
-  if (USE_MOCK) {
-    await delay();
-    return mockData.commissionOverrides?.filter((o: any) => o.staff_id === staffId) || [];
-  }
   try {
     const { data, error } = await supabase
       .from('staff_commission_overrides')
@@ -806,29 +689,6 @@ export async function upsertCommissionOverride(input: {
   service_id: string;
   founder_fixed_amount: number;
 }) {
-  if (USE_MOCK) {
-    await delay();
-    if (!mockData.commissionOverrides) mockData.commissionOverrides = [];
-    const existingIdx = mockData.commissionOverrides.findIndex(
-      (o: any) => o.staff_id === input.staff_id && o.service_id === input.service_id
-    );
-    const now = new Date().toISOString();
-    if (existingIdx >= 0) {
-      mockData.commissionOverrides[existingIdx] = {
-        ...mockData.commissionOverrides[existingIdx],
-        ...input,
-        updated_at: now,
-      } as any;
-    } else {
-      mockData.commissionOverrides.push({
-        ...input,
-        id: String(Date.now()),
-        created_at: now,
-        updated_at: now,
-      } as any);
-    }
-    return true;
-  }
   try {
     const { data, error } = await supabase
       .from('staff_commission_overrides')
@@ -844,14 +704,6 @@ export async function upsertCommissionOverride(input: {
 }
 
 export async function deleteCommissionOverride(staffId: string, serviceId: string) {
-  if (USE_MOCK) {
-    await delay();
-    if (!mockData.commissionOverrides) return true;
-    mockData.commissionOverrides = mockData.commissionOverrides.filter(
-      (o: any) => !(o.staff_id === staffId && o.service_id === serviceId)
-    );
-    return true;
-  }
   try {
     const { error } = await supabase
       .from('staff_commission_overrides')
@@ -870,29 +722,6 @@ export async function deleteCommissionOverride(staffId: string, serviceId: strin
 
 export async function getCommissionReport(dateFrom: string, dateTo: string) {
   return cachedQuery(cacheKey('commissionReport', { dateFrom, dateTo }), 15_000, async () => {
-    if (USE_MOCK) {
-      await delay();
-      return [
-        {
-        artist_id: 'staff-1',
-        artist_name: 'Valentina Ríos',
-        artist_role_name: 'Nail Artist',
-        total_services: 1,
-        total_service_revenue: 70,
-        total_artist_commission: 49,
-        total_founder_share: 21,
-      },
-      {
-        artist_id: 'staff-founder',
-        artist_name: 'Sofía Castillo',
-        artist_role_name: 'Founder',
-        total_services: 1,
-        total_service_revenue: 120,
-        total_artist_commission: 120,
-        total_founder_share: 0,
-      },
-      ];
-    }
     try {
       const endOfTo = new Date(dateTo);
       endOfTo.setHours(23, 59, 59, 999);

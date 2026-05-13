@@ -6,6 +6,8 @@ export const metadata: Metadata = {
   title: 'Staff / Artists',
 };
 
+export const dynamic = 'force-dynamic';
+
 export default async function Page() {
   const [members, roles, categories, services] = await Promise.all([
     getStaff(false),

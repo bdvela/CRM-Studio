@@ -6,6 +6,8 @@ export const metadata: Metadata = {
   title: 'Servicios',
 };
 
+export const dynamic = 'force-dynamic';
+
 export default async function Page() {
   const [services, categories, allStaff] = await Promise.all([
     getServices(true),

@@ -6,6 +6,8 @@ export const metadata: Metadata = {
   title: 'Reporte Comisiones',
 };
 
+export const dynamic = 'force-dynamic';
+
 export default async function Page() {
   const today = new Date().toISOString().split('T')[0];
   const monthStart = new Date();
