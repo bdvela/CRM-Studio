@@ -140,10 +140,10 @@ function MonthView({ monthDays, formattedAppts, currentDate, isMobile, now, onEm
                         isFaded && 'opacity-50 line-through',
                       )}
                     >
-                      <span className="text-[9px] sm:text-[10px] font-semibold tabular-nums shrink-0">
+                      <span className="text-[10px] sm:text-xs font-semibold tabular-nums shrink-0">
                         {timeStr}
                       </span>
-                      <span className="text-[10px] sm:text-[11px] font-medium truncate min-w-0">
+                      <span className="text-xs sm:text-sm font-medium truncate min-w-0">
                         {emoji && <span className="mr-0.5">{emoji}</span>}
                         {clientName}
                       </span>
@@ -173,7 +173,7 @@ function WeekView({ weekDays, formattedApptsByHour, now, onEmptyDayClick, onAppt
 
   return (
     <div className="overflow-x-auto rounded-2xl border border-zinc-100">
-    <div className="min-w-[560px] bg-white">
+    <div className="min-w-[300px] md:min-w-[560px] bg-white">
       <div className="grid grid-cols-8 border-b border-zinc-100">
         <div className="p-3 text-xs text-zinc-400 border-r border-zinc-100 w-16">Hora</div>
         {weekDays.map((day, i) => (
@@ -265,21 +265,21 @@ function WeekView({ weekDays, formattedApptsByHour, now, onEmptyDayClick, onAppt
                         <div className="px-1.5 py-1 h-full flex flex-col justify-center min-h-0">
                           <div className="flex items-center gap-1">
                             <span className={cn(
-                              'text-[10px] font-bold tabular-nums leading-none shrink-0',
+                              'text-xs font-bold tabular-nums leading-none shrink-0',
                               colors.solid === 'bg-salon-500' ? 'text-salon-700' : colors.text
                             )}>
                               {appt._timeStr}
                             </span>
                             {height > 26 && (
-                              <span className="text-[9px] leading-none truncate opacity-70">
+                              <span className="text-xs leading-none truncate opacity-70">
                                 {appt.client?.name || '—'}
                               </span>
                             )}
                           </div>
                           {height > 44 && appt.appointment_services?.[0]?.service && (
                             <div className="flex items-center gap-1 mt-0.5 min-w-0">
-                              <span className="text-[9px] shrink-0">{appt.appointment_services[0].service.category?.icon}</span>
-                              <span className="text-[9px] leading-tight truncate opacity-70">
+                              <span className="text-xs shrink-0">{appt.appointment_services[0].service.category?.icon}</span>
+                              <span className="text-xs leading-tight truncate opacity-70">
                                 {appt.appointment_services[0].service.name}
                               </span>
                             </div>

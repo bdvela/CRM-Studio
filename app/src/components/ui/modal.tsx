@@ -35,7 +35,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
           <h2 className="text-lg font-semibold text-zinc-900 truncate pr-4">{title}</h2>
           <button
             onClick={onClose}
-            className="p-2 rounded-full hover:bg-zinc-100 transition-colors flex-shrink-0"
+            className="p-3 rounded-full hover:bg-zinc-100 transition-colors flex-shrink-0"
           >
             <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />

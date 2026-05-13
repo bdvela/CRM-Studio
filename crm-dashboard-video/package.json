@@ -1,0 +1,13 @@
+{
+  "name": "crm-dashboard-video",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "preview": "hyperframes preview",
+    "render": "hyperframes render --output crm-studio-promo.mp4",
+    "inspect": "hyperframes inspect"
+  },
+  "devDependencies": {
+    "hyperframes": "latest"
+  }
+}

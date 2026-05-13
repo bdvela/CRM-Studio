@@ -20,6 +20,14 @@ const navItems = [
   { href: '/reportes/comisiones', label: 'Comisiones', icon: TrendingUp },
 ];
 
+const mobileNavItems = [
+  { href: '/', label: 'Inicio', icon: LayoutDashboard },
+  { href: '/citas', label: 'Citas', icon: CalendarDays },
+  { href: '/clientes', label: 'Clientes', icon: Users },
+  { href: '/staff', label: 'Staff', icon: UserRound },
+  { href: '/pagos', label: 'Pagos', icon: DollarSign },
+];
+
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const [tabletMenuOpen, setTabletMenuOpen] = useState(false);
   const pathname = usePathname();
@@ -205,17 +213,17 @@ export function MobileNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-zinc-200 z-40 safe-area-bottom shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
-      <div className="flex items-center justify-between px-1 py-1">
-        {navItems.map((item) => {
-          const isActive = pathname === item.href;
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-zinc-200 z-40 safe-area-bottom pb-[env(safe-area-inset-bottom)] shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
+      <div className="flex items-center justify-around px-1 py-1">
+        {mobileNavItems.map((item) => {
+          const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
           return (
             <Link
               key={item.href}
               href={item.href}
               prefetch
               className={cn(
-                'flex flex-col items-center justify-center gap-0.5 py-1.5 px-2 rounded-lg flex-1',
+                'flex flex-col items-center justify-center gap-0.5 py-1.5 px-3 rounded-lg min-w-[60px]',
                 isActive ? 'text-salon-600 bg-salon-50' : 'text-zinc-400'
               )}
             >

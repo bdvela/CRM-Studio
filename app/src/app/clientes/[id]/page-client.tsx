@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { getClientById, getAppointments, updateClient, deleteClient } from '@/lib/db/queries';
 import type { Client, ClientInsert, AppointmentStatus } from '@/types/database';
 import { Header } from '@/components/layout/shell';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -16,7 +16,7 @@ import { formatCurrency, formatDate, formatTime } from '@/lib/utils';
 import { APPOINTMENT_STATUS_LABELS } from '@/types/database';
 import {
   Phone, Mail, Instagram, CalendarDays, DollarSign,
-  Clock, ArrowLeft, Edit, Save, Trash2,
+  Clock, ArrowLeft, Edit, Save, Trash2, User,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useConfirm } from '@/context/confirm-context';
@@ -161,108 +161,143 @@ export default function ClientDetailPage({ initialData }: {
   return (
     <>
       <Header action={
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => back()}>
-            <ArrowLeft className="size-4 mr-1" /> Volver
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <Button variant="outline" size="sm" onClick={() => back()} className="px-2 sm:px-3">
+            <ArrowLeft className="size-4" />
+            <span className="hidden sm:inline ml-1">Volver</span>
           </Button>
-          <Button size="sm" onClick={openEditModal}>
-            <Edit className="size-4 mr-1" /> Editar
+          <Button size="sm" onClick={openEditModal} className="px-2 sm:px-3">
+            <Edit className="size-4" />
+            <span className="hidden sm:inline ml-1">Editar</span>
           </Button>
         </div>
       } />
 
-      <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-4">
+      <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-4">
         {/* Profile Card */}
-        <Card>
-          <CardContent className="py-5">
-            <div className="flex items-start gap-5">
-              <div className="size-16 rounded-full bg-accent-100 flex items-center justify-center text-accent-600 font-bold text-2xl flex-shrink-0">
+        <div className="rounded-2xl bg-white border border-zinc-100 shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-4 border-b border-zinc-50">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="size-7 sm:size-8 rounded-lg bg-salon-50 flex items-center justify-center">
+                <User className="size-3.5 sm:size-4 text-salon-600" />
+              </div>
+              <div>
+                <h2 className="text-sm sm:text-base font-semibold text-zinc-900">Perfil</h2>
+                <p className="text-[10px] sm:text-xs text-zinc-400">Datos de la clienta</p>
+              </div>
+            </div>
+          </div>
+          <div className="p-4 sm:p-5">
+            <div className="flex items-start gap-3 sm:gap-4">
+              <div className="size-11 sm:size-12 rounded-full bg-accent-100 flex items-center justify-center text-accent-600 font-bold text-lg sm:text-xl flex-shrink-0">
                 {client.name[0].toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-3 flex-wrap">
-                  <h2 className="text-xl font-semibold">{client.name}</h2>
-                  <Badge variant={statusBadge[client.status]}>{statusLabels[client.status]}</Badge>
+                <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                  <h2 className="text-lg sm:text-xl font-semibold truncate">{client.name}</h2>
+                  <Badge variant={statusBadge[client.status]} className="text-[10px] sm:text-xs">{statusLabels[client.status]}</Badge>
                 </div>
-                <div className="flex flex-wrap gap-4 mt-3 text-sm text-zinc-500">
-                  {client.phone && <span className="flex items-center gap-1.5"><Phone className="size-4" />{client.phone}</span>}
-                  {client.email && <span className="flex items-center gap-1.5"><Mail className="size-4" />{client.email}</span>}
-                  {client.instagram && <span className="flex items-center gap-1.5"><Instagram className="size-4" />{client.instagram}</span>}
+                <div className="mt-2 sm:mt-3 flex flex-col xs:flex-row xs:flex-wrap gap-1.5 sm:gap-4 text-xs sm:text-sm text-zinc-500">
+                  {client.phone && (
+                    <span className="flex items-center gap-1.5 truncate">
+                      <Phone className="size-3.5 flex-shrink-0" />
+                      <span className="truncate">{client.phone}</span>
+                    </span>
+                  )}
+                  {client.email && (
+                    <span className="flex items-center gap-1.5 truncate">
+                      <Mail className="size-3.5 flex-shrink-0" />
+                      <span className="truncate">{client.email}</span>
+                    </span>
+                  )}
+                  {client.instagram && (
+                    <span className="flex items-center gap-1.5 truncate">
+                      <Instagram className="size-3.5 flex-shrink-0" />
+                      <span className="truncate">{client.instagram}</span>
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
 
             {client.notes && (
-              <div className="mt-4 p-3 rounded-xl bg-zinc-50 text-sm text-zinc-600">
+              <div className="mt-4 p-3 rounded-xl bg-zinc-50 text-xs sm:text-sm text-zinc-600 line-clamp-3">
                 {client.notes}
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Stats */}
         {client.client_stats && (
-          <div className="grid grid-cols-3 gap-4">
-            <Card>
-              <CardContent className="py-4 text-center">
-                <CalendarDays className="size-6 mx-auto text-salon-500 mb-2" />
-                <p className="text-2xl font-bold">{client.client_stats.total_appointments}</p>
-                <p className="text-xs text-zinc-400">Citas totales</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="py-4 text-center">
-                <DollarSign className="size-6 mx-auto text-green-500 mb-2" />
-                <p className="text-2xl font-bold">{formatCurrency(client.client_stats.total_spent)}</p>
-                <p className="text-xs text-zinc-400">Total gastado</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="py-4 text-center">
-                <Clock className="size-6 mx-auto text-accent-500 mb-2" />
-                <p className="text-sm font-bold">{client.client_stats.last_visit ? formatDate(client.client_stats.last_visit) : '—'}</p>
-                <p className="text-xs text-zinc-400">Última visita</p>
-              </CardContent>
-            </Card>
+          <div className="grid grid-cols-3 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
+            <div className="rounded-2xl bg-white border border-zinc-100 p-3 sm:p-4 text-center shadow-sm">
+              <CalendarDays className="size-4 sm:size-5 mx-auto text-salon-500 mb-1.5 sm:mb-2" />
+              <p className="text-lg sm:text-xl font-bold">{client.client_stats.total_appointments}</p>
+              <p className="text-[10px] sm:text-xs text-zinc-400">Citas totales</p>
+            </div>
+            <div className="rounded-2xl bg-white border border-zinc-100 p-3 sm:p-4 text-center shadow-sm">
+              <DollarSign className="size-4 sm:size-5 mx-auto text-green-500 mb-1.5 sm:mb-2" />
+              <p className="text-lg sm:text-xl font-bold">{formatCurrency(client.client_stats.total_spent)}</p>
+              <p className="text-[10px] sm:text-xs text-zinc-400">Total gastado</p>
+            </div>
+            <div className="rounded-2xl bg-white border border-zinc-100 p-3 sm:p-4 text-center shadow-sm col-span-1 sm:col-span-2 lg:col-span-2">
+              <Clock className="size-4 sm:size-5 mx-auto text-accent-500 mb-1.5 sm:mb-2" />
+              <p className="text-sm sm:text-base font-bold">{client.client_stats.last_visit ? formatDate(client.client_stats.last_visit) : '—'}</p>
+              <p className="text-[10px] sm:text-xs text-zinc-400">Última visita</p>
+            </div>
           </div>
         )}
 
         {/* Appointment History */}
-        <Card>
-          <CardHeader>
-            <h3 className="text-lg font-semibold flex items-center gap-2">
-              <CalendarDays className="size-5" /> Historial de citas
-            </h3>
-          </CardHeader>
-          <CardContent>
+        <div className="rounded-2xl bg-white border border-zinc-100 shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-4 border-b border-zinc-50">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="size-7 sm:size-8 rounded-lg bg-salon-50 flex items-center justify-center">
+                <CalendarDays className="size-3.5 sm:size-4 text-salon-600" />
+              </div>
+              <div>
+                <h2 className="text-sm sm:text-base font-semibold text-zinc-900">Historial de citas</h2>
+                <p className="text-[10px] sm:text-xs text-zinc-400">{appointments.length} {appointments.length === 1 ? 'cita' : 'citas'}</p>
+              </div>
+            </div>
+          </div>
+          <div className="p-4 sm:p-5">
             {appointments.length === 0 ? (
-              <p className="text-center py-8 text-zinc-400 text-sm">Sin citas registradas</p>
+              <div className="text-center py-8 sm:py-10">
+                <div className="size-12 sm:size-14 rounded-2xl bg-zinc-50 flex items-center justify-center mx-auto mb-2 sm:mb-3">
+                  <CalendarDays className="size-6 sm:size-7 text-zinc-300" />
+                </div>
+                <p className="text-xs sm:text-sm text-zinc-400">Sin citas registradas</p>
+              </div>
             ) : (
               <div className="space-y-2">
                 {appointments.map((appt) => (
-                  <Card key={appt.id} className="hover:shadow-sm transition-all">
-                    <CardContent className="flex items-center gap-4 py-3">
-                      <div className="text-center w-16">
-                        <p className="text-sm font-bold">{formatTime(appt.start_time)}</p>
-                        <p className="text-xs text-zinc-400">{formatDate(appt.start_time)}</p>
+                  <div key={appt.id} className="min-w-0">
+                    <div className="rounded-xl border border-zinc-100 p-3 sm:p-4 hover:shadow-sm transition-all">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="text-center w-12 sm:w-14 flex-shrink-0">
+                          <p className="text-xs sm:text-sm font-bold">{formatTime(appt.start_time)}</p>
+                          <p className="text-[10px] sm:text-xs text-zinc-400">{formatDate(appt.start_time)}</p>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-xs sm:text-sm truncate">{appt.title}</p>
+                          {appt.artist && <p className="text-[10px] sm:text-xs text-zinc-400 truncate">{appt.artist.name}</p>}
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <p className="text-xs sm:text-sm font-semibold">{formatCurrency(appt.total_price)}</p>
+                          <Badge variant={appt.status === 'completada' ? 'success' : appt.status === 'programada' ? 'info' : 'danger'} className="text-[10px] sm:text-xs">
+                            {APPOINTMENT_STATUS_LABELS[appt.status as AppointmentStatus]}
+                          </Badge>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm">{appt.title}</p>
-                        {appt.artist && <p className="text-xs text-zinc-400">{appt.artist.name}</p>}
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-semibold">{formatCurrency(appt.total_price)}</p>
-                        <Badge variant={appt.status === 'completada' ? 'success' : appt.status === 'programada' ? 'info' : 'danger'} className="text-xs">
-                          {APPOINTMENT_STATUS_LABELS[appt.status as AppointmentStatus]}
-                        </Badge>
-                      </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 ))}
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
       {/* Edit Modal */}

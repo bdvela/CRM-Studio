@@ -375,7 +375,7 @@ Principales funciones exportadas:
 ### Archivos Clave
 | Archivo | Descripción |
 |---------|-------------|
-| `claude.md` / `CLAUDE.md` | Contexto completo del proyecto (AI) |
+| `AGENTS.md` | Contexto completo del proyecto (AI) |
 | `supabase/schema.sql` | Esquema completo BD |
 | `supabase/migrations/` | Migraciones SQL |
 | `docs/specs/` | Especificaciones HU |

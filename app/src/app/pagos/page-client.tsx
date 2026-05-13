@@ -328,7 +328,7 @@ export default function PagosPage({ initialData }: {
               placeholder="Buscar..."
               value={ui.search}
               onChange={(e) => dispatchUI({ search: e.target.value })}
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-zinc-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-salon-500"
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-zinc-200 bg-white text-base focus:outline-none focus:ring-2 focus:ring-salon-500"
             />
           </div>
           <div className="flex gap-1 p-1 bg-zinc-100 rounded-xl">

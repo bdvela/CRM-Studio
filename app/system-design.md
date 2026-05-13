@@ -300,6 +300,6 @@ Las migraciones están en `supabase/migrations/` y se aplican en orden:
 │   ├── status.md                           # Project status
 │   ├── specs/                             # HUs organizadas por módulo
 │   └── reference/                         # Documentos de referencia
-├── claude.md                              # Project context (AI)
+├── AGENTS.md                              # Contexto del proyecto (AI)
 └── status.md                              # Project status
 ```

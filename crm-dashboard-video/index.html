@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+
+      body {
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #ffffff;
+        font-family: Inter, sans-serif;
+        color: #1a1a2e;
+      }
+
+      .scene {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 1920px;
+        height: 1080px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+
+      /* ── Scene 1 ── */
+      #scene1 {
+        z-index: 1;
+        background: #ffffff;
+        flex-direction: column;
+        gap: 28px;
+      }
+
+      .hero-title {
+        font-size: 100px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: #1a1a2e;
+        line-height: 1;
+      }
+
+      .hero-title span {
+        color: #e91e8c;
+      }
+
+      .hero-tagline {
+        font-size: 22px;
+        font-weight: 400;
+        color: #6b6b80;
+        letter-spacing: 0.04em;
+        text-align: center;
+        max-width: 600px;
+      }
+
+.hero-sub {
+        font-size: 14px;
+        font-weight: 600;
+        color: #c2177a;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        margin-top: -8px;
+      }
+
+      /* ── Scene 2 ── */
+      #scene2 {
+        z-index: 2;
+        background: #ffffff;
+        opacity: 0;
+        flex-direction: column;
+        gap: 56px;
+      }
+
+      .section-label {
+        font-size: 13px;
+        font-weight: 600;
+        color: #c2177a;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        text-align: center;
+      }
+
+      .modules-row {
+        display: flex;
+        gap: 28px;
+        align-items: stretch;
+      }
+
+      .module-card {
+        background: #fff5f8;
+        border: 1px solid #fad9e8;
+        border-radius: 20px;
+        padding: 40px 36px;
+        width: 340px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+        box-shadow: 0 4px 32px rgba(233, 30, 140, 0.07);
+      }
+
+      .module-icon {
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #fce4f0 0%, #fad9e8 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+        color: #e91e8c;
+        flex-shrink: 0;
+      }
+
+      .module-title {
+        font-size: 24px;
+        font-weight: 600;
+        color: #1a1a2e;
+        text-align: center;
+      }
+
+      .module-desc {
+        font-size: 15px;
+        color: #6b6b80;
+        text-align: center;
+        line-height: 1.6;
+      }
+
+      .module-tag {
+        display: inline-block;
+        background: #fad9e8;
+        color: #a01260;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        padding: 6px 14px;
+        border-radius: 99px;
+        margin-top: 4px;
+      }
+
+      /* ── Scene 3 ── */
+      #scene3 {
+        z-index: 3;
+        background: #ffffff;
+        opacity: 0;
+        flex-direction: column;
+        gap: 52px;
+      }
+
+      .scene3-inner {
+        display: flex;
+        gap: 80px;
+        align-items: center;
+      }
+
+      .calendar-block {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+      }
+
+      .calendar-icon {
+        width: 140px;
+        height: 140px;
+        background: linear-gradient(135deg, #fff5f8 0%, #fad9e8 100%);
+        border: 2px solid #fad9e8;
+        border-radius: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+      }
+
+      .calendar-icon svg {
+        width: 70px;
+        height: 70px;
+        color: #e91e8c;
+      }
+
+      .cal-label {
+        font-size: 16px;
+        font-weight: 600;
+        color: #1a1a2e;
+      }
+
+      .cal-sublabel {
+        font-size: 13px;
+        color: #6b6b80;
+        margin-top: -12px;
+      }
+
+      .divider-line {
+        width: 1px;
+        height: 200px;
+        background: #fad9e8;
+      }
+
+      .staff-block {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+      }
+
+      .staff-avatar-row {
+        display: flex;
+        gap: -10px;
+        position: relative;
+      }
+
+      .staff-avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        border: 3px solid #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 28px;
+        color: #fff;
+        font-weight: 600;
+        position: relative;
+      }
+
+      .staff-avatar.v {
+        background: #880e4f;
+        z-index: 3;
+        color: #fff;
+      }
+
+      .staff-avatar.c {
+        background: #ad1457;
+        z-index: 2;
+        margin-left: -16px;
+        color: #fff;
+      }
+
+      .staff-avatar.a {
+        background: #c2185b;
+        z-index: 1;
+        margin-left: -16px;
+        color: #fff;
+      }
+
+      .staff-label {
+        font-size: 16px;
+        font-weight: 600;
+        color: #1a1a2e;
+      }
+
+      .staff-sublabel {
+        font-size: 13px;
+        color: #6b6b80;
+        margin-top: -12px;
+      }
+
+      .appointment-badge {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: #fff5f8;
+        border: 1px solid #fad9e8;
+        border-radius: 99px;
+        padding: 14px 28px;
+        font-size: 15px;
+        font-weight: 500;
+        color: #1a1a2e;
+      }
+
+      .badge-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #e91e8c;
+        animation: pulse 1.8s ease-in-out infinite;
+      }
+
+      @keyframes pulse {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.4); opacity: 0.7; }
+      }
+
+      /* ── Scene 4 ── */
+      #scene4 {
+        z-index: 4;
+        background: #ffffff;
+        opacity: 0;
+        flex-direction: column;
+        gap: 32px;
+      }
+
+      .logo-mark {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+      }
+
+      .logo-icon {
+        width: 100px;
+        height: 100px;
+        border-radius: 28px;
+        background: linear-gradient(135deg, #fce4f0 0%, #fad9e8 100%);
+        border: 2px solid #fad9e8;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 42px;
+        color: #e91e8c;
+      }
+
+      .logo-word {
+        font-size: 56px;
+        font-weight: 700;
+        color: #1a1a2e;
+        letter-spacing: -0.02em;
+      }
+
+      .logo-word span {
+        color: #e91e8c;
+      }
+
+      .logo-tagline {
+        font-size: 20px;
+        color: #6b6b80;
+        font-weight: 400;
+        letter-spacing: 0.02em;
+      }
+
+      .logo-url {
+        font-size: 14px;
+        color: #b01060;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        margin-top: 8px;
+        background: #fad9e8;
+        padding: 8px 20px;
+        border-radius: 99px;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-width="1920"
+      data-height="1080"
+      data-start="0"
+      data-duration="10"
+    >
+      <!-- ── Scene 1: Title ── 0–2s -->
+      <div id="scene1" class="scene">
+        <div class="hero-sub" id="s1-sub">CRM Studio</div>
+        <div class="hero-title" id="s1-title">
+          <span>CRM</span> Studio
+        </div>
+        <div class="hero-tagline" id="s1-tag">
+          Gestión inteligente para estudios de belleza
+        </div>
+      </div>
+
+      <!-- ── Scene 2: Modules ── 2–6s -->
+      <div id="scene2" class="scene">
+        <div class="section-label" id="s2-label">Módulos principales</div>
+        <div class="modules-row" id="s2-cards">
+          <div class="module-card" id="s2-card1">
+            <div class="module-icon">👥</div>
+            <div class="module-title">Clientes</div>
+            <div class="module-desc">Historial completo, estados y métricas de cada clienta</div>
+            <div class="module-tag">Prospecto · Activa · VIP</div>
+          </div>
+          <div class="module-card" id="s2-card2">
+            <div class="module-icon">📅</div>
+            <div class="module-title">Citas</div>
+            <div class="module-desc">Agenda visual, evita solapamientos y gestiona artistas</div>
+            <div class="module-tag">Calendario · Vista día/mes</div>
+          </div>
+          <div class="module-card" id="s2-card3">
+            <div class="module-icon">💰</div>
+            <div class="module-title">Pagos</div>
+            <div class="module-desc">Ingresos, egresos y cálculo automático de comisiones</div>
+            <div class="module-tag">S/ · Métodos varios</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Scene 3: Appointment + Staff ── 6–9s -->
+      <div id="scene3" class="scene">
+        <div class="section-label" id="s3-label">Citas y personal</div>
+        <div class="scene3-inner" id="s3-inner">
+          <div class="calendar-block">
+            <div class="calendar-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+                <path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"></path>
+              </svg>
+            </div>
+            <div class="cal-label">12 citas hoy</div>
+            <div class="cal-sublabel">4 en curso</div>
+          </div>
+
+          <div class="divider-line"></div>
+
+          <div class="staff-block">
+            <div class="staff-avatar-row" id="s3-avatars">
+              <div class="staff-avatar v" id="s3-av1">V</div>
+              <div class="staff-avatar c" id="s3-av2">C</div>
+              <div class="staff-avatar a" id="s3-av3">A</div>
+            </div>
+            <div class="staff-label">3 artistas</div>
+            <div class="staff-sublabel">Valentina, Camila, Araceli</div>
+          </div>
+        </div>
+        <div class="appointment-badge" id="s3-badge">
+          <div class="badge-dot"></div>
+          Agenda en tiempo real
+        </div>
+      </div>
+
+      <!-- ── Scene 4: Final Logo ── 9–10s -->
+      <div id="scene4" class="scene">
+        <div class="logo-mark" id="s4-logo">
+          <div class="logo-icon">💅</div>
+          <div class="logo-word"><span>CRM</span> Studio</div>
+          <div class="logo-tagline">Todo en un solo lugar</div>
+          <div class="logo-url">crmstudio.app</div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+
+      var tl = gsap.timeline({ paused: true });
+
+      /* ════════════════════════════════════
+         SCENE 1 — Title (0 – 2s)
+         Entrance: elements float in softly
+         Transition: blur crossfade → Scene 2
+      ════════════════════════════════════ */
+
+      tl.from("#s1-sub", { y: 20, opacity: 0, duration: 0.5, ease: "power3.out" }, 0.1);
+      tl.from("#s1-title", { y: 40, opacity: 0, duration: 0.8, ease: "power3.out" }, 0.25);
+      tl.from("#s1-tag", { y: 20, opacity: 0, duration: 0.6, ease: "power2.out" }, 0.55);
+
+      /* Scene 1 exit → Scene 2 entrance */
+      tl.to("#scene1", { filter: "blur(8px)", scale: 1.02, duration: 0.45, ease: "power2.in" }, 1.6);
+      tl.to("#scene1", { opacity: 0, duration: 0.25, ease: "power2.in" }, 1.85);
+      tl.set("#scene1", { visibility: "hidden" }, 2.1);
+
+      /* Scene 2 entrance */
+      tl.fromTo("#scene2",
+        { opacity: 0, filter: "blur(8px)", scale: 0.97 },
+        { opacity: 1, filter: "blur(0px)", scale: 1, duration: 0.55, ease: "power2.out" },
+      1.9);
+      tl.from("#s2-label", { y: 20, opacity: 0, duration: 0.45, ease: "power3.out" }, 2.1);
+      tl.from("#s2-card1", { y: 60, opacity: 0, duration: 0.55, ease: "power3.out" }, 2.3);
+      tl.from("#s2-card2", { y: 60, opacity: 0, duration: 0.55, ease: "power3.out" }, 2.45);
+      tl.from("#s2-card3", { y: 60, opacity: 0, duration: 0.55, ease: "power3.out" }, 2.6);
+
+      /* Scene 2 exit → Scene 3 entrance */
+      tl.to("#scene2", { filter: "blur(8px)", scale: 1.02, duration: 0.45, ease: "power2.in" }, 5.7);
+      tl.to("#scene2", { opacity: 0, duration: 0.25, ease: "power2.in", overwrite: "auto" }, 5.95);
+      tl.set("#scene2", { visibility: "hidden" }, 6.2);
+
+      /* Scene 3 entrance */
+      tl.fromTo("#scene3",
+        { opacity: 0, filter: "blur(8px)", scale: 0.97 },
+        { opacity: 1, filter: "blur(0px)", scale: 1, duration: 0.55, ease: "power2.out" },
+      6.0);
+      tl.from("#s3-label", { y: 16, opacity: 0, duration: 0.4, ease: "power3.out" }, 6.2);
+      tl.from("#s3-inner", { y: 30, opacity: 0, duration: 0.55, ease: "power3.out" }, 6.35);
+      tl.from("#s3-av1", { scale: 0.5, opacity: 0, duration: 0.45, ease: "back.out(1.8)" }, 6.5);
+      tl.from("#s3-av2", { scale: 0.5, opacity: 0, duration: 0.45, ease: "back.out(1.8)" }, 6.65);
+      tl.from("#s3-av3", { scale: 0.5, opacity: 0, duration: 0.45, ease: "back.out(1.8)" }, 6.8);
+      tl.from("#s3-badge", { y: 20, opacity: 0, duration: 0.45, ease: "power2.out" }, 7.1);
+
+/* Scene 3 exit → Scene 4 entrance */
+      tl.to("#scene3", { filter: "blur(8px)", scale: 1.02, duration: 0.45, ease: "power2.in", overwrite: "auto" }, 8.5);
+      tl.to("#scene3", { opacity: 0, duration: 0.25, ease: "power2.in" }, 8.75);
+      tl.set("#scene3", { visibility: "hidden" }, 9.0);
+
+      /* Scene 4 entrance — starts after scene3 exit fully clears at t=9.0 */
+      tl.fromTo("#scene4",
+        { opacity: 0, filter: "blur(6px)" },
+        { opacity: 1, filter: "blur(0px)", duration: 0.55, ease: "power2.out", overwrite: "auto" },
+      9.0);
+      tl.from("#s4-logo", { y: 30, opacity: 0, duration: 0.6, ease: "power3.out" }, 9.1);
+
+      /* Final fade-out to white */
+      tl.to("#scene4", { opacity: 0, duration: 0.5, ease: "power1.in" }, 9.6);
+      tl.set("#scene4", { visibility: "hidden" }, 10.1);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

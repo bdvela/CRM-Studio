@@ -140,7 +140,7 @@ function StaffFilters({ search, onSearchChange }: { search: string; onSearchChan
         placeholder="Buscar por nombre o rol..."
         value={search}
         onChange={(e) => onSearchChange(e.target.value)}
-        className="w-full pl-10 pr-4 py-3 rounded-xl border border-zinc-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-salon-500"
+        className="w-full pl-10 pr-4 py-3 rounded-xl border border-zinc-200 bg-white text-base focus:outline-none focus:ring-2 focus:ring-salon-500"
       />
     </div>
   );
@@ -517,15 +517,15 @@ function StaffFormModal({
             <button
               type="button"
               onClick={() => dispatch({ type: 'UPDATE', payload: { active: !form.active } })}
-              className="relative w-12 h-6 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-salon-500 focus:ring-offset-2"
+              className="relative w-14 h-7 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-salon-500 focus:ring-offset-2"
               style={{
                 backgroundColor: form.active ? '#22c55e' : '#d1d5db'
               }}
             >
               <div
-                className="absolute top-1 size-4 bg-white rounded-full shadow transition-transform"
+                className="absolute top-0.5 size-5 bg-white rounded-full shadow transition-transform"
                 style={{
-                  left: form.active ? '1.75rem' : '0.25rem'
+                  left: form.active ? '2rem' : '0.25rem'
                 }}
               />
             </button>

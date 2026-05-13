@@ -8,8 +8,14 @@
 5. [Módulos Funcionales](#módulos-funcionales)
 6. [Patrones UI/UX](#patrones-uiux)
 7. [Variables de Entorno](#variables-de-entorno)
-8. [Migraciones SQL](#migraciones-sql)
-9. [Datos Mock](#datos-mock)
+8. [Comandos](#comandos)
+9. [Migraciones SQL](#migraciones-sql)
+10. [Datos Mock](#datos-mock)
+11. [Reglas de Desarrollo](#reglas-de-desarrollo)
+12. [Decisiones Técnicas](#decisiones-técnicas)
+13. [Especificaciones HU](#especificaciones-hu)
+14. [Issues Conocidos](#issues-conocidos)
+15. [Última Actualización](#última-actualización)
 
 ---
 
@@ -54,7 +60,8 @@
 
 ### Dev Server
 - **Default Port**: 3000
-- **Turbo Mode**: Disponible (`npm run dev:turbo`)
+- **Turbopack**: Usado por defecto en Next.js 16 (`npm run dev`)
+- **Webpack**: Disponible via `npm run dev:webpack` si se necesita
 
 ---
 
@@ -63,49 +70,50 @@
 ### Estructura de Directorios
 ```
 CRM Studio/
-├── app/                              # Next.js App (PWA)
+├── AGENTS.md                            # Este archivo — contexto del proyecto (AI)
+├── app/                                 # Next.js App (PWA)
 │   ├── src/
-│   │   ├── app/                       # App Router pages (Server/Client pattern)
-│   │   │   ├── page.tsx               # Dashboard (Server)
-│   │   │   ├── page-client.tsx        # Dashboard (Client)
-│   │   │   ├── loading.tsx             # Skeleton loading
+│   │   ├── app/                         # App Router pages (Server/Client pattern)
+│   │   │   ├── page.tsx                 # Dashboard (Server)
+│   │   │   ├── page-client.tsx          # Dashboard (Client)
+│   │   │   ├── loading.tsx              # Skeleton loading
 │   │   │   ├── citas/
-│   │   │   │   ├── page.tsx           # Citas (Server)
-│   │   │   │   ├── page-client.tsx    # Citas (Client)
+│   │   │   │   ├── page.tsx             # Citas (Server)
+│   │   │   │   ├── page-client.tsx      # Citas (Client)
 │   │   │   │   ├── layout.tsx
 │   │   │   │   └── loading.tsx
 │   │   │   ├── clientes/
-│   │   │   │   ├── page.tsx           # Lista (Server)
-│   │   │   │   ├── page-client.tsx    # Lista (Client)
+│   │   │   │   ├── page.tsx             # Lista (Server)
+│   │   │   │   ├── page-client.tsx      # Lista (Client)
 │   │   │   │   ├── [id]/
-│   │   │   │   │   ├── page.tsx       # Detalle (Server)
+│   │   │   │   │   ├── page.tsx         # Detalle (Server)
 │   │   │   │   │   └── page-client.tsx
 │   │   │   │   ├── layout.tsx
 │   │   │   │   └── loading.tsx
 │   │   │   ├── pagos/
-│   │   │   │   ├── page.tsx           # Pagos (Server)
-│   │   │   │   ├── page-client.tsx    # Pagos (Client)
+│   │   │   │   ├── page.tsx             # Pagos (Server)
+│   │   │   │   ├── page-client.tsx      # Pagos (Client)
 │   │   │   │   ├── layout.tsx
 │   │   │   │   └── loading.tsx
 │   │   │   ├── reportes/comisiones/
-│   │   │   │   ├── page.tsx           # Comisiones (Server)
-│   │   │   │   ├── page-client.tsx    # Comisiones (Client)
+│   │   │   │   ├── page.tsx             # Comisiones (Server)
+│   │   │   │   ├── page-client.tsx      # Comisiones (Client)
 │   │   │   │   ├── layout.tsx
 │   │   │   │   └── loading.tsx
 │   │   │   ├── servicios/
-│   │   │   │   ├── page.tsx           # Servicios (Server)
-│   │   │   │   ├── page-client.tsx    # Servicios (Client)
+│   │   │   │   ├── page.tsx             # Servicios (Server)
+│   │   │   │   ├── page-client.tsx      # Servicios (Client)
 │   │   │   │   ├── layout.tsx
 │   │   │   │   └── loading.tsx
 │   │   │   └── staff/
-│   │   │       ├── page.tsx           # Staff (Server)
-│   │   │       ├── page-client.tsx    # Staff (Client)
+│   │   │       ├── page.tsx             # Staff (Server)
+│   │   │       ├── page-client.tsx      # Staff (Client)
 │   │   │       ├── layout.tsx
 │   │   │       └── loading.tsx
 │   │   ├── components/
-│   │   │   ├── layout/shell.tsx       # Sidebar + MobileNav + Header
-│   │   │   ├── ui/                    # Primitives (button, input, modal, etc.)
-│   │   │   ├── citas/                 # Componentes de Citas (refactorizados)
+│   │   │   ├── layout/shell.tsx         # Sidebar + MobileNav + Header
+│   │   │   ├── ui/                      # Primitives (button, input, modal, etc.)
+│   │   │   ├── citas/                    # Componentes de Citas (refactorizados)
 │   │   │   │   ├── AppointmentCard.tsx
 │   │   │   │   ├── AppointmentDetail.tsx
 │   │   │   │   ├── AppointmentFormModal.tsx
@@ -119,33 +127,33 @@ CRM Studio/
 │   │   │   │   ├── hooks.ts
 │   │   │   │   ├── reducers.ts
 │   │   │   │   └── types.ts
-│   │   │   ├── confirm/               # ConfirmDialog
-│   │   │   └── providers.tsx          # ConfirmProvider
+│   │   │   ├── confirm/                 # ConfirmDialog
+│   │   │   └── providers.tsx            # ConfirmProvider
 │   │   ├── lib/
-│   │   │   ├── db/queries.ts          # Supabase queries + mock + cache
-│   │   │   ├── db/mock-data.ts        # Mock data
-│   │   │   ├── supabase/client.ts     # Supabase client
-│   │   │   └── utils.ts              # formatCurrency, formatDate, comisiones, etc.
-│   │   ├── types/database.ts          # TypeScript types
+│   │   │   ├── db/queries.ts            # Supabase queries + mock + cache
+│   │   │   ├── db/mock-data.ts          # Mock data
+│   │   │   ├── supabase/client.ts       # Supabase client
+│   │   │   └── utils.ts                # formatCurrency, formatDate, comisiones, etc.
+│   │   ├── types/database.ts            # TypeScript types
 │   │   └── context/confirm-context.tsx
-│   └── public/                        # PWA manifest
+│   └── public/                          # PWA manifest
 ├── supabase/
-│   ├── schema.sql                     # Esquema completo BD
-│   └── migrations/                    # 11 migraciones SQL
-├── scripts/                           # DB scripts (clean, seed, test, check)
+│   ├── schema.sql                       # Esquema completo BD
+│   └── migrations/                      # Migraciones SQL
+├── scripts/                             # DB scripts (clean, seed, test, check)
 ├── docs/
-│   ├── system-design.md               # Arquitectura del sistema
-│   ├── status.md                      # Estado del proyecto
-│   ├── specs/                         # HUs organizadas por módulo
-│   │   ├── 01-clientes/               # HU-01 a HU-05
-│   │   ├── 02-servicios/              # HU-06 a HU-08, HU-25
-│   │   ├── 03-citas/                  # HU-09 a HU-13
-│   │   ├── 04-staff/                  # HU-14, HU-15, HU-23
-│   │   ├── 05-pagos/                  # HU-16 a HU-20
-│   │   ├── 06-dashboard/              # HU-21, HU-22
-│   │   └── README.md                  # Índice de HUs
-│   └── reference/                     # Documentos de referencia
-└── claude.md                          # Contexto del proyecto (AI)
+│   ├── system-design.md                 # Arquitectura del sistema
+│   ├── status.md                        # Estado del proyecto
+│   ├── specs/                           # HUs organizadas por módulo
+│   │   ├── 01-clientes/                # HU-01 a HU-05
+│   │   ├── 02-servicios/                # HU-06 a HU-08, HU-25
+│   │   ├── 03-citas/                   # HU-09 a HU-13
+│   │   ├── 04-staff/                   # HU-14, HU-15, HU-23
+│   │   ├── 05-pagos/                   # HU-16 a HU-20
+│   │   ├── 06-dashboard/               # HU-21, HU-22
+│   │   └── README.md                   # Índice de HUs
+│   └── reference/                      # Documentos de referencia
+└── AGENTS.md                            # Este archivo
 ```
 
 ### Rutas Principales
@@ -367,6 +375,29 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 
 ---
 
+## Comandos
+
+```bash
+# Desarrollo (Turbopack por defecto en Next.js 16)
+npm run dev
+
+# Desarrollo con Webpack (si Turbopack causa problemas)
+npm run dev:webpack
+
+# Build
+npm run build
+
+# Lint
+npm run lint
+
+# Start (producción)
+npm run start
+```
+
+> **Nota**: En Next.js 16, `npm run dev` usa Turbopack por defecto. Si hay problemas, usa `npm run dev:webpack` para forzar Webpack. No usar `--no-turbopack` (flag no válido).
+
+---
+
 ## Migraciones SQL
 
 ### Orden de Ejecución
@@ -433,6 +464,28 @@ const USE_MOCK = process.env.NEXT_PUBLIC_SUPABASE_URL === 'https://placeholder.s
 
 ---
 
+## Reglas de Desarrollo
+
+### Patrones Obligatorios
+- **Server/Client Components**: `page.tsx` (Server) para data fetching + metadata, `page-client.tsx` (Client) para interactividad
+- **Moneda**: Usar "S/" como texto con posicionamiento absoluto, NUNCA ícono DollarSign
+- **Inputs iOS**: Font-size ≥ 16px para evitar zoom automático
+- **Cards**: Clickeables, sin botones editar/eliminar visibles
+- **Modales**: Toda edición vía modal, botón eliminar dentro del modal
+- **Detección de cambios**: Botón "Actualizar" deshabilitado si no hay cambios
+- **Componentes custom**: NO usar shadcn/ui, los componentes UI son propios
+
+### Prohibido
+- ❌ Usar shadcn/ui (componentes son custom)
+- ❌ Usar ícono DollarSign para moneda (usar texto "S/")
+- ❌ Font-size < 16px en inputs (causa zoom en iOS)
+- ❌ Botones editar/eliminar fuera de modales
+- ❌ Eliminar a Araceli Zevallos (founder protegida)
+- ❌ Usar flag `--no-turbopack` (no válido en Next.js 16)
+- ❌ Crear `package.json` en el root del monorepo (causa loop infinito en Turbopack)
+
+---
+
 ## Decisiones Técnicas Clave
 
 ### Patrón Server/Client Components
@@ -460,6 +513,11 @@ const USE_MOCK = process.env.NEXT_PUBLIC_SUPABASE_URL === 'https://placeholder.s
 - **Estado**: ✅ Resuelto
 - **Problema anterior**: Tabla `appointment_services` tenía RLS habilitado pero sin políticas → Error 401 Unauthorized
 - **Solución aplicada**: Migraciones `HU-28` y `HU-29` con políticas para SELECT/INSERT/UPDATE/DELETE usando `USING (true)` (tabla de relación N:M que necesita ser accesible)
+
+### Turbopack en Next.js 16
+- **Estado**: ✅ Funcionando
+- **Problema anterior**: Monorepo con dos `package-lock.json` causaba que Turbopack spawneara cientos de procesos
+- **Solución aplicada**: Eliminar `package.json` y `package-lock.json` del root, solo mantener `/app/package.json`
 
 ---
 
@@ -513,30 +571,13 @@ const USE_MOCK = process.env.NEXT_PUBLIC_SUPABASE_URL === 'https://placeholder.s
 | Columna `service_price` faltante | ✅ Fixeado | Migración HU-27 |
 | Servicios no cargan al editar cita | ✅ Fixeado | Solución de RLS |
 | params síncronos en Next.js 15+ | ✅ Fixeado | Refactor a `await params` + validación UUID |
-
----
-
-## Comandos Útiles
-
-```bash
-# Desarrollo
-npm run dev
-npm run dev:turbo    # Con Turbo mode
-
-# Build
-npm run build
-
-# Lint
-npm run lint
-
-# Start (producción)
-npm run start
-```
+| Turbopack loop infinito (2 package-lock.json) | ✅ Fixeado | Eliminar package.json del root |
+| `--no-turbopack` flag no válido | ✅ Fixeado | Cambiar a `next dev` (turbopack por defecto) o `--webpack` |
 
 ---
 
 ## Última Actualización
 - **Fecha**: 12 Mayo 2026
-- **Commit**: `01ef5829`
+- **Commit**: `0cdfb92a`
 - **Rama**: `main`
-- **Cambios recientes**: Refactor Server/Client Components + fix params Promise + validación UUID
+- **Cambios recientes**: Renombrar CLAUDE.md → AGENTS.md + fix dev script turbopack

@@ -78,7 +78,7 @@ function ServiceFilter({
           placeholder="Buscar servicio..."
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="w-full pl-10 pr-4 py-3 rounded-xl border border-zinc-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-salon-500"
+          className="w-full pl-10 pr-4 py-3 rounded-xl border border-zinc-200 bg-white text-base focus:outline-none focus:ring-2 focus:ring-salon-500"
         />
       </div>
       <div className="w-full sm:w-48 sm:flex-shrink-0">
@@ -416,7 +416,7 @@ function ServicioFormModal({
                 </div>
               ) : (
                 <>
-                  <div className="flex flex-col gap-2 items-start sm:hidden">
+                  <div className="flex flex-col gap-2 items-start md:hidden">
                     <div className="w-full">
                       <Select
                         value={form.price_type}
@@ -457,7 +457,7 @@ function ServicioFormModal({
                     </div>
                   </div>
 
-                  <div className="hidden sm:flex gap-2 items-start">
+                  <div className="hidden md:flex gap-2 items-start">
                     <div className="w-36 flex-shrink-0">
                       <Select
                         value={form.price_type}

@@ -162,7 +162,7 @@ export default function ClientesPage({ initialClients }: { initialClients?: Clie
               placeholder="Buscar por nombre, teléfono o Instagram..."
               value={ui.search}
               onChange={(e) => dispatchUI({ search: e.target.value })}
-              className="w-full pl-10 pr-4 py-3 rounded-xl border border-zinc-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-salon-500"
+              className="w-full pl-10 pr-4 py-3 rounded-xl border border-zinc-200 bg-white text-base focus:outline-none focus:ring-2 focus:ring-salon-500"
             />
           </div>
           <div className="w-full sm:w-48 flex-shrink-0">
@@ -261,7 +261,7 @@ function ClientCard({ client, onClick }: { client: Client; onClick: () => void }
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="font-medium truncate max-w-[150px] sm:max-w-none">{client.name}</p>
+            <p className="font-medium truncate sm:max-w-none md:max-w-none">{client.name}</p>
             <Badge variant={statusBadge[client.status] || 'default'} className="flex-shrink-0">
               {statusLabels[client.status]}
             </Badge>

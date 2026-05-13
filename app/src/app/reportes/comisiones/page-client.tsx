@@ -116,7 +116,7 @@ export default function ReportesComisionesPage({ initialData }: {
                     placeholder="Buscar artista..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-zinc-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-salon-500"
+                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-zinc-200 bg-white text-base focus:outline-none focus:ring-2 focus:ring-salon-500"
                   />
                 </div>
                 <div className="w-full sm:w-auto flex items-center gap-2">
@@ -181,7 +181,7 @@ export default function ReportesComisionesPage({ initialData }: {
                             </span>
                           )}
                         </div>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 text-sm">
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-4 text-sm">
                           <div>
                             <p className="text-xs text-zinc-400">Servicios</p>
                             <p className="font-semibold text-zinc-900">{row.total_services}</p>
