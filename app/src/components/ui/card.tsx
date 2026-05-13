@@ -4,9 +4,10 @@ interface CardProps {
   children: React.ReactNode;
   className?: string;
   onClick?: () => void;
+  'aria-label'?: string;
 }
 
-export function Card({ children, className, onClick }: CardProps) {
+export function Card({ children, className, onClick, 'aria-label': ariaLabel }: CardProps) {
   if (onClick) {
     return (
       <div
@@ -17,6 +18,7 @@ export function Card({ children, className, onClick }: CardProps) {
         onClick={onClick}
         role="button"
         tabIndex={0}
+        aria-label={ariaLabel}
         onKeyDown={(e: React.KeyboardEvent) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
