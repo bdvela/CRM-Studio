@@ -240,8 +240,8 @@ export function MobileNav() {
 export function Header({ title, action }: { title?: string; action?: React.ReactNode }) {
   return (
     <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-zinc-100">
-      <div className="flex items-center justify-between px-3 sm:px-6 md:px-8 py-3 sm:py-4">
-        {title && <h1 className="text-lg sm:text-xl md:text-2xl font-semibold text-zinc-900 truncate max-w-[60%] sm:max-w-none">{title}</h1>}
+      <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 min-h-[60px]">
+        {title && <h1 className="text-base sm:text-lg md:text-xl font-semibold text-zinc-900 truncate max-w-[60%] sm:max-w-none">{title}</h1>}
         {!title && <div className="flex-1" />}
         {action && <div className="flex-shrink-0">{action}</div>}
       </div>
