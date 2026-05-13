@@ -15,6 +15,30 @@ export function DetailPopover({
   const detailRef = useRef<HTMLDivElement>(null);
   const onCloseEvent = useEffectEvent(onClose);
   const [detailTimeRange, setDetailTimeRange] = useState('');
+  const [timeStatus, setTimeStatus] = useState<React.ReactNode>(null);
+
+  useEffect(() => {
+    if (!selectedAppt || selectedAppt.status !== 'programada') return;
+    
+    const updateTimeStatus = () => {
+      const diffMs = new Date(selectedAppt.start_time).getTime() - Date.now();
+      if (diffMs < 0) setTimeStatus(<span className="text-xs text-red-500 mt-0.5">Atrasada</span>);
+      else {
+        const diffH = Math.round(diffMs / 3600000);
+        if (diffH < 1) setTimeStatus(<span className="text-xs text-amber-500 mt-0.5">En menos de 1 hora</span>);
+        else if (diffH < 24) setTimeStatus(<span className="text-xs text-amber-500 mt-0.5">En {diffH}h</span>);
+        else {
+          const diffD = Math.round(diffH / 24);
+          if (diffD === 1) setTimeStatus(<span className="text-xs text-zinc-400 mt-0.5">Mañana</span>);
+          else setTimeStatus(<span className="text-xs text-zinc-400 mt-0.5">En {diffD} días</span>);
+        }
+      }
+    };
+
+    updateTimeStatus();
+    const interval = setInterval(updateTimeStatus, 60000);
+    return () => clearInterval(interval);
+  }, [selectedAppt?.start_time, selectedAppt?.status]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -79,7 +103,7 @@ export function DetailPopover({
                 {selectedAppt.client?.name || 'Sin clienta'}
               </h3>
               {(() => {
-                const names = [...new Set(selectedAppt.appointment_services?.map((as: any) => as.artist?.name).filter(Boolean))] as string[];
+                const names = [...new Set(selectedAppt.appointment_services?.flatMap((as: any) => as.artist?.name ? [as.artist.name] : []))] as string[];
                 if (names.length === 0) return null;
                 return <p className="text-sm text-zinc-500 mt-0.5">con {names.join(', ')}</p>;
               })()}
@@ -103,17 +127,8 @@ export function DetailPopover({
               <span className="text-zinc-700">
                 {detailTimeRange}
                 <span className="text-zinc-400 ml-2">({selectedAppt.total_duration_min} min)</span>
+                {timeStatus}
               </span>
-              {selectedAppt.status === 'programada' && (() => {
-                const diffMs = new Date(selectedAppt.start_time).getTime() - Date.now();
-                if (diffMs < 0) return <span className="text-xs text-red-500 mt-0.5">Atrasada</span>;
-                const diffH = Math.round(diffMs / 3600000);
-                if (diffH < 1) return <span className="text-xs text-amber-500 mt-0.5">En menos de 1 hora</span>;
-                if (diffH < 24) return <span className="text-xs text-amber-500 mt-0.5">En {diffH}h</span>;
-                const diffD = Math.round(diffH / 24);
-                if (diffD === 1) return <span className="text-xs text-zinc-400 mt-0.5">Mañana</span>;
-                return <span className="text-xs text-zinc-400 mt-0.5">En {diffD} días</span>;
-              })()}
             </div>
           </div>
 

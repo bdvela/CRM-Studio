@@ -87,7 +87,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Tablet Sidebar Drawer */}
       <>
         {tabletMenuOpen && (
-          <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setTabletMenuOpen(false)} />
+          <div
+            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+            onClick={() => setTabletMenuOpen(false)}
+            onKeyDown={(e) => { if (e.key === 'Escape') setTabletMenuOpen(false); }}
+            role="button"
+            tabIndex={0}
+            aria-label="Cerrar menú"
+          />
         )}
         <aside className={cn(
           'fixed top-0 left-0 h-full w-64 bg-white border-r border-zinc-200 z-50 transform transition-transform duration-300 lg:hidden',
@@ -149,7 +156,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function Sidebar() {
+function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
 

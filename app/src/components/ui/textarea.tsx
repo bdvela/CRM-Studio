@@ -11,7 +11,7 @@ interface TextareaProps extends Omit<React.TextareaHTMLAttributes<HTMLTextAreaEl
 export function Textarea({ label, error, className, id, onChange: externalOnChange, maxLength, value, ...props }: TextareaProps) {
   const [internalError, setInternalError] = useState<string>('');
 
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleTextareaChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     let newValue = e.target.value;
     
     if (maxLength && newValue.length > maxLength) {
@@ -47,7 +47,7 @@ export function Textarea({ label, error, className, id, onChange: externalOnChan
           )}
          rows={3}
          value={currentValue}
-         onChange={handleChange}
+         onChange={handleTextareaChange}
          maxLength={maxLength}
          {...props}
        />

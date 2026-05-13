@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Calendar as CalendarIcon, Clock, X, AlertTriangle, XCircle, Pencil, Check } from 'lucide-react';
@@ -41,8 +42,32 @@ export function AppointmentDetail({ appt, onClose, onEdit, onCancel, onAdvanceSt
   }
   const totalFounder = founderDirect + founderCut;
   const showCommissions = hasCommissions && (regularArtistCommission > 0 || totalFounder > 0);
-  const uniqueArtists = [...new Set(appt.appointment_services?.map((as: any) => as.artist?.name).filter(Boolean))] as string[];
+  const uniqueArtists = [...new Set(appt.appointment_services?.flatMap((as: any) => as.artist?.name ? [as.artist.name] : []))] as string[];
   const dateStr = format(new Date(appt.start_time), "EEEE d 'de' MMMM", { locale: es });
+  const [timeStatus, setTimeStatus] = useState<React.ReactNode>(null);
+
+  useEffect(() => {
+    if (appt.status !== 'programada') return;
+    
+    const updateTimeStatus = () => {
+      const diffMs = new Date(appt.start_time).getTime() - Date.now();
+      if (diffMs < 0) setTimeStatus(<span className="text-xs text-red-500 mt-0.5">Atrasada</span>);
+      else {
+        const diffH = Math.round(diffMs / 3600000);
+        if (diffH < 1) setTimeStatus(<span className="text-xs text-amber-500 mt-0.5">En menos de 1 hora</span>);
+        else if (diffH < 24) setTimeStatus(<span className="text-xs text-amber-500 mt-0.5">En {diffH}h</span>);
+        else {
+          const diffD = Math.round(diffH / 24);
+          if (diffD === 1) setTimeStatus(<span className="text-xs text-zinc-400 mt-0.5">Mañana</span>);
+          else setTimeStatus(<span className="text-xs text-zinc-400 mt-0.5">En {diffD} días</span>);
+        }
+      }
+    };
+
+    updateTimeStatus();
+    const interval = setInterval(updateTimeStatus, 60000);
+    return () => clearInterval(interval);
+  }, [appt.start_time, appt.status]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm" onClick={onClose} onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }} role="dialog" aria-modal="true">
@@ -92,17 +117,8 @@ export function AppointmentDetail({ appt, onClose, onEdit, onCancel, onAdvanceSt
               <span className="text-zinc-700">
                 {formatTime(appt.start_time)} - {formatTime(appt.end_time || appt.start_time)}
                 <span className="text-zinc-400 ml-2">({appt.total_duration_min} min)</span>
+                {timeStatus}
               </span>
-              {appt.status === 'programada' && (() => {
-                const diffMs = new Date(appt.start_time).getTime() - Date.now();
-                if (diffMs < 0) return <span className="text-xs text-red-500 mt-0.5">Atrasada</span>;
-                const diffH = Math.round(diffMs / 3600000);
-                if (diffH < 1) return <span className="text-xs text-amber-500 mt-0.5">En menos de 1 hora</span>;
-                if (diffH < 24) return <span className="text-xs text-amber-500 mt-0.5">En {diffH}h</span>;
-                const diffD = Math.round(diffH / 24);
-                if (diffD === 1) return <span className="text-xs text-zinc-400 mt-0.5">Mañana</span>;
-                return <span className="text-xs text-zinc-400 mt-0.5">En {diffD} días</span>;
-              })()}
             </div>
           </div>
 

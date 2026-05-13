@@ -174,7 +174,7 @@ function UpcomingBirthdays({ birthdays }: { birthdays: Array<{ id: string; name:
                 {label(birthday.days_left, birthday.is_today)}
               </p>
             </div>
-            <span className="text-xs font-medium text-pink-600 bg-white px-2 py-1 rounded-full border border-pink-100 flex-shrink-0">
+            <span className="text-xs font-medium text-pink-600 bg-white px-2 py-1 rounded-full border border-pink-100 flex-shrink-0" suppressHydrationWarning>
               {new Date(birthday.next_birthday).toLocaleDateString('es-PE', { day: 'numeric', month: 'short' })}
             </span>
           </div>

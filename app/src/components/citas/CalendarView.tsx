@@ -97,8 +97,9 @@ function MonthView({ monthDays, formattedAppts, currentDate, isMobile, now, onEm
               key={key}
               onClick={() => { if (!isPastDay) onEmptyDayClick(day); }}
               onKeyDown={(e) => { if (!isPastDay && (e.key === 'Enter' || e.key === ' ')) onEmptyDayClick(day); }}
-              role={isPastDay ? undefined : 'button'}
-              tabIndex={isPastDay ? -1 : 0}
+              role="button"
+              tabIndex={0}
+              aria-disabled={isPastDay}
               className={cn(
                 'min-h-[72px] sm:min-h-[100px] flex flex-col p-1 sm:p-1.5 transition-colors',
                 isPastDay ? 'opacity-45 cursor-not-allowed bg-zinc-50/50' : 'cursor-pointer',
@@ -226,8 +227,9 @@ function WeekView({ weekDays, formattedApptsByHour, now, onEmptyDayClick, onAppt
                       onEmptyDayClick(set(day, { hours: hour, minutes: 0, seconds: 0, milliseconds: 0 }));
                     }
                   }}
-                  role={isPastDay ? undefined : 'button'}
-                  tabIndex={isPastDay ? -1 : 0}
+                  role="button"
+                  tabIndex={0}
+                  aria-disabled={isPastDay}
                   onDragOver={onDragOver}
                   onDrop={(e) => { if (!isPastDay) onDrop(day, hour, e); }}
                   className={cn(
@@ -361,8 +363,9 @@ function DayView({ currentDate, formattedApptsByHour, now, onEmptyDayClick, onAp
                       onEmptyDayClick(set(day, { hours: hour, minutes: 0, seconds: 0, milliseconds: 0 }));
                     }
                   }}
-                  role={isPastDay ? undefined : 'button'}
-                  tabIndex={isPastDay ? -1 : 0}
+                  role="button"
+                  tabIndex={0}
+                  aria-disabled={isPastDay}
                   onDragOver={onDragOver}
                   onDrop={(e) => { if (!isPastDay) onDrop(day, hour, e); }}
                   className={cn(

@@ -36,7 +36,7 @@ export function AppointmentCard({ appt, statusColors, onSelect }: AppointmentCar
             </p>
           </div>
           {(() => {
-            const names = [...new Set(appt.appointment_services?.map((as: any) => as.artist?.name).filter(Boolean))] as string[];
+            const names = [...new Set(appt.appointment_services?.flatMap((as: any) => as.artist?.name ? [as.artist.name] : []))] as string[];
             if (names.length === 0) return null;
             return <p className="text-xs text-salon-600 truncate">{names.join(', ')}</p>;
           })()}

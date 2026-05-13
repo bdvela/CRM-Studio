@@ -31,19 +31,18 @@ export function ServiceConfigModalContent({
   const initialState = useMemo(() => ({ artistId: currentArtistId, customPrice: currentPrice }), [currentArtistId, currentPrice]);
   const [configState, dispatchConfig] = useReducer(configReducer, initialState);
   const svc = useMemo(() => services.find(s => s.id === serviceId), [services, serviceId]);
+  const availableArtists = useMemo(
+    () => getAvailableArtistsForService(serviceId, svc?.category_id ?? '', staff, services),
+    [serviceId, svc?.category_id, staff, services],
+  );
 
   useEffect(() => {
     if (!open || !serviceId) return;
     dispatchConfig({ type: 'RESET', state: initialState });
   }, [open, serviceId, initialState]);
 
-  if (!open || !serviceId) return null;
-  if (!svc) return null;
+  if (!open || !serviceId || !svc) return null;
 
-  const availableArtists = useMemo(
-    () => getAvailableArtistsForService(svc.id, svc.category_id, staff, services),
-    [svc.id, svc.category_id, staff, services],
-  );
   const isVariablePrice = svc.price_type === 'variable';
   const suggestedArtistIds = availableArtists.map(a => a.id);
   const isSelectedArtistSuggested = configState.artistId && suggestedArtistIds.includes(configState.artistId);

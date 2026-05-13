@@ -56,25 +56,27 @@ function delay(ms = 300) {
 function getUpcomingBirthdays(staff: any[], limit = 3, windowDays = 45) {
   const today = new Date();
   const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const items = staff
-    .filter((member) => member.birthday_date)
-    .map((member) => {
-      const birthday = new Date(member.birthday_date);
-      const next = new Date(start.getFullYear(), birthday.getMonth(), birthday.getDate());
-      if (next < start) next.setFullYear(next.getFullYear() + 1);
-      const daysLeft = Math.ceil((next.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-      return {
+  const items: Array<{ id: string; name: string; birthday_date: string; next_birthday: string; days_left: number; is_today: boolean }> = [];
+  
+  for (const member of staff) {
+    if (!member.birthday_date) continue;
+    const birthday = new Date(member.birthday_date);
+    const next = new Date(start.getFullYear(), birthday.getMonth(), birthday.getDate());
+    if (next < start) next.setFullYear(next.getFullYear() + 1);
+    const daysLeft = Math.ceil((next.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    if (daysLeft >= 0 && daysLeft <= windowDays) {
+      items.push({
         id: member.id,
         name: member.name,
         birthday_date: member.birthday_date,
         next_birthday: next.toISOString(),
         days_left: daysLeft,
         is_today: daysLeft === 0,
-      };
-    })
-    .filter((item) => item.days_left >= 0 && item.days_left <= windowDays)
-    .sort((a, b) => a.days_left - b.days_left);
-
+      });
+    }
+  }
+  
+  items.sort((a, b) => a.days_left - b.days_left);
   return items.slice(0, limit);
 }
 
@@ -739,7 +741,7 @@ export async function getDashboardMetrics() {
 
       const pendingPayments: any[] = [];
       if (completedAppts.data) {
-        const clientIds = [...new Set(completedAppts.data.map((a: any) => a.client_id))].filter(Boolean);
+        const clientIds = [...new Set(completedAppts.data.flatMap((a: any) => a.client_id ? [a.client_id] : []))];
         if (clientIds.length > 0) {
           const [clients, incomePayments] = await Promise.all([
             supabase.from('clients').select('id, name').in('id', clientIds),
@@ -915,7 +917,7 @@ export async function getCommissionReport(dateFrom: string, dateTo: string) {
       if (detErr) throw detErr;
       if (!details) return [];
 
-      const staffIds = [...new Set(details.map(d => d.artist_id).filter(Boolean))];
+      const staffIds = [...new Set(details.flatMap(d => d.artist_id ? [d.artist_id] : []))];
       const { data: staffRoles } = await supabase
         .from('staff')
         .select('id, role:roles(name)')

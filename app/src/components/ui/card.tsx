@@ -36,7 +36,7 @@ export function Card({ children, className, onClick }: CardProps) {
   );
 }
 
-export function CardHeader({ children, className }: CardProps) {
+function CardHeader({ children, className }: CardProps) {
   return <div className={cn('px-5 py-4 border-b border-zinc-100', className)}>{children}</div>;
 }
 

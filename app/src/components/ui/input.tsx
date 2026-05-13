@@ -19,7 +19,7 @@ export function Input({
 }: InputProps) {
   const [internalError, setInternalError] = useState<string>('');
   
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     let newValue = e.target.value;
     
     if (numeric) {
@@ -77,7 +77,7 @@ export function Input({
                   className
                 )}
                 value={currentValue}
-                onChange={handleChange}
+                onChange={handleInputChange}
                 onFocus={inputOnFocus}
                 inputMode={inputMode}
                 pattern={pattern}
@@ -96,7 +96,7 @@ export function Input({
                className
              )}
              value={currentValue}
-             onChange={handleChange}
+             onChange={handleInputChange}
              onFocus={inputOnFocus}
              inputMode={inputMode}
              pattern={pattern}
