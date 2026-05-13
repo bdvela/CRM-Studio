@@ -8,14 +8,14 @@ interface BadgeProps {
 }
 
 const variants = {
-  default: 'bg-zinc-100/60 backdrop-blur-sm text-zinc-700 border border-zinc-200/30',
-  success: 'bg-green-100/60 backdrop-blur-sm text-green-700 border border-green-200/30',
-  warning: 'bg-amber-100/60 backdrop-blur-sm text-amber-700 border border-amber-200/30',
-  danger: 'bg-red-100/60 backdrop-blur-sm text-red-700 border border-red-200/30',
-  info: 'bg-blue-100/60 backdrop-blur-sm text-blue-700 border border-blue-200/30',
-  purple: 'bg-purple-100/60 backdrop-blur-sm text-purple-700 border border-purple-200/30',
-  pink: 'bg-pink-100/60 backdrop-blur-sm text-pink-700 border border-pink-200/30',
-  blue: 'bg-blue-100/60 backdrop-blur-sm text-blue-700 border border-blue-200/30',
+  default: 'bg-zinc-100 text-zinc-700',
+  success: 'bg-green-100 text-green-700',
+  warning: 'bg-amber-100 text-amber-700',
+  danger: 'bg-red-100 text-red-700',
+  info: 'bg-blue-100 text-blue-700',
+  purple: 'bg-purple-100 text-purple-700',
+  pink: 'bg-pink-100 text-pink-700',
+  blue: 'bg-blue-100 text-blue-700',
   custom: '',
 };
 

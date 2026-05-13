@@ -257,7 +257,7 @@ export default function ClientesPage({ initialClients }: { initialClients?: Clie
               placeholder="Buscar por nombre, teléfono o Instagram..."
               value={ui.search}
               onChange={(e) => dispatchUI({ search: e.target.value })}
-              className="w-full pl-10 pr-4 py-3 rounded-xl border border-t-white/50 border-b-white/20 border-l-white/30 border-r-white/30 bg-white/40 backdrop-blur-lg text-base focus:outline-none focus:ring-2 focus:ring-salon-500/50 focus:border-salon-500/50"
+              className="w-full pl-10 pr-4 py-3 rounded-xl border border-zinc-200 bg-white text-base focus:outline-none focus:ring-2 focus:ring-salon-500"
             />
           </div>
           <div className="w-full sm:w-48 flex-shrink-0">
@@ -392,7 +392,7 @@ export default function ClientesPage({ initialClients }: { initialClients?: Clie
                   <div className="space-y-1.5 sm:space-y-2 py-1">
                     {ui.viewingClient.phone && (
                       <a href={`tel:${ui.viewingClient.phone}`} className="flex items-center gap-2.5 sm:gap-3 p-2.5 sm:p-3 rounded-xl hover:bg-zinc-50 transition-colors group">
-                        <div className="size-8 sm:size-9 rounded-lg border border-t-white/50 border-b-white/20 border-l-white/30 border-r-white/30 bg-white/40 backdrop-blur-sm flex items-center justify-center group-hover:bg-salon-100/60 transition-colors">
+                        <div className="size-8 sm:size-9 rounded-lg bg-zinc-100 flex items-center justify-center group-hover:bg-salon-100 transition-colors">
                           <Phone className="size-3.5 sm:size-4 text-zinc-400 group-hover:text-salon-500" />
                         </div>
                         <div>
@@ -403,7 +403,7 @@ export default function ClientesPage({ initialClients }: { initialClients?: Clie
                     )}
                     {ui.viewingClient.email && (
                       <a href={`mailto:${ui.viewingClient.email}`} className="flex items-center gap-2.5 sm:gap-3 p-2.5 sm:p-3 rounded-xl hover:bg-zinc-50 transition-colors group">
-                        <div className="size-8 sm:size-9 rounded-lg border border-t-white/50 border-b-white/20 border-l-white/30 border-r-white/30 bg-white/40 backdrop-blur-sm flex items-center justify-center group-hover:bg-salon-100/60 transition-colors">
+                        <div className="size-8 sm:size-9 rounded-lg bg-zinc-100 flex items-center justify-center group-hover:bg-salon-100 transition-colors">
                           <Mail className="size-3.5 sm:size-4 text-zinc-400 group-hover:text-salon-500" />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -414,7 +414,7 @@ export default function ClientesPage({ initialClients }: { initialClients?: Clie
                     )}
                     {ui.viewingClient.instagram && (
                       <div className="flex items-center gap-2.5 sm:gap-3 p-2.5 sm:p-3 rounded-xl">
-                        <div className="size-8 sm:size-9 rounded-lg border border-t-white/50 border-b-white/20 border-l-white/30 border-r-white/30 bg-white/40 backdrop-blur-sm flex items-center justify-center">
+                        <div className="size-8 sm:size-9 rounded-lg bg-zinc-100 flex items-center justify-center">
                           <Instagram className="size-3.5 sm:size-4 text-zinc-400" />
                         </div>
                         <div>
@@ -429,17 +429,17 @@ export default function ClientesPage({ initialClients }: { initialClients?: Clie
                 {/* Stats Section */}
                 {ui.viewingClient.client_stats && (
                   <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                  <div className="p-3 sm:p-4 rounded-xl border border-t-white/50 border-b-white/20 border-l-white/30 border-r-white/30 bg-white/40 backdrop-blur-lg text-center">
-                    <CalendarDays className="size-4 sm:size-5 mx-auto text-salon-500 mb-1.5 sm:mb-2" />
-                    <p className="text-lg sm:text-xl font-bold text-zinc-900">{ui.viewingClient.client_stats.total_appointments}</p>
-                    <p className="text-[10px] sm:text-xs text-zinc-400 mt-1">Citas</p>
-                  </div>
-                  <div className="p-3 sm:p-4 rounded-xl border border-t-white/50 border-b-white/20 border-l-white/30 border-r-white/30 bg-white/40 backdrop-blur-lg text-center">
-                    <DollarSign className="size-4 sm:size-5 mx-auto text-green-500 mb-1.5 sm:mb-2" />
-                    <p className="text-base sm:text-lg font-bold text-zinc-900">{formatCurrency(ui.viewingClient.client_stats.total_spent)}</p>
-                    <p className="text-[10px] sm:text-xs text-zinc-400 mt-1">Total</p>
-                  </div>
-                  <div className="p-3 sm:p-4 rounded-xl border border-t-white/50 border-b-white/20 border-l-white/30 border-r-white/30 bg-white/40 backdrop-blur-lg text-center">
+                    <div className="p-3 sm:p-4 rounded-xl bg-zinc-50 text-center">
+                      <CalendarDays className="size-4 sm:size-5 mx-auto text-salon-500 mb-1.5 sm:mb-2" />
+                      <p className="text-lg sm:text-xl font-bold text-zinc-900">{ui.viewingClient.client_stats.total_appointments}</p>
+                      <p className="text-[10px] sm:text-xs text-zinc-400 mt-1">Citas</p>
+                    </div>
+                    <div className="p-3 sm:p-4 rounded-xl bg-zinc-50 text-center">
+                      <DollarSign className="size-4 sm:size-5 mx-auto text-green-500 mb-1.5 sm:mb-2" />
+                      <p className="text-base sm:text-lg font-bold text-zinc-900">{formatCurrency(ui.viewingClient.client_stats.total_spent)}</p>
+                      <p className="text-[10px] sm:text-xs text-zinc-400 mt-1">Total</p>
+                    </div>
+                    <div className="p-3 sm:p-4 rounded-xl bg-zinc-50 text-center">
                       <Clock className="size-4 sm:size-5 mx-auto text-accent-500 mb-1.5 sm:mb-2" />
                       <p className="text-xs sm:text-sm font-bold text-zinc-900">
                         {ui.viewingClient.client_stats.last_visit ? formatDate(ui.viewingClient.client_stats.last_visit) : '—'}
@@ -451,7 +451,7 @@ export default function ClientesPage({ initialClients }: { initialClients?: Clie
 
                 {/* Notes Section */}
                 {ui.viewingClient.notes && (
-                  <div className="p-3 sm:p-4 rounded-xl border border-amber-200/30 bg-amber-50/40 backdrop-blur-sm">
+                  <div className="p-3 sm:p-4 rounded-xl bg-amber-50/50 border border-amber-100">
                     <div className="flex items-start gap-2">
                       <svg className="size-3.5 sm:size-4 text-amber-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                         <path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1h4v1a2 2 0 11-4 0zM12 14c.015-.34.208-.646.477-.859a4 4 0 10-4.954 0c.27.213.462.519.476.859h4.002z" />
@@ -468,7 +468,7 @@ export default function ClientesPage({ initialClients }: { initialClients?: Clie
                     <h4 className="text-xs sm:text-sm font-semibold text-zinc-900">Última cita</h4>
                   </div>
                   {ui.clientAppointments.length === 0 ? (
-                      <div className="text-center py-6 sm:py-8 px-4 rounded-xl border border-t-white/50 border-b-white/20 border-l-white/30 border-r-white/30 bg-white/40 backdrop-blur-lg">
+                    <div className="text-center py-6 sm:py-8 px-4 rounded-xl bg-zinc-50">
                       <CalendarDays className="size-6 sm:size-8 mx-auto text-zinc-300 mb-2" />
                       <p className="text-xs sm:text-sm text-zinc-400">Sin citas registradas</p>
                     </div>
@@ -478,7 +478,7 @@ export default function ClientesPage({ initialClients }: { initialClients?: Clie
                         const statusKey = appt.status as keyof typeof statusConfigByStatus;
                         const sc = statusConfigByStatus[statusKey] || statusConfigByStatus.completada;
                         return (
-                          <div key={appt.id} className="p-2.5 sm:p-3 rounded-xl border border-t-white/50 border-b-white/20 border-l-white/30 border-r-white/30 bg-white/40 backdrop-blur-lg hover:bg-white/60 hover:backdrop-blur-xl transition-all duration-300">
+                          <div key={appt.id} className="p-2.5 sm:p-3 rounded-xl border border-zinc-100 hover:border-zinc-200 hover:bg-zinc-50/50 transition-all">
                             <div className="flex items-start justify-between gap-2 mb-1.5 sm:mb-2">
                               <p className="font-medium text-xs sm:text-sm text-zinc-900 flex-1 min-w-0 truncate">{appt.title}</p>
                               <p className="text-xs sm:text-sm font-semibold text-zinc-900 flex-shrink-0">{formatCurrency(appt.total_price)}</p>

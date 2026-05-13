@@ -22,12 +22,12 @@ export function CitasToolbar({
 
   return (
     <div className="flex flex-col gap-3 md:flex-row md:items-center md:flex-wrap">
-      <div className="flex items-center gap-1 p-1 bg-white/20 backdrop-blur-sm rounded-xl w-full md:w-auto border border-t-white/50 border-b-white/20 border-l-white/30 border-r-white/30 shadow-sm">
+      <div className="flex items-center gap-1 p-1 bg-zinc-100 rounded-xl w-full md:w-auto">
         <button
           onClick={() => onListFilterChange('list')}
           className={cn(
-            'flex-1 md:flex-none px-3 py-2 text-sm font-medium rounded-lg transition-all duration-300',
-            listFilter === 'list' ? 'bg-white/60 backdrop-blur-sm text-zinc-900 shadow-[0_2px_8px_rgba(0,0,0,0.06)] border border-t-white/60 border-b-white/20' : 'text-zinc-500 hover:text-zinc-700'
+            'flex-1 md:flex-none px-3 py-2 text-sm font-medium rounded-lg transition-all',
+            listFilter === 'list' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'
           )}
         >
           Todas
@@ -35,8 +35,8 @@ export function CitasToolbar({
         <button
           onClick={() => onListFilterChange('day')}
           className={cn(
-            'flex-1 md:flex-none px-3 py-2 text-sm font-medium rounded-lg transition-all duration-300',
-            listFilter === 'day' ? 'bg-white/60 backdrop-blur-sm text-zinc-900 shadow-[0_2px_8px_rgba(0,0,0,0.06)] border border-t-white/60 border-b-white/20' : 'text-zinc-500 hover:text-zinc-700'
+            'flex-1 md:flex-none px-3 py-2 text-sm font-medium rounded-lg transition-all',
+            listFilter === 'day' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'
           )}
         >
           Hoy
@@ -44,8 +44,8 @@ export function CitasToolbar({
         <button
           onClick={() => onListFilterChange('week')}
           className={cn(
-            'flex-1 md:flex-none px-3 py-2 text-sm font-medium rounded-lg transition-all duration-300',
-            listFilter === 'week' ? 'bg-white/60 backdrop-blur-sm text-zinc-900 shadow-[0_2px_8px_rgba(0,0,0,0.06)] border border-t-white/60 border-b-white/20' : 'text-zinc-500 hover:text-zinc-700'
+            'flex-1 md:flex-none px-3 py-2 text-sm font-medium rounded-lg transition-all',
+            listFilter === 'week' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'
           )}
         >
           Semana

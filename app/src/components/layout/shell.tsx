@@ -214,7 +214,7 @@ export function MobileNav() {
 
   return (
     <nav className="md:hidden fixed bottom-4 left-4 right-4 z-40 safe-area-bottom pb-[env(safe-area-inset-bottom)]">
-      <div className="flex items-center justify-around px-2 py-2 bg-white/40 backdrop-blur-2xl rounded-2xl border border-t-white/60 border-b-white/20 border-l-white/30 border-r-white/30 shadow-[0_12px_48px_rgba(0,0,0,0.12),0_4px_12px_rgba(0,0,0,0.06)]">
+      <div className="flex items-center justify-around px-2 py-2 bg-white/70 backdrop-blur-xl rounded-2xl border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.12)]">
         {mobileNavItems.map((item) => {
           const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
           return (
@@ -223,15 +223,15 @@ export function MobileNav() {
               href={item.href}
               prefetch
               className={cn(
-                'flex flex-col items-center justify-center gap-0.5 py-1.5 px-3 rounded-xl min-w-[52px] transition-all duration-300',
+                'flex flex-col items-center justify-center gap-0.5 py-1.5 px-3 rounded-xl min-w-[52px] transition-all duration-200',
                 isActive
-                  ? 'text-salon-600 bg-white/50 backdrop-blur-sm shadow-[0_2px_8px_rgba(0,0,0,0.06)]'
+                  ? 'text-salon-600 bg-salon-100/60 shadow-inner'
                   : 'text-zinc-400 hover:text-zinc-600'
               )}
             >
-              <item.icon className={cn('size-5 transition-all duration-300', isActive && 'scale-110')} />
+              <item.icon className={cn('size-5 transition-all duration-200', isActive && 'scale-110')} />
               <span className={cn(
-                'text-[10px] font-medium truncate w-full text-center transition-all duration-300',
+                'text-[10px] font-medium truncate w-full text-center transition-all duration-200',
                 isActive && 'font-semibold'
               )}>{item.label}</span>
             </Link>
@@ -244,7 +244,7 @@ export function MobileNav() {
 
 export function Header({ title, action }: { title?: string; action?: React.ReactNode }) {
   return (
-    <header className="sticky top-0 z-30 bg-white/40 backdrop-blur-2xl border-b border-white/20">
+    <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-zinc-100">
       <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 min-h-[60px]">
         {title && <h1 className="text-base sm:text-lg md:text-xl font-semibold text-zinc-900 truncate max-w-[60%] sm:max-w-none">{title}</h1>}
         {!title && <div className="flex-1" />}

@@ -26,12 +26,12 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
       <div className="fixed inset-0 bg-black/40" onClick={onClose} role="presentation" />
       <div
-        className="relative w-full sm:max-w-lg md:max-w-xl bg-white/50 backdrop-blur-2xl border border-t-white/60 border-b-white/20 border-l-white/30 border-r-white/30 rounded-t-3xl sm:rounded-2xl shadow-[0_16px_64px_rgba(0,0,0,0.12),0_4px_16px_rgba(0,0,0,0.08)] max-h-[85vh] sm:max-h-[90vh] overflow-y-auto"
+        className="relative w-full sm:max-w-lg md:max-w-xl bg-white rounded-t-3xl sm:rounded-2xl shadow-xl max-h-[85vh] sm:max-h-[90vh] overflow-y-auto"
         role="dialog"
         aria-modal="true"
         aria-label={title || 'Dialog'}
       >
-        <div className="sticky top-0 bg-white/50 backdrop-blur-2xl border-b border-white/20 px-4 sm:px-6 py-4 flex items-center justify-between rounded-t-3xl sm:rounded-t-2xl z-10">
+        <div className="sticky top-0 bg-white border-b border-zinc-100 px-4 sm:px-6 py-4 flex items-center justify-between rounded-t-3xl sm:rounded-t-2xl z-10">
           {title ? (
             <h2 className="text-lg font-semibold text-zinc-900 truncate pr-4">{title}</h2>
           ) : (

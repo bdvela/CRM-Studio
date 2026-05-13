@@ -2,20 +2,21 @@
 
 import { useState, useRef } from 'react';
 import { X } from 'lucide-react';
+import { Select } from './select';
 
 const MONTHS = [
-  { value: 0, label: 'Enero', days: 31 },
-  { value: 1, label: 'Febrero', days: 28 },
-  { value: 2, label: 'Marzo', days: 31 },
-  { value: 3, label: 'Abril', days: 30 },
-  { value: 4, label: 'Mayo', days: 31 },
-  { value: 5, label: 'Junio', days: 30 },
-  { value: 6, label: 'Julio', days: 31 },
-  { value: 7, label: 'Agosto', days: 31 },
-  { value: 8, label: 'Septiembre', days: 30 },
-  { value: 9, label: 'Octubre', days: 31 },
-  { value: 10, label: 'Noviembre', days: 30 },
-  { value: 11, label: 'Diciembre', days: 31 },
+  { value: '0', label: 'Enero', days: 31 },
+  { value: '1', label: 'Febrero', days: 28 },
+  { value: '2', label: 'Marzo', days: 31 },
+  { value: '3', label: 'Abril', days: 30 },
+  { value: '4', label: 'Mayo', days: 31 },
+  { value: '5', label: 'Junio', days: 30 },
+  { value: '6', label: 'Julio', days: 31 },
+  { value: '7', label: 'Agosto', days: 31 },
+  { value: '8', label: 'Septiembre', days: 30 },
+  { value: '9', label: 'Octubre', days: 31 },
+  { value: '10', label: 'Noviembre', days: 30 },
+  { value: '11', label: 'Diciembre', days: 31 },
 ];
 
 function getDaysInMonth(year: number, month: number): number {
@@ -35,12 +36,12 @@ interface DatePickerProps {
   placeholder?: string;
 }
 
-type DateParts = { day: number | null; month: number | null; year: number | null };
+type DateParts = { day: string | null; month: string | null; year: string | null };
 
 function dateFromValue(value: string | null): DateParts {
   if (!value) return { day: null, month: null, year: null };
   const d = new Date(value + 'T00:00:00');
-  return { day: d.getDate(), month: d.getMonth(), year: d.getFullYear() };
+  return { day: String(d.getDate()), month: String(d.getMonth()), year: String(d.getFullYear()) };
 }
 
 function toIsoDate(day: number, month: number, year: number): string {
@@ -62,41 +63,44 @@ export function DatePicker({ value, onChange, label }: DatePickerProps) {
   
   const years = Array.from(
     { length: currentYear - minYear + 1 },
-    (_, i) => currentYear - i
+    (_, i) => String(currentYear - i)
   );
 
   function emitChange(updated: DateParts) {
     if (updated.day !== null && updated.month !== null && updated.year !== null) {
-      const maxDays = getDaysInMonth(updated.year, updated.month);
-      const actualDay = Math.min(updated.day, maxDays);
-      onChange(toIsoDate(actualDay, updated.month, updated.year));
+      const dayNum = Number(updated.day);
+      const monthNum = Number(updated.month);
+      const yearNum = Number(updated.year);
+      const maxDays = getDaysInMonth(yearNum, monthNum);
+      const actualDay = Math.min(dayNum, maxDays);
+      onChange(toIsoDate(actualDay, monthNum, yearNum));
     }
   }
 
-  function handleDayChange(newDay: number | null) {
-    const updated = { ...dp, day: newDay };
+  function handleDayChange(newDay: string) {
+    const updated = { ...dp, day: newDay || null };
     setDp(updated);
     emitChange(updated);
   }
 
-  function handleMonthChange(newMonth: number | null) {
-    let updated = { ...dp, month: newMonth };
-    if (newMonth !== null && dp.year !== null && dp.day !== null) {
-      const maxDays = getDaysInMonth(dp.year, newMonth);
-      if (dp.day > maxDays) {
-        updated = { ...updated, day: maxDays };
+  function handleMonthChange(newMonth: string) {
+    let updated = { ...dp, month: newMonth || null };
+    if (newMonth && dp.year !== null && dp.day !== null) {
+      const maxDays = getDaysInMonth(Number(dp.year), Number(newMonth));
+      if (Number(dp.day) > maxDays) {
+        updated = { ...updated, day: String(maxDays) };
       }
     }
     setDp(updated);
     emitChange(updated);
   }
 
-  function handleYearChange(newYear: number | null) {
-    let updated = { ...dp, year: newYear };
-    if (newYear !== null && dp.month !== null && dp.day !== null) {
-      const maxDays = getDaysInMonth(newYear, dp.month);
-      if (dp.day > maxDays) {
-        updated = { ...updated, day: maxDays };
+  function handleYearChange(newYear: string) {
+    let updated = { ...dp, year: newYear || null };
+    if (newYear && dp.month !== null && dp.day !== null) {
+      const maxDays = getDaysInMonth(Number(newYear), Number(dp.month));
+      if (Number(dp.day) > maxDays) {
+        updated = { ...updated, day: String(maxDays) };
       }
     }
     setDp(updated);
@@ -110,10 +114,17 @@ export function DatePicker({ value, onChange, label }: DatePickerProps) {
   }
 
   const maxDaysForSelection = dp.month !== null && dp.year !== null 
-    ? getDaysInMonth(dp.year, dp.month) 
+    ? getDaysInMonth(Number(dp.year), Number(dp.month)) 
     : 31;
 
-  const daysArray = Array.from({ length: maxDaysForSelection }, (_, i) => i + 1);
+  const daysOptions = Array.from({ length: maxDaysForSelection }, (_, i) => ({
+    value: String(i + 1),
+    label: String(i + 1).padStart(2, '0'),
+  }));
+
+  const monthOptions = MONTHS.map(m => ({ value: String(m.value), label: m.label }));
+
+  const yearOptions = years.map(y => ({ value: y, label: y }));
 
   const hasValue = dp.day !== null && dp.month !== null && dp.year !== null;
 
@@ -123,55 +134,30 @@ export function DatePicker({ value, onChange, label }: DatePickerProps) {
         <label className="block text-sm font-medium text-zinc-700">{label}</label>
       )}
       
-      {/* Dropdowns simples: Día / Mes / Año */}
       <div className="grid grid-cols-3 gap-2">
-        {/* DÍA */}
-        <div className="space-y-1">
-          <label htmlFor="dp-day" className="text-xs text-zinc-500 font-medium">Día</label>
-           <select id="dp-day"
-             value={dp.day ?? ''}
-             onChange={(e) => handleDayChange(e.target.value ? Number(e.target.value) : null)}
-             className="w-full rounded-xl border border-zinc-300 px-3 py-2.5 text-base text-zinc-900 bg-white focus:border-salon-500 focus:ring-2 focus:ring-salon-500/20 transition-all cursor-pointer"
-           >
-            <option value="">--</option>
-            {daysArray.map((d) => (
-              <option key={d} value={d}>{String(d).padStart(2, '0')}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* MES */}
-        <div className="space-y-1">
-          <label htmlFor="dp-month" className="text-xs text-zinc-500 font-medium">Mes</label>
-           <select id="dp-month"
-             value={dp.month ?? ''}
-             onChange={(e) => handleMonthChange(e.target.value !== '' ? Number(e.target.value) : null)}
-             className="w-full rounded-xl border border-zinc-300 px-3 py-2.5 text-base text-zinc-900 bg-white focus:border-salon-500 focus:ring-2 focus:ring-salon-500/20 transition-all cursor-pointer"
-           >
-            <option value="">--</option>
-            {MONTHS.map((m) => (
-              <option key={m.value} value={m.value}>{m.label}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* AÑO */}
-        <div className="space-y-1">
-          <label htmlFor="dp-year" className="text-xs text-zinc-500 font-medium">Año</label>
-           <select id="dp-year"
-             value={dp.year ?? ''}
-             onChange={(e) => handleYearChange(e.target.value ? Number(e.target.value) : null)}
-             className="w-full rounded-xl border border-zinc-300 px-3 py-2.5 text-base text-zinc-900 bg-white focus:border-salon-500 focus:ring-2 focus:ring-salon-500/20 transition-all cursor-pointer"
-           >
-            <option value="">--</option>
-            {years.map((y) => (
-              <option key={y} value={y}>{y}</option>
-            ))}
-          </select>
-        </div>
+        <Select
+          label="Día"
+          options={daysOptions}
+          value={dp.day ?? ''}
+          onChange={handleDayChange}
+          placeholder="--"
+        />
+        <Select
+          label="Mes"
+          options={monthOptions}
+          value={dp.month ?? ''}
+          onChange={handleMonthChange}
+          placeholder="--"
+        />
+        <Select
+          label="Año"
+          options={yearOptions}
+          value={dp.year ?? ''}
+          onChange={handleYearChange}
+          placeholder="--"
+        />
       </div>
 
-      {/* Botón para limpiar */}
       {hasValue && (
         <div className="flex justify-end">
           <button

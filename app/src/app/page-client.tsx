@@ -45,13 +45,13 @@ function StatCard({ icon: Icon, value, label, badge, iconBgClass, iconClass }: {
   iconClass: string;
 }) {
   return (
-    <div className="rounded-2xl border border-t-white/50 border-b-white/20 border-l-white/30 border-r-white/30 bg-white/40 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.08),0_2px_8px_rgba(0,0,0,0.04)] p-5 hover:bg-white/60 hover:shadow-[0_12px_40px_rgba(0,0,0,0.12),0_4px_12px_rgba(0,0,0,0.06)] transition-all duration-300">
+    <div className="rounded-2xl bg-white border border-zinc-100 p-5 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex items-center justify-between mb-4">
         <div className={`size-10 rounded-xl flex items-center justify-center ${iconBgClass}`}>
           <Icon className={`size-5 ${iconClass}`} />
         </div>
         {badge && (
-          <span className="text-xs font-medium text-emerald-600 bg-emerald-50/50 backdrop-blur-sm border border-emerald-200/30 px-2 py-0.5 rounded-full">{badge}</span>
+          <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">{badge}</span>
         )}
       </div>
       <p className="text-2xl font-bold tracking-tight text-zinc-900">{value}</p>
@@ -70,8 +70,8 @@ function TodayAppointments({ appointments, onNavigate }: { appointments: any[]; 
 
   return (
       <div className="lg:col-span-2">
-      <div className="rounded-2xl border border-t-white/50 border-b-white/20 border-l-white/30 border-r-white/30 bg-white/40 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.08),0_2px_8px_rgba(0,0,0,0.04)] overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/20">
+      <div className="rounded-2xl bg-white border border-zinc-100 shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-50">
           <div className="flex items-center gap-3">
             <div className="size-8 rounded-lg bg-salon-50 flex items-center justify-center">
               <CalendarDays className="size-4 text-salon-600" />
@@ -111,7 +111,7 @@ function TodayAppointments({ appointments, onNavigate }: { appointments: any[]; 
                   role="button"
                   tabIndex={0}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onNavigate('/citas'); }}
-                  className="flex items-center gap-4 p-3 rounded-xl hover:bg-white/40 hover:backdrop-blur-sm transition-all duration-300 cursor-pointer group"
+                  className="flex items-center gap-4 p-3 rounded-xl hover:bg-zinc-50 transition-colors cursor-pointer group"
                 >
                   <div className="text-center w-14 flex-shrink-0">
                     <p className="text-sm font-bold text-zinc-900">{formatTime(appt.start_time)}</p>
@@ -152,8 +152,8 @@ function UpcomingBirthdays({ birthdays }: { birthdays: Array<{ id: string; name:
   }
 
   return (
-    <div className="rounded-2xl border border-t-white/50 border-b-white/20 border-l-white/30 border-r-white/30 bg-white/40 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.08),0_2px_8px_rgba(0,0,0,0.04)] overflow-hidden">
-      <div className="px-6 py-4 border-b border-white/20 flex items-center gap-2">
+    <div className="rounded-2xl bg-white border border-zinc-100 shadow-sm overflow-hidden">
+      <div className="px-6 py-4 border-b border-zinc-50 flex items-center gap-2">
         <div className="size-8 rounded-lg bg-pink-50 flex items-center justify-center">
           <Cake className="size-4 text-pink-500" />
         </div>
@@ -164,7 +164,7 @@ function UpcomingBirthdays({ birthdays }: { birthdays: Array<{ id: string; name:
       </div>
       <div className="p-4 space-y-2">
         {birthdays.map((birthday) => (
-          <div key={birthday.id} className="flex items-center gap-3 p-2.5 rounded-xl bg-pink-50/40 backdrop-blur-sm border border-pink-100/30">
+          <div key={birthday.id} className="flex items-center gap-3 p-2.5 rounded-xl bg-pink-50/60">
             <div className="size-8 rounded-full bg-gradient-to-br from-pink-400 to-rose-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
               {birthday.name[0]?.toUpperCase()}
             </div>
@@ -174,7 +174,7 @@ function UpcomingBirthdays({ birthdays }: { birthdays: Array<{ id: string; name:
                 {label(birthday.days_left, birthday.is_today)}
               </p>
             </div>
-            <span className="text-xs font-medium text-pink-600 bg-white/60 backdrop-blur-sm px-2 py-1 rounded-full border border-pink-100/50 flex-shrink-0">
+            <span className="text-xs font-medium text-pink-600 bg-white px-2 py-1 rounded-full border border-pink-100 flex-shrink-0">
               {new Date(birthday.next_birthday).toLocaleDateString('es-PE', { day: 'numeric', month: 'short' })}
             </span>
           </div>
@@ -238,7 +238,7 @@ export default function DashboardPage({ initialMetrics }: { initialMetrics?: any
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {[1, 2, 3, 4].map((n) => (
-              <div key={`stat-${n}`} className="rounded-2xl border border-t-white/50 border-b-white/20 border-l-white/30 border-r-white/30 bg-white/40 backdrop-blur-xl p-5 shadow-[0_8px_32px_rgba(0,0,0,0.08),0_2px_8px_rgba(0,0,0,0.04)]">
+              <div key={`stat-${n}`} className="rounded-2xl bg-white/60 backdrop-blur-lg border border-white/40 p-5 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
                   <Skeleton className="size-10 rounded-xl" />
                   <Skeleton className="h-5 w-16 rounded-full" />
@@ -250,8 +250,8 @@ export default function DashboardPage({ initialMetrics }: { initialMetrics?: any
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 rounded-2xl border border-t-white/50 border-b-white/20 border-l-white/30 border-r-white/30 bg-white/40 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.08),0_2px_8px_rgba(0,0,0,0.04)] overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-white/20">
+            <div className="lg:col-span-2 rounded-2xl bg-white border border-zinc-100 shadow-sm overflow-hidden">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-50">
                 <Skeleton className="h-5 w-32" />
                 <Skeleton className="h-4 w-20" />
               </div>
@@ -274,8 +274,8 @@ export default function DashboardPage({ initialMetrics }: { initialMetrics?: any
             </div>
 
             <div className="space-y-6">
-              <div className="rounded-2xl bg-white/60 backdrop-blur-lg border border-white/40 shadow-sm overflow-hidden">
-                <div className="px-6 py-4 border-b border-white/30">
+              <div className="rounded-2xl bg-white border border-zinc-100 shadow-sm overflow-hidden">
+                <div className="px-6 py-4 border-b border-zinc-50">
                   <Skeleton className="h-5 w-36" />
                 </div>
                 <div className="p-4 space-y-2">
@@ -284,6 +284,23 @@ export default function DashboardPage({ initialMetrics }: { initialMetrics?: any
                       <Skeleton className="size-9 rounded-lg" />
                       <Skeleton className="h-5 w-28 flex-1" />
                       <Skeleton className="size-4" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-2xl bg-white border border-zinc-100 shadow-sm overflow-hidden">
+                <div className="px-6 py-4 border-b border-zinc-50">
+                  <Skeleton className="h-5 w-40" />
+                </div>
+                <div className="p-4 space-y-2">
+                  {[1, 2].map((n) => (
+                    <div key={`payment-${n}`} className="flex items-center justify-between py-2.5">
+                      <div className="min-w-0 flex-1">
+                        <Skeleton className="h-5 w-36 mb-1" />
+                        <Skeleton className="h-4 w-24" />
+                      </div>
+                      <Skeleton className="h-5 w-20 ml-3" />
                     </div>
                   ))}
                 </div>
@@ -336,8 +353,8 @@ export default function DashboardPage({ initialMetrics }: { initialMetrics?: any
           {/* Right Column */}
           <div className="space-y-6">
             {/* Quick Actions */}
-            <div className="rounded-2xl border border-t-white/50 border-b-white/20 border-l-white/30 border-r-white/30 bg-white/40 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.08),0_2px_8px_rgba(0,0,0,0.04)] overflow-hidden">
-              <div className="px-6 py-4 border-b border-white/20">
+            <div className="rounded-2xl bg-white border border-zinc-100 shadow-sm overflow-hidden">
+              <div className="px-6 py-4 border-b border-zinc-50">
                 <h2 className="text-base font-semibold text-zinc-900">Acciones rápidas</h2>
               </div>
               <div className="p-4 space-y-2">
@@ -349,7 +366,7 @@ export default function DashboardPage({ initialMetrics }: { initialMetrics?: any
                   <button
                     key={action.label}
                     onClick={() => push(action.href)}
-                    className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/40 hover:backdrop-blur-sm transition-all duration-300 group text-left"
+                    className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-zinc-50 transition-colors group text-left"
                   >
                     <div className={`size-9 rounded-lg flex items-center justify-center ${
                       action.color === 'salon' ? 'bg-salon-50 text-salon-600' :
@@ -369,8 +386,8 @@ export default function DashboardPage({ initialMetrics }: { initialMetrics?: any
 
             {/* Pending Payments */}
             {metrics.pendingPayments.length > 0 && (
-              <div className="rounded-2xl border border-t-white/50 border-b-white/20 border-l-white/30 border-r-white/30 bg-white/40 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.08),0_2px_8px_rgba(0,0,0,0.04)] overflow-hidden">
-                <div className="px-6 py-4 border-b border-white/20">
+              <div className="rounded-2xl bg-white border border-zinc-100 shadow-sm overflow-hidden">
+                <div className="px-6 py-4 border-b border-zinc-50">
                   <div className="flex items-center gap-2">
                     <div className="size-8 rounded-lg bg-amber-50 flex items-center justify-center">
                       <Clock className="size-4 text-amber-600" />

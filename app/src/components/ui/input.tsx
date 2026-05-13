@@ -65,8 +65,8 @@ export function Input({
         </label>
       )}
        {leftPrefix ? (
-          <div className="flex items-center rounded-xl border border-t-white/50 border-b-white/20 border-l-white/30 border-r-white/30 bg-white/40 backdrop-blur-lg overflow-hidden focus-within:ring-2 focus-within:ring-salon-500/50 focus-within:border-salon-500/50">
-            <div className="flex items-center gap-1.5 px-3 py-2.5 border-r border-white/20 bg-white/20 text-sm text-zinc-600 whitespace-nowrap">
+          <div className="flex items-center rounded-xl border border-zinc-300 bg-white overflow-hidden focus-within:ring-2 focus-within:ring-salon-500 focus-within:border-transparent">
+            <div className="flex items-center gap-1.5 px-3 py-2.5 border-r border-zinc-200 bg-zinc-50 text-sm text-zinc-600 whitespace-nowrap">
               {leftPrefix}
             </div>
               <input
@@ -89,10 +89,10 @@ export function Input({
            <input
              id={id}
              className={cn(
-               'w-full rounded-xl border border-t-white/50 border-b-white/20 border-l-white/30 border-r-white/30 bg-white/40 backdrop-blur-lg px-4 py-2.5 text-base',
-               'focus:outline-none focus:ring-2 focus:ring-salon-500/50 focus:border-salon-500/50',
+               'w-full rounded-xl border border-zinc-300 bg-white px-4 py-2.5 text-base',
+               'focus:outline-none focus:ring-2 focus:ring-salon-500 focus:border-transparent',
                'disabled:bg-zinc-50 disabled:text-zinc-400 disabled:cursor-not-allowed',
-               displayError && 'border-red-500/50 focus:ring-red-500/50',
+               displayError && 'border-red-500 focus:ring-red-500',
                className
              )}
              value={currentValue}
