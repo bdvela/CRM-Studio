@@ -10,12 +10,11 @@
 7. [Variables de Entorno](#variables-de-entorno)
 8. [Comandos](#comandos)
 9. [Migraciones SQL](#migraciones-sql)
-10. [Datos Mock](#datos-mock)
-11. [Reglas de Desarrollo](#reglas-de-desarrollo)
-12. [Decisiones Técnicas](#decisiones-técnicas)
-13. [Especificaciones HU](#especificaciones-hu)
-14. [Issues Conocidos](#issues-conocidos)
-15. [Última Actualización](#última-actualización)
+10. [Reglas de Desarrollo](#reglas-de-desarrollo)
+11. [Decisiones Técnicas](#decisiones-técnicas)
+12. [Especificaciones HU](#especificaciones-hu)
+13. [Issues Conocidos](#issues-conocidos)
+14. [Última Actualización](#última-actualización)
 
 ---
 
@@ -113,11 +112,31 @@ CRM Studio/
 │   │   ├── components/
 │   │   │   ├── layout/shell.tsx         # Sidebar + MobileNav + Header
 │   │   │   ├── ui/                      # Primitives (button, input, modal, etc.)
+│   │   │   ├── dashboard/               # Componentes del Dashboard (refactorizados)
+│   │   │   │   ├── DashboardStatCard.tsx
+│   │   │   │   ├── DashboardSkeleton.tsx
+│   │   │   │   ├── IncomeSparkline.tsx
+│   │   │   │   ├── MonthlyReport.tsx
+│   │   │   │   ├── PendingPaymentsWidget.tsx
+│   │   │   │   ├── QuickActions.tsx
+│   │   │   │   ├── ReactivationWidget.tsx
+│   │   │   │   ├── RecentActivity.tsx
+│   │   │   │   ├── StaffOccupancy.tsx
+│   │   │   │   ├── TodayAppointments.tsx
+│   │   │   │   ├── UpcomingBirthdays.tsx
+│   │   │   │   ├── WelcomeBanner.tsx
+│   │   │   │   ├── types.ts
+│   │   │   │   └── useCountUp.ts
 │   │   │   ├── citas/                    # Componentes de Citas (refactorizados)
 │   │   │   │   ├── AppointmentCard.tsx
 │   │   │   │   ├── AppointmentDetail.tsx
 │   │   │   │   ├── AppointmentFormModal.tsx
-│   │   │   │   ├── CalendarView.tsx
+│   │   │   │   ├── AppointmentTicket.tsx
+│   │   │   │   ├── CalendarView.tsx       # Orquestador (~80 lns)
+│   │   │   │   ├── MonthView.tsx          # Subvista mes (~80 lns)
+│   │   │   │   ├── WeekView.tsx           # Subvista semana (~140 lns)
+│   │   │   │   ├── DayView.tsx            # Subvista día (~120 lns)
+│   │   │   │   ├── calendar-utils.ts      # Helpers color/hora
 │   │   │   │   ├── CitasToolbar.tsx
 │   │   │   │   ├── ClientCombobox.tsx
 │   │   │   │   ├── DetailPopover.tsx
@@ -127,11 +146,18 @@ CRM Studio/
 │   │   │   │   ├── hooks.ts
 │   │   │   │   ├── reducers.ts
 │   │   │   │   └── types.ts
+│   │   │   ├── servicios/               # Componentes de Servicios (refactorizados)
+│   │   │   │   ├── types.ts             # ServiceForm, props interfaces
+│   │   │   │   ├── ServiceCard.tsx       # Card con badge staff, hover shadow
+│   │   │   │   ├── ServiceFilters.tsx    # Búsqueda + filtro categoría (memo)
+│   │   │   │   ├── ServiceListContent.tsx # Orquestador con skeleton/empty/fadeIn
+│   │   │   │   ├── ServicioStaffTab.tsx  # Checkbox list staff + badge sugerido
+│   │   │   │   └── ServicioFormModal.tsx # Modal 2 tabs (Datos + Staff)
 │   │   │   ├── confirm/                 # ConfirmDialog
 │   │   │   └── providers.tsx            # ConfirmProvider
 │   │   ├── lib/
-│   │   │   ├── db/queries.ts            # Supabase queries + mock + cache
-│   │   │   ├── db/mock-data.ts          # Mock data
+│   │   │   ├── constants.ts             # DEPOSIT_AMOUNT = 20
+│   │   │   ├── db/queries.ts            # Supabase queries + cache
 │   │   │   ├── supabase/client.ts       # Supabase client
 │   │   │   └── utils.ts                # formatCurrency, formatDate, comisiones, etc.
 │   │   ├── types/database.ts            # TypeScript types
@@ -159,14 +185,14 @@ CRM Studio/
 ### Rutas Principales
 | Ruta | Descripción |
 |------|-------------|
-| `/` | Dashboard principal (Home) |
+| `/` | Dashboard (incluye reporte mensual, sparkline, ocupación staff, actividad reciente) |
 | `/citas` | Panel de gestión de citas |
-| `/clientes` | Lista de clientas |
+| `/clientes` | Lista de clientas (con paginación) |
 | `/clientes/[id]` | Detalle de clienta + historial |
-| `/pagos` | Gestión de ingresos/egresos |
-| `/reportes/comisiones` | Reporte de comisiones |
+| `/pagos` | Hub con 4 tabs: Registrar, Pendientes, Resumen, Comisiones |
 | `/servicios` | Gestión de servicios y categorías |
 | `/staff` | Gestión de artistas/staff |
+| `/staff/[id]` | Rendimiento del artista |
 
 ---
 
@@ -219,6 +245,22 @@ payment_kind: ['reserva', 'pago_completo', 'pago_final']
 | `staff_stats` | Estadísticas por artista |
 | `commission_details` | Detalle de comisiones calculadas |
 
+### Cache System (queries.ts)
+- **TTL**: Valores por defecto 10-60s según query
+- **Stale-while-revalidate**: Cache devuelve dato stale dentro de 3x TTL mientras refresca en background
+- **Deduplication**: Queries duplicadas en vuelo comparten la misma Promise
+- **Refresh callbacks**: `onCacheRefresh(key, cb)` para notificar cuando cambia el cache
+- **Auto-clear**: `clearQueryCache(prefix?)` tras mutations
+
+### Dashboard Queries
+| Query | TTL | Descripción |
+|-------|-----|-------------|
+| `getDashboardMetrics()` | 30s | Métricas principales, citas hoy, tendencias, ocupación staff, actividad reciente |
+| `getMonthlyReport(year, month)` | 30s | Reporte mensual: completadas, ingresos, gastos, top servicios/artistas |
+| `getTopServices()` | 30s | Top servicios por count en rango |
+| `getTopArtistsByRevenue()` | 30s | Top artistas por revenue en rango |
+| `getInactiveClients()` | 30s | Clientes activas sin visitas >60 días |
+
 ### Triggers
 - `update_updated_at()`: Actualiza automáticamente el campo `updated_at` en todas las tablas
 
@@ -226,11 +268,21 @@ payment_kind: ['reserva', 'pago_completo', 'pago_final']
 
 ## Módulos Funcionales
 
-### 1. Dashboard (`/`)
-- Métricas principales del día/mes
-- Citas de hoy
-- Ingresos/egresos del mes
-- Clientas activas
+### 1. Dashboard (`/`) — Refactorizado
+- **Componentes extraídos**: 13 componentes en `components/dashboard/` (antes todo inline en `page-client.tsx`)
+- **Métricas principales**: Ingresos, gastos, ganancia neta, clientas activas (con tendencias vs semana anterior)
+- **Citas de hoy**: Con indicador de capacidad visual y estado activo/inactivo
+- **Sparkline SVG**: Mini gráfico de tendencia semanal de ingresos (sin librerías externas)
+- **Ocupación del staff**: Barras de capacidad por artista programado hoy
+- **Actividad reciente**: Timeline de últimas 4 acciones (citas creadas, pagos registrados)
+- **Acciones rápidas**: Atajos a Nueva cita, Nueva clienta, Registrar pago
+- **Cumpleaños**: Próximos cumpleaños del staff
+- **Pagos pendientes**: Citas completadas con saldo > 0
+- **Reactivación**: Clientas inactivas por contactar
+- **Reporte mensual**: Visible por defecto, expandible con top servicios y top artistas
+- **Auto-refresh**: Cada 60s con stale-while-revalidate, pausa al ocultar pestaña
+- **Cache**: 30s TTL + 90s stale window con refresco en background
+- **Server/Client pre-fetch**: `getDashboardMetrics` + `getMonthlyReport` se ejecutan en paralelo desde el Server Component
 
 ### 2. Citas (`/citas`)
 #### Funcionalidades
@@ -283,26 +335,14 @@ payment_kind: ['reserva', 'pago_completo', 'pago_final']
 - Edición por modal
 - Botón eliminar DENTRO del modal
 
-### 4. Servicios (`/servicios`)
-#### Funcionalidades
-- **Precio Fijo/Variable**:
-  - Fijo: Precio único
-  - Variable: Rango (desde/hasta)
-- **Pestañas**:
-  - Lista de servicios
-  - Categorías (CRUD dinámico)
-  - Staff (asignar artistas a servicios)
-- **Filtro por Categoría**: Select con "Todos" + categorías
-- **Artistas Sugeridos**:
-  - Prioridad: `staff_services` > `staff_specialties` (por categoría)
-  - Auto-selección si solo hay 1 artista sugerido
-  - Badge "✨" para artistas sugeridos
-
-#### Patrón UI Precio
-- **"S/" como texto superpuesto** con posicionamiento absoluto
-- Border: `border-gray-200`
-- Padding: `pl-12`
-- Font-size: `text-base` (≥ 16px para iOS)
+### 4. Servicios (`/servicios`) — Refactorizado
+- **Componentes extraídos**: 6 archivos en `components/servicios/` (antes todo inline en `page-client.tsx`)
+- **Precio Fijo/Variable**: Select tipo + Input con `leftPrefix` para "S/" (unificado responsive)
+- **Staff por servicio**: Checkbox list con badge de especialidad y "sugerido", auto-selección por categoría
+- **Filtros**: Búsqueda + Select categoría, `React.memo`
+- **Performance**: React.memo en ServiceCard/ServiceFilters, useMemo en filtered/grouped/filterOptions, useCallback en handlers
+- **Accesibilidad**: ARIA labels en cards/search/delete, role=alert en errores y warnings, aria-hidden en iconos
+- **UI/UX**: Skeleton anidado por grupos, empty state con CTA, fadeIn en cambio de filtros, sort alfabético
 
 ### 5. Staff (`/staff`)
 #### Funcionalidades
@@ -317,22 +357,11 @@ payment_kind: ['reserva', 'pago_completo', 'pago_final']
 - Avatar: `bg-accent-100 text-accent-600`
 - Cards clickeables
 
-### 6. Pagos (`/pagos`)
-#### Funcionalidades
-- **Ingresos**: Ventas de servicios
-- **Egresos**: Insumos, alquiler, marketing, comisiones
-- Métodos de pago: Efectivo, Tarjeta, Transferencia, Yape/Plin
-- Tipos: Reserva, Pago completo, Pago final
-
-### 7. Reportes - Comisiones (`/reportes/comisiones`)
-#### Funcionalidades
-- Cálculo automático de comisiones
-- Lógica:
-  - Founder como artista → 100% para artista, 0 para founder
-  - Con override → Founder recibe monto fijo
-  - Sin override → Porcentaje normal
-- Filtro por rango de fechas
-- Filtro por artista
+### 6. Pagos (`/pagos`) — Hub con 4 tabs
+- **Registrar**: Lista de pagos + modal crear (ingreso/egreso)
+- **Pendientes**: Citas completadas con saldo > 0 (urgencia critical/warning/normal)
+- **Resumen**: Income vs expenses con breakdown por método y categoría, rango de fechas
+- **Comisiones**: Reporte por artista con filtro de fechas, distribución, navegación a staff/[id]
 
 ---
 
@@ -440,30 +469,6 @@ npm run start
 
 ---
 
-## Datos Mock
-
-### Ubicación
-- Archivo: `app/src/lib/db/mock-data.ts`
-
-### Bandera de Mock
-```typescript
-const USE_MOCK = process.env.NEXT_PUBLIC_SUPABASE_URL === 'https://placeholder.supabase.co' || !process.env.NEXT_PUBLIC_SUPABASE_URL;
-```
-
-### Query Cache
-- `queries.ts` incluye un sistema de caché en memoria con TTL
-- `cachedQuery<T>(key, ttlMs, fetcher)` para consultas frecuentes
-- `clearQueryCache(prefix?)` para invalidar caché tras mutations
-
-### Datos Incluidos
-- Staff: Valentina Ríos, Camila Vega, Araceli Zevallos (Founder)
-- Clientes: María García, Ana López, Sofía Rodríguez, Carolina Mendoza
-- Servicios: Acrílico completo, Esmaltado semi, Pedicura spa, etc.
-- Citas: Ejemplos con diferentes estados
-- Pagos: Ejemplos de ingresos y egresos
-
----
-
 ## Reglas de Desarrollo
 
 ### Patrones Obligatorios
@@ -505,9 +510,33 @@ const USE_MOCK = process.env.NEXT_PUBLIC_SUPABASE_URL === 'https://placeholder.s
 - **Auto-selección**: Si solo hay 1 artista sugerido
 - **Badge "✨"**: Para artistas sugeridos
 
-### Toggle de Adelanto
-- **Por defecto activado**: S/10 de reserva
-- **Pago automático**: Al completar cita se crea pago por diferencia
+### Adelanto (Depósito)
+- **Monto**: S/20 (constante `DEPOSIT_AMOUNT` en `constants.ts`)
+- **Por defecto activado**: S/20 de reserva al crear cita
+- **Pago automático**: Al completar cita se crea pago por diferencia (pending_balance)
+
+### Borde de Estado en Cards
+- **`border-l-4`** en `AppointmentCard` con color según status:
+  - `programada` → `border-l-salon-400`
+  - `en_curso` → `border-l-amber-400`
+  - `completada` → `border-l-emerald-400`
+  - `cancelada` → `border-l-red-300`
+  - `no_show` → `border-l-zinc-300`
+
+### Stepper de Progreso
+- En `AppointmentTicket`, barra visual: `① Programada → ② En curso → ③ Completada`
+- Paso completado: verde con checkmark
+- Paso actual: rosa (salon)
+- Paso futuro: gris claro
+
+### Transición entre Vistas
+- Al cambiar Mes/Semana/Día en calendario: animación `fadeIn` 200ms
+- `key={ui.view}` fuerza re-montaje con animación
+- `prefers-reduced-motion: reduce` respeta preferencia del usuario (global en `globals.css`)
+
+### Hover "Crear aquí" en Calendario
+- En slots vacíos de WeekView/DayView, al hover aparece "+ Crear aquí"
+- Patrón `group-hover:opacity-100` sobre `absolute inset-0`
 
 ### RLS (Row Level Security)
 - **Estado**: ✅ Resuelto
@@ -526,38 +555,39 @@ const USE_MOCK = process.env.NEXT_PUBLIC_SUPABASE_URL === 'https://placeholder.s
 ### Ubicación
 - Directorio: `docs/specs/`
 
-### Implementadas ✓
-| HU | Descripción |
-|-----|-------------|
-| HU-01 | Registrar clienta |
-| HU-02 | Buscar clientas |
-| HU-03 | Estado clienta |
-| HU-04 | Historial clienta |
-| HU-05 | Reactivar clientas |
-| HU-06 | Gestion servicios |
-| HU-07 | Catalogo categoria |
-| HU-08 | Actualizar precios |
-| HU-09 | Agendar cita |
-| HU-10 | Ver agenda |
-| HU-11 | Estado cita |
-| HU-12 | Solapamientos |
-| HU-13 | Resumen cita |
-| HU-14 | Registrar staff |
-| HU-16 | Calcular comisiones |
-| HU-17 | Registrar pagos |
-| HU-18 | Registrar egresos |
-| HU-21 | Dashboard |
-| HU-23 | Roles dinamicos |
-| HU-24 | Comisiones dinamicas |
-| HU-25 | Panel servicios mejoras |
+### Todas las HUs Implementadas ✓
 
-### Pendientes ⏳
-| HU | Descripción |
-|-----|-------------|
-| HU-15 | Rendimiento artista (página staff/[id]) |
-| HU-19 | Resumen financiero |
-| HU-20 | Pagos pendientes |
-| HU-22 | Reporte mensual |
+| HU | Descripción | Estado |
+|-----|-------------|--------|
+| HU-01 | Registrar clienta | ✅ |
+| HU-02 | Buscar clientas | ✅ |
+| HU-03 | Estado clienta | ✅ |
+| HU-04 | Historial clienta | ✅ |
+| HU-05 | Reactivar clientas | ✅ |
+| HU-06 | Gestion servicios | ✅ |
+| HU-07 | Catalogo categoria | ✅ |
+| HU-08 | Actualizar precios | ✅ |
+| HU-09 | Agendar cita | ✅ |
+| HU-10 | Ver agenda | ✅ |
+| HU-11 | Estado cita | ✅ |
+| HU-12 | Solapamientos | ✅ |
+| HU-13 | Resumen cita | ✅ |
+| HU-14 | Registrar staff | ✅ |
+| HU-15 | Rendimiento artista (`/staff/[id]`) | ✅ |
+| HU-16 | Calcular comisiones | ✅ |
+| HU-17 | Registrar pagos | ✅ |
+| HU-18 | Registrar egresos | ✅ |
+| HU-19 | Resumen financiero (tab en Pagos) | ✅ |
+| HU-20 | Pagos pendientes (tab en Pagos) | ✅ |
+| HU-21 | Dashboard | ✅ |
+| HU-22 | Reporte mensual (sección en Dashboard) | ✅ |
+| HU-23 | Roles dinamicos | ✅ |
+| HU-24 | Comisiones dinamicas | ✅ |
+| HU-25 | Panel servicios mejoras | ✅ |
+
+### Próximas Sesiones (no son HU)
+- Tests unitarios y E2E
+- Autenticación/Login (Supabase Auth)
 
 ---
 
@@ -573,11 +603,29 @@ const USE_MOCK = process.env.NEXT_PUBLIC_SUPABASE_URL === 'https://placeholder.s
 | params síncronos en Next.js 15+ | ✅ Fixeado | Refactor a `await params` + validación UUID |
 | Turbopack loop infinito (2 package-lock.json) | ✅ Fixeado | Eliminar package.json del root |
 | `--no-turbopack` flag no válido | ✅ Fixeado | Cambiar a `next dev` (turbopack por defecto) o `--webpack` |
+| Dashboard 564 líneas en un archivo | ✅ Fixeado | Extraído a 13 componentes en `components/dashboard/` |
+| Tipado `any` en dashboard | ✅ Fixeado | Interfaces dedicadas en `components/dashboard/types.ts` |
+| Sin tendencias vs semana anterior | ✅ Fixeado | Week-over-week en StatCards + sparkline SVG |
+| Sin visualización de datos | ✅ Fixeado | Sparkline + barras de ocupación + capacidad visual |
+| Sin auto-refresh | ✅ Fixeado | 60s auto-refresh con stale-while-revalidate |
+| Monthly report no pre-fetcheado | ✅ Fixeado | `getMonthlyReport` desde Server Component |
+| Componentes inline duplicados | ✅ Fixeado | `StatCard`, `TodayAppointments`, `UpcomingBirthdays` extraídos |
+| CalendarView 672 líneas | ✅ Fixeado | Split en 4 archivos (MonthView, WeekView, DayView, calendar-utils) |
+| Tipado `any` en citas | ✅ Fixeado | Tipos AppointmentWithDetails, CalendarAppointment, eliminación total de any |
+| Sin DayView en toolbar | ✅ Fixeado | Agregado botón "Día" en toolbar del calendario |
+| Accesibilidad en citas | ✅ Fixeado | ARIA roles, focus-visible, aria-labels, reduced-motion |
+| Sin skeleton/empty states calendario | ✅ Fixeado | Skeleton loading + empty state con CTA |
+| Sin React.memo en componentes citas | ✅ Fixeado | memo en Card, Form, Selector, Config, CalendarView |
+| Columna hora desalineada en calendario | ✅ Fixeado | grid-cols-[56px_repeat(7,1fr)] fijo |
+| Hardcodeo depósito | ✅ Fixeado | Usa constante DEPOSIT_AMOUNT = 20 |
+| Servicios 939 líneas en page-client.tsx | ✅ Fixeado | Extraído a 6 componentes en `components/servicios/` |
+| Precios con raw inputs | ✅ Fixeado | PriceSection usa `<Input leftPrefix>` en vez de raw `<input>` |
+| Sin error state en load | ✅ Fixeado | Banner rojo con role="alert" cuando falla la carga |
+| Sin sort en servicios | ✅ Fixeado | Sort alfabético con localeCompare |
 
 ---
 
 ## Última Actualización
-- **Fecha**: 12 Mayo 2026
-- **Commit**: `0cdfb92a`
+- **Fecha**: 13 Mayo 2026
 - **Rama**: `main`
-- **Cambios recientes**: Renombrar CLAUDE.md → AGENTS.md + fix dev script turbopack
+- **Cambios recientes**: Refactor completo del módulo Servicios. Extraídos 6 componentes a `components/servicios/` (page-client.tsx 939→423 lns). Tipado fuerte eliminando `any`. Accesibilidad: ARIA labels, role=alert en errores, aria-hidden en iconos. Performance: React.memo en ServiceCard/ServiceFilters, useMemo/useCallback en computaciones y handlers. UI/UX: skeleton anidado por grupos de categoría, empty state con CTA, fadeIn al cambiar filtros, sort alfabético, error state con banner. Fixes: PriceSection unificada usando `<Input leftPrefix>`, `getStaffForCategory` como función pura fuera del componente, `isFormValid`/`resetForm` memoizados, 4 ESLint warnings eliminados. Fix: `Card` component ahora acepta `aria-label`.
