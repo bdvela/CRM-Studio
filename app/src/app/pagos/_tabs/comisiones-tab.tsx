@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, memo } from 'react';
 import { useRouter } from 'next/navigation';
 import { getCommissionReport } from '@/lib/db/queries';
 import type { CommissionReportRow } from '@/types/database';
@@ -11,7 +11,7 @@ import { StatCard } from '@/components/ui/stat-card';
 import { formatCurrency, startOfMonth } from '@/lib/utils';
 import { DollarSign, Users, TrendingUp, Search, Briefcase, PiggyBank } from 'lucide-react';
 
-export default function ComisionesTab() {
+const ComisionesTab = memo(function ComisionesTab() {
   const { push } = useRouter();
   const [rows, setRows] = useState<CommissionReportRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,7 +33,6 @@ export default function ComisionesTab() {
     }
   }, [dateRange]);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, [load]);
 
   const filtered = rows.filter((r) => (r.artist_name || '').toLowerCase().includes(search.toLowerCase()));
@@ -50,11 +49,15 @@ export default function ComisionesTab() {
   }
 
   if (loading) {
-    return <div className="space-y-3">{[1, 2, 3].map(i => <div key={i} className="h-24 rounded-2xl bg-zinc-100 animate-pulse" />)}</div>;
+    return (
+      <div className="space-y-3" role="status" aria-label="Cargando comisiones">
+        {[1, 2, 3].map(i => <div key={i} className="h-24 rounded-2xl bg-zinc-100 animate-pulse" />)}
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" role="region" aria-label="Comisiones">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Ingreso Total" value={formatCurrency(totalRevenue)} icon={<DollarSign className="size-5" />} color="salon" />
         <StatCard label="Comisión Artistas" value={formatCurrency(totalArtistCommission)} icon={<Users className="size-5" />} color="accent" />
@@ -66,14 +69,15 @@ export default function ComisionesTab() {
         <CardContent className="py-4 space-y-4">
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-zinc-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-zinc-400" aria-hidden="true" />
               <input type="text" placeholder="Buscar artista..." value={search} onChange={(e) => setSearch(e.target.value)}
+                aria-label="Buscar artista"
                 className="w-full pl-10 pr-4 py-3 rounded-xl border border-zinc-200 bg-white text-base focus:outline-none focus:ring-2 focus:ring-salon-500" />
             </div>
             <div className="w-full sm:w-auto flex items-center gap-2">
-              <Input type="date" value={dateRange.from} onChange={(v) => setDateRange(prev => ({ ...prev, from: v }))} className="text-sm h-full" />
+              <Input type="date" value={dateRange.from} onChange={(v) => setDateRange(prev => ({ ...prev, from: v }))} className="text-sm h-full" aria-label="Fecha desde" />
               <span className="text-zinc-400 text-sm">al</span>
-              <Input type="date" value={dateRange.to} onChange={(v) => setDateRange(prev => ({ ...prev, to: v }))} className="text-sm h-full" />
+              <Input type="date" value={dateRange.to} onChange={(v) => setDateRange(prev => ({ ...prev, to: v }))} className="text-sm h-full" aria-label="Fecha hasta" />
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -90,23 +94,32 @@ export default function ComisionesTab() {
       {filtered.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-zinc-400">
-            <DollarSign className="size-12 mx-auto mb-3 opacity-30" />
+            <DollarSign className="size-12 mx-auto mb-3 opacity-30" aria-hidden="true" />
             <p className="text-sm">{search ? 'No hay artistas que coincidan' : 'No hay datos de comisiones para este período'}</p>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4" aria-live="polite" role="list" aria-label="Comisiones por artista">
           {filtered.map((row) => {
             const isFounder = row.artist_role_name === 'Dueña' || row.artist_role_name === 'Founder';
             return (
               <Card key={row.artist_id || 'no-artist'}
                 onClick={() => row.artist_id ? push(`/staff/${row.artist_id}`) : undefined}
-                className="hover:shadow-md transition-all cursor-pointer w-full box-border">
+                className="hover:shadow-md transition-all cursor-pointer w-full box-border"
+                role="button"
+                tabIndex={0}
+                aria-label={`${row.artist_name || 'Sin artista'}: ${formatCurrency(row.total_artist_commission)} de comisión`}
+                onKeyDown={(e) => {
+                  if ((e.key === 'Enter' || e.key === ' ') && row.artist_id) {
+                    e.preventDefault();
+                    push(`/staff/${row.artist_id}`);
+                  }
+                }}>
                 <CardContent className="py-4 sm:py-5 px-3 sm:px-4">
                   <div className="flex items-start gap-3 sm:gap-4">
                     <div className={`size-10 sm:size-12 rounded-full flex items-center justify-center text-base sm:text-lg font-bold flex-shrink-0 ${
                       isFounder ? 'bg-amber-100 text-amber-600' : 'bg-accent-100 text-accent-600'
-                    }`}>
+                    }`} aria-hidden="true">
                       {(row.artist_name || 'S')[0].toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -116,9 +129,9 @@ export default function ComisionesTab() {
                       </div>
                       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-4 text-sm">
                         <div><p className="text-xs text-zinc-400">Servicios</p><p className="font-semibold text-zinc-900">{row.total_services}</p></div>
-                        <div><p className="text-xs text-zinc-400">Ingreso</p><p className="font-semibold text-zinc-900">{formatCurrency(row.total_service_revenue)}</p></div>
-                        <div><p className="text-xs text-zinc-400">Comisión</p><p className="font-semibold text-accent-600">{formatCurrency(row.total_artist_commission)}</p></div>
-                        <div><p className="text-xs text-zinc-400">Share</p><p className="font-semibold text-emerald-600">{formatCurrency(row.total_founder_share)}</p></div>
+                        <div><p className="text-xs text-zinc-400">Ingreso</p><p className="font-semibold text-zinc-900 tabular-nums">{formatCurrency(row.total_service_revenue)}</p></div>
+                        <div><p className="text-xs text-zinc-400">Comisión</p><p className="font-semibold text-accent-600 tabular-nums">{formatCurrency(row.total_artist_commission)}</p></div>
+                        <div><p className="text-xs text-zinc-400">Share</p><p className="font-semibold text-emerald-600 tabular-nums">{formatCurrency(row.total_founder_share)}</p></div>
                       </div>
                       {row.total_service_revenue > 0 && (
                         <div className="mt-3 pt-3 border-t border-zinc-100">
@@ -126,7 +139,14 @@ export default function ComisionesTab() {
                             <span>Distribución</span>
                             <span>Artista: {Math.round((row.total_artist_commission / row.total_service_revenue) * 100)}% | Founder: {Math.round((row.total_founder_share / row.total_service_revenue) * 100)}%</span>
                           </div>
-                          <div className="w-full h-2 bg-zinc-100 rounded-full overflow-hidden">
+                          <div
+                            className="w-full h-2 bg-zinc-100 rounded-full overflow-hidden"
+                            role="progressbar"
+                            aria-valuenow={Math.round((row.total_artist_commission / row.total_service_revenue) * 100)}
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                            aria-label={`Distribución: ${Math.round((row.total_artist_commission / row.total_service_revenue) * 100)}% artista`}
+                          >
                             <div className="h-full bg-accent-500 rounded-full transition-all"
                               style={{ width: `${Math.round((row.total_artist_commission / row.total_service_revenue) * 100)}%` }} />
                           </div>
@@ -142,4 +162,6 @@ export default function ComisionesTab() {
       )}
     </div>
   );
-}
+});
+
+export default ComisionesTab;

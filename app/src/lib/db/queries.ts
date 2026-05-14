@@ -1537,9 +1537,80 @@ export async function getInactiveClients(daysThreshold = 60) {
           };
         })
         .slice(0, 20);
+     } catch (e) {
+       console.error('getInactiveClients error:', e);
+       return [];
+     }
+   });
+ }
+
+export async function getAppointmentById(id: string) {
+  if (!id || id === 'undefined' || id === 'null') {
+    console.warn('getAppointmentById: invalid id', id);
+    return null;
+  }
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(id)) {
+    console.warn('getAppointmentById: not a valid UUID:', id);
+    return null;
+  }
+  return cachedQuery(cacheKey('appointment', id), 10_000, async () => {
+    try {
+      const { data: appt, error } = await supabase
+        .from('appointments')
+        .select(`
+          *,
+          client:clients(name, phone, instagram),
+          artist:staff(name, photo_url, role:roles(name, color))
+        `)
+        .eq('id', id)
+        .maybeSingle();
+      if (error) throw error;
+      if (!appt) return null;
+
+      const [svcResult, balanceResult, commResult] = await Promise.all([
+        supabase
+          .from('appointment_services')
+          .select('id, appointment_id, service_id, artist_id, service_price, service:services(name, price, duration_min, category_id, category:categories(*)), artist:staff(name, photo_url)')
+          .eq('appointment_id', id),
+        supabase
+          .from('appointment_balance')
+          .select('*')
+          .eq('id', id)
+          .maybeSingle(),
+        supabase
+          .from('commission_details')
+          .select('*')
+          .eq('appointment_id', id),
+      ]);
+
+      if (svcResult.data) {
+        (appt as any).appointment_services = svcResult.data.map((s: any) => {
+          const svc: any = {
+            id: s.id,
+            service_id: s.service_id,
+            artist_id: s.artist_id || null,
+            service_price: s.service_price,
+            service: s.service,
+          };
+          if (s.artist) svc.artist = s.artist;
+
+          if (commResult.data) {
+            const cd = commResult.data.find((c: any) => c.appointment_service_id === s.id);
+            if (cd) svc.commission_detail = cd;
+          }
+          return svc;
+        });
+      }
+
+      if (balanceResult.data) {
+        (appt as any).appointment_balance = balanceResult.data;
+      }
+
+      return appt;
     } catch (e) {
-      console.error('getInactiveClients error:', e);
-      return [];
+      console.error('getAppointmentById error:', (e as any).message || e);
+      return null;
     }
   });
 }

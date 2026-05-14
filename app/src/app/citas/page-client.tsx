@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useReducer, useMemo, useCallback } from 'react';
 import { getAppointments, getClients, getStaff, getServices } from '@/lib/db/queries';
+import { useRouter } from 'next/navigation';
 import type { Client, Service, StaffMember } from '@/types/database';
 import { Header } from '@/components/layout/shell';
 import { Card, CardContent } from '@/components/ui/card';
@@ -128,6 +129,7 @@ export default function CitasPage({ initialData }: { initialData?: InitialData }
   const { appointments, staff, services, clients, loading, submitting } = data;
   const [ui, dispatchUi] = useReducer(uiReducer, initialUiState);
   const { viewMode, listFilter, filterArtist, filterStatus, showModal, showDetail, showServiceConfig, showServiceSelector, overlapWarning, pendingDate, advancePaid } = ui;
+  const { push } = useRouter();
   const [selectedAppt, setSelectedAppt] = useState<AppointmentWithDetails | null>(null);
 
   const [formMeta, setFormMeta] = useState({
@@ -359,6 +361,7 @@ export default function CitasPage({ initialData }: { initialData?: InitialData }
         onCancel={cancelAppt}
         onAdvanceStatus={advanceStatus}
         onMarkAsNoShow={markAsNoShow}
+        onViewDetail={(appt) => { push(`/citas/${appt.id}`); }}
       />
 
       <Modal open={showModal} onClose={() => { dispatchUi({ type: 'SET_SHOW_MODAL', showModal: false }); setEditingAppt(null); }} title={editingAppt ? `Editar Cita (${selectedServices.length} servicio${selectedServices.length !== 1 ? 's' : ''})` : selectedServices.length > 0 ? `Nueva Cita (${selectedServices.length} servicio${selectedServices.length !== 1 ? 's' : ''})` : 'Nueva Cita'}>

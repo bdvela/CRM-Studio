@@ -12,10 +12,11 @@ interface DetailPopoverProps {
   onCancel: (appt: AppointmentWithDetails) => void;
   onAdvanceStatus?: (appt: AppointmentWithDetails) => void;
   onMarkAsNoShow?: (appt: AppointmentWithDetails) => void;
+  onViewDetail?: (appt: AppointmentWithDetails) => void;
 }
 
 export function DetailPopover({
-  show, selectedAppt, onClose, onEdit, onCancel, onAdvanceStatus, onMarkAsNoShow,
+  show, selectedAppt, onClose, onEdit, onCancel, onAdvanceStatus, onMarkAsNoShow, onViewDetail,
 }: DetailPopoverProps) {
   if (!show || !selectedAppt) return null;
 
@@ -27,6 +28,7 @@ export function DetailPopover({
       onCancel={onCancel}
       onAdvanceStatus={onAdvanceStatus}
       onMarkAsNoShow={onMarkAsNoShow}
+      onViewDetail={onViewDetail}
     />
   );
 }

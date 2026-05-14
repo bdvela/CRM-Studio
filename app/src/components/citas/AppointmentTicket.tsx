@@ -23,11 +23,12 @@ interface AppointmentTicketProps {
   onCancel?: (appt: AppointmentWithDetails) => void;
   onAdvanceStatus?: (appt: AppointmentWithDetails) => void;
   onMarkAsNoShow?: (appt: AppointmentWithDetails) => void;
+  onViewDetail?: (appt: AppointmentWithDetails) => void;
   closeOnOverlay?: boolean;
 }
 
 export function AppointmentTicket({
-  appt, onClose, onEdit, onCancel, onAdvanceStatus, onMarkAsNoShow, closeOnOverlay = true,
+  appt, onClose, onEdit, onCancel, onAdvanceStatus, onMarkAsNoShow, onViewDetail, closeOnOverlay = true,
 }: AppointmentTicketProps) {
   const headerColor = statusHeaderColors[appt.status] || 'bg-salon-500';
   const dateStr = format(new Date(appt.start_time), "EEEE d 'de' MMMM", { locale: es });
@@ -262,6 +263,14 @@ export function AppointmentTicket({
               )}
             >
               <Pencil className="size-4" /> Editar
+            </button>
+          )}
+          {onViewDetail && (
+            <button
+              onClick={() => { onClose(); onViewDetail(appt); }}
+              className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium text-salon-700 bg-salon-50 hover:bg-salon-100 transition-colors"
+            >
+              <CalendarIcon className="size-4" /> Ver detalle completo
             </button>
           )}
         </div>

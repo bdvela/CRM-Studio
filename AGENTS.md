@@ -198,6 +198,7 @@ CRM Studio/
 |------|-------------|
 | `/` | Dashboard (incluye reporte mensual, sparkline, ocupación staff, actividad reciente) |
 | `/citas` | Panel de gestión de citas |
+| `/citas/[id]` | Detalle de cita (full-page con schedule, servicios, comisiones, balance, acciones) |
 | `/clientes` | Lista de clientas (con paginación) |
 | `/clientes/[id]` | Detalle de clienta + historial |
 | `/pagos` | Hub con 4 tabs: Registrar, Pendientes, Resumen, Comisiones |
@@ -318,6 +319,17 @@ payment_kind: ['reserva', 'pago_completo', 'pago_final']
   - Al crear cita con adelanto: Crea pago de S/10
   - Al completar cita: Crea pago por diferencia (pending_balance)
 
+#### Detalle de Cita (`/citas/[id]`) — Nueva
+- **Componentes**: 7 componentes en `components/citas/` + `page.tsx` + `page-client.tsx`
+- **Vista full-page**: Profile con avatar clienta clickeable, badge estado, teléfono/Instagram, monto total
+- **Schedule**: Fecha formateada, rango horario + duración, indicador en vivo (atrasada/en Xh/mañana)
+- **Stepper**: Barra visual 3 pasos (Programada → En curso → Completada) con checkmarks
+- **Servicios**: Lista con icono categoría, nombre, artista clickeable (navega a staff/[id]), precio
+- **Comisiones**: Desglose artista + founder (solo si hay datos)
+- **Balance**: Grid Total/Pagado/Saldo con badge adelanto S/20
+- **Acciones**: Según estado (Iniciar/Completar/Editar/Cancelar/No Show)
+- **Navegación**: Enlace a `clientes/[id]` desde avatar/nombre, enlace a `staff/[id]` desde artista, "Ver detalle completo" desde AppointmentTicket modal
+
 #### Componente Clave: CalendarView
 - Modos: Mes, Semana, Día, Hoy
 - Drag & Drop para mover citas
@@ -362,11 +374,17 @@ payment_kind: ['reserva', 'pago_completo', 'pago_final']
   - `StaffDetailQuickInfo.tsx` — Resumen rápido (comisión, especialidades, rol, horario)
   - `StaffAppointmentHistory.tsx` — Tabla historial citas con badges de estado
 
-### 6. Pagos (`/pagos`) — Hub con 4 tabs
-- **Registrar**: Lista de pagos + modal crear (ingreso/egreso)
-- **Pendientes**: Citas completadas con saldo > 0 (urgencia critical/warning/normal)
-- **Resumen**: Income vs expenses con breakdown por método y categoría, rango de fechas
-- **Comisiones**: Reporte por artista con filtro de fechas, distribución, navegación a staff/[id]
+### 6. Pagos (`/pagos`) — Refactorizado
+- **Componentes extraídos**: 7 archivos en `components/pagos/` (page-client.tsx 409→87 lns)
+- **Tipado fuerte**: `PaymentWithRelations`, interfaces dedicadas, eliminación total de `any`
+- **Componentes**:
+  - `PaymentCard.tsx` — Card con `border-l-4` (verde ingreso / rojo egreso), icono tipo, badges kind/method, Link2 vinculado, React.memo
+  - `PaymentFilters.tsx` — Búsqueda + filtro Todos/Ingresos/Egresos, React.memo, role="radiogroup"
+  - `PagosSummaryCards.tsx` — Grid 3 stat cards (ingresos, egresos, ganancia neta)
+  - `PagosTabs.tsx` — Barra 4 tabs con ARIA role="tablist", React.memo
+  - `PaymentFormModal.tsx` — Modal crear pago extraído, patrón botones consistente con border-t, disabled en submit inválido
+  - `PaymentDetailModal.tsx` — Modal detalle con cliente vinculado + cita vinculada + servicios, tipado fuerte
+- **Tabs mejorados**: `_tabs/pendientes-tab.tsx`, `resumen-tab.tsx`, `comisiones-tab.tsx` — tipados sin `any`, React.memo, aria-live, role="progressbar"
 
 ---
 
@@ -645,6 +663,7 @@ npm run start
 ---
 
 ## Última Actualización
-- **Fecha**: 13 Mayo 2026
+- **Fecha**: 14 Mayo 2026
 - **Rama**: `main`
-- **Cambios recientes**: Refactor completo del módulo Staff. Extraídos 11 componentes a `components/staff/` (page-client.tsx 1079→308 lns, [id]/page-client.tsx 430→179 lns). Tipado fuerte eliminando `any` mediante interfaces dedicadas (StaffWithDetails, StaffFormState, StaffPerformance, StaffTopService). Accesibilidad: ARIA labels en avatar y cards, aria-live en resultados, role/teclado en cards, role progressbar en distribución. Performance: React.memo en StaffCard/StaffFilters, useMemo en filtered, useCallback en handlers del modal. UI/UX: avatar degradado rose→purple, border-t-4 del color del role (role.color), Founder con anillo amber, skeleton coincidente con cards reales (avatar + 3 líneas + badges), empty state con CTA "Registrar primer miembro", stats de rendimiento con iconos por card, distribución visual con barra de progreso animada. Extraído StaffDetailQuickInfo del inline del detalle. Agregado botón Editar en StaffDetailProfile que navega a /staff. Eliminación total de casts `as any` en page-client y [id]/page-client.
+- **Cambios recientes**: Refactor completo del módulo Pagos. Extraídos 7 componentes a `components/pagos/` (page-client.tsx 409→87 lns). Tipado fuerte eliminando `any` mediante interfaces (PaymentWithRelations, FormAction). Accesibilidad: role="tablist" en tabs, role="button" en PaymentCard, role="radiogroup" en filtros, aria-live en tabs. Performance: React.memo en PaymentCard/PaymentFilters/PagosTabs, useMemo en filtered/totals. UI/UX: border-l-4 (verde ingreso / rojo egreso), icono tipo con círculo de bg, badge vinculado con Link2, skeleton loading coincidente con stat cards + toolbar + payment list.
+Nuevo detalle de cita `/citas/[id]`: 7 componentes nuevos en `components/citas/` (AppointmentDetailHeader, Stepper, Schedule, Services, Commissions, Balance, Actions, Notes) siguiendo el patrón de `clientes/[id]`. Navegación integrada desde PaymentDetailModal y AppointmentTicket modal.
