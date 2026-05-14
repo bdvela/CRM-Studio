@@ -6,9 +6,14 @@ import { Modal } from '@/components/ui/modal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatCurrency, formatDate, formatTime } from '@/lib/utils';
-import { CalendarDays, DollarSign, Clock, Phone, Mail, Instagram, Trash2, Edit } from 'lucide-react';
+import { CalendarDays, DollarSign, Clock, Phone, Mail, Instagram, Trash2, Edit, ExternalLink } from 'lucide-react';
 import { APPOINTMENT_STATUS_LABELS } from '@/types/database';
 import { APPT_STATUS_STYLES } from './constants';
+
+function instagramUrl(handle: string): string {
+  const cleaned = handle.replace(/^@/, '');
+  return `https://instagram.com/${cleaned}`;
+}
 
 export function ClientDetailModal({
   open,
@@ -17,8 +22,8 @@ export function ClientDetailModal({
   onClose,
   onEdit,
   onDelete,
+  onViewDetail,
   deleting,
-  loading,
 }: ClientDetailModalProps) {
   if (!client) return null;
 
@@ -26,20 +31,7 @@ export function ClientDetailModal({
 
   return (
     <Modal open={open} onClose={onClose} title="Detalle de clienta">
-      {loading ? (
-        <div className="space-y-4 animate-pulse">
-          <div className="flex items-center gap-4">
-            <div className="size-14 rounded-full bg-zinc-100" />
-            <div className="space-y-2">
-              <div className="h-5 w-32 bg-zinc-100 rounded-lg" />
-              <div className="h-4 w-20 bg-zinc-100 rounded-lg" />
-            </div>
-          </div>
-          <div className="h-24 bg-zinc-100 rounded-xl" />
-          <div className="h-32 bg-zinc-100 rounded-xl" />
-        </div>
-      ) : (
-        <div className="space-y-5 sm:space-y-6">
+      <div className="space-y-5 sm:space-y-6">
           {/* Profile */}
           <div className="flex items-center gap-3 sm:gap-4">
             <div
@@ -83,15 +75,15 @@ export function ClientDetailModal({
                 </a>
               )}
               {client.instagram && (
-                <div className="flex items-center gap-2.5 sm:gap-3 p-2.5 sm:p-3 rounded-xl">
-                  <div className="size-8 sm:size-9 rounded-lg bg-zinc-100 flex items-center justify-center">
-                    <Instagram className="size-3.5 sm:size-4 text-zinc-400" />
+                <a href={instagramUrl(client.instagram)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 sm:gap-3 p-2.5 sm:p-3 rounded-xl hover:bg-zinc-50 transition-colors group">
+                  <div className="size-8 sm:size-9 rounded-lg bg-zinc-100 flex items-center justify-center group-hover:bg-salon-100 transition-colors">
+                    <Instagram className="size-3.5 sm:size-4 text-zinc-400 group-hover:text-salon-500" />
                   </div>
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <p className="text-[10px] sm:text-xs text-zinc-400">Instagram</p>
-                    <p className="text-xs sm:text-sm font-medium text-zinc-700">{client.instagram}</p>
+                    <p className="text-xs sm:text-sm font-medium text-zinc-700 truncate">{client.instagram}</p>
                   </div>
-                </div>
+                </a>
               )}
             </div>
           )}
@@ -180,8 +172,11 @@ export function ClientDetailModal({
               Editar
             </Button>
           </div>
+          <Button type="button" variant="outline" className="w-full" onClick={onViewDetail}>
+            <ExternalLink className="size-4 mr-1.5" />
+            Ver detalle completo
+          </Button>
         </div>
-      )}
     </Modal>
   );
 }

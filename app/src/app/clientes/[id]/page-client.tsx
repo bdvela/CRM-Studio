@@ -96,7 +96,7 @@ export default function ClienteDetailClient({
   return (
     <>
       <Header
-        title={editing ? 'Editando' : client.name}
+        title={editing ? `Editando: ${client.name}` : client.name}
         action={
           <div className="flex gap-2">
             <Button size="sm" variant="outline" onClick={() => setEditing(true)}>

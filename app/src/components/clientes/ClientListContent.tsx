@@ -6,7 +6,8 @@ import { STATUS_LABELS, STATUS_BADGE_VARIANT, STATUS_ORDER, PAGE_SIZE } from './
 import { ClientCard } from './ClientCard';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Users } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Users, Plus } from 'lucide-react';
 import { useMemo } from 'react';
 
 function groupByStatus(clients: ClientListContentProps['clients']) {
@@ -52,11 +53,17 @@ export function ClientListContent({
   }
 
   if (clients.length === 0) {
+    const hasFilters = search || statusFilter !== 'all';
     return (
       <Card>
         <CardContent className="py-12 text-center text-zinc-400">
           <Users className="size-12 mx-auto mb-3 opacity-30" />
-          <p className="text-sm">{search ? 'No hay clientas que coincidan' : 'No hay clientas registradas'}</p>
+          <p className="text-sm">{hasFilters ? 'No hay clientas que coincidan con los filtros' : 'No hay clientas registradas'}</p>
+          {!hasFilters && (
+            <Button size="sm" className="mt-4" onClick={() => document.getElementById('btn-nueva-clienta')?.click()}>
+              <Plus className="size-4 mr-1" /> Registrar primera clienta
+            </Button>
+          )}
         </CardContent>
       </Card>
     );
@@ -68,7 +75,6 @@ export function ClientListContent({
         {STATUS_ORDER.map((status) => {
           const items = grouped[status] || [];
           if (items.length === 0) return null;
-          const statusHasMore = items.length > PAGE_SIZE;
           return (
             <div key={status}>
               <div className="flex items-center gap-2 mb-2">
@@ -76,14 +82,9 @@ export function ClientListContent({
                 <span className="text-xs text-zinc-400">{items.length} clienta{items.length !== 1 ? 's' : ''}</span>
               </div>
               <div className="space-y-2">
-                {items.slice(0, visibleCount).map((client) => (
+                {items.map((client) => (
                   <ClientCard key={client.id} client={client} onClick={() => onClientClick(client)} />
                 ))}
-                {statusHasMore && (
-                  <button onClick={onShowMore} className="w-full py-2 text-sm text-salon-600 font-medium hover:text-salon-700 transition-colors">
-                    Ver más ({items.length - visibleCount} restantes)
-                  </button>
-                )}
               </div>
             </div>
           );

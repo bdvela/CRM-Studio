@@ -48,8 +48,8 @@ export interface ClientDetailModalProps {
   onClose: () => void;
   onEdit: () => void;
   onDelete: () => Promise<void>;
+  onViewDetail: () => void;
   deleting: boolean;
-  loading: boolean;
 }
 
 export interface ClientDetailProfileProps {
@@ -70,6 +70,7 @@ export interface ClientAppointmentHistoryProps {
 export type ClientesUIState = {
   clients: ClientWithStats[];
   loading: boolean;
+  error: string | null;
   submitting: boolean;
   showCreateModal: boolean;
   showDetailModal: boolean;
@@ -85,6 +86,7 @@ export type ClientesUIState = {
 
 export type ClientesUIAction =
   | { type: 'SET_LOADING'; loading: boolean }
+  | { type: 'SET_ERROR'; error: string | null }
   | { type: 'SET_CLIENTS'; clients: ClientWithStats[] }
   | { type: 'SET_SUBMITTING'; submitting: boolean }
   | { type: 'SET_SHOW_CREATE_MODAL'; show: boolean }

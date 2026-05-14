@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useReducer, useRef, useMemo, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { getClients, createClient, updateClient, deleteClient, getClientById, getAppointments } from '@/lib/db/queries';
-import type { Client, ClientInsert } from '@/types/database';
+import type { Client, ClientInsert, Appointment } from '@/types/database';
 import { Header } from '@/components/layout/shell';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Plus, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useConfirm } from '@/context/confirm-context';
 import { normalizePeruPhone } from '@/lib/utils';
@@ -19,6 +20,7 @@ import { ClientDetailModal } from '@/components/clientes/ClientDetailModal';
 const UI_INIT: ClientesUIState = {
   clients: [],
   loading: false,
+  error: null,
   submitting: false,
   showCreateModal: false,
   showDetailModal: false,
@@ -35,7 +37,8 @@ const UI_INIT: ClientesUIState = {
 function uiReducer(state: ClientesUIState, action: ClientesUIAction): ClientesUIState {
   switch (action.type) {
     case 'SET_LOADING': return { ...state, loading: action.loading };
-    case 'SET_CLIENTS': return { ...state, loading: false, clients: action.clients };
+    case 'SET_ERROR': return { ...state, error: action.error, loading: false };
+    case 'SET_CLIENTS': return { ...state, loading: false, error: null, clients: action.clients };
     case 'SET_SUBMITTING': return { ...state, submitting: action.submitting };
     case 'SET_SHOW_CREATE_MODAL': return { ...state, showCreateModal: action.show };
     case 'SET_SHOW_DETAIL_MODAL': return { ...state, showDetailModal: action.show };
@@ -53,6 +56,7 @@ function uiReducer(state: ClientesUIState, action: ClientesUIAction): ClientesUI
 }
 
 export default function ClientesPage({ initialClients }: { initialClients?: Client[] }) {
+  const { push } = useRouter();
   const { confirm } = useConfirm();
   const [ui, dispatch] = useReducer(uiReducer, { ...UI_INIT, clients: initialClients || [] as ClientWithStats[], loading: !initialClients });
   const loaded = useRef(!!initialClients);
@@ -63,14 +67,19 @@ export default function ClientesPage({ initialClients }: { initialClients?: Clie
       const data = await getClients();
       dispatch({ type: 'SET_CLIENTS', clients: data as ClientWithStats[] });
     } catch {
-      toast.error('Error al cargar clientas');
-      dispatch({ type: 'SET_LOADING', loading: false });
+      dispatch({ type: 'SET_ERROR', error: 'Error al cargar clientas' });
     }
   }
 
   useEffect(() => {
     if (loaded.current) { loaded.current = false; return; }
     load();
+  }, []);
+
+  // Auto-refresh every 60s, pause when tab hidden
+  useEffect(() => {
+    const interval = setInterval(load, 60000);
+    return () => clearInterval(interval);
   }, []);
 
   const openDetail = useCallback(async (client: ClientWithStats) => {
@@ -82,7 +91,7 @@ export default function ClientesPage({ initialClients }: { initialClients?: Clie
       dispatch({
         type: 'SET_VIEWING_CLIENT',
         client: fullClient as ClientWithStats,
-        appointments: appointments,
+        appointments: appointments as Appointment[],
       });
     } catch {
       toast.error('Error al cargar datos');
@@ -113,7 +122,7 @@ export default function ClientesPage({ initialClients }: { initialClients?: Clie
       dispatch({
         type: 'SET_VIEWING_CLIENT',
         client: updated as ClientWithStats,
-        appointments: updatedAppts as any[],
+        appointments: updatedAppts as Appointment[],
       });
     } catch {
       toast.error('Error al actualizar');
@@ -208,6 +217,14 @@ export default function ClientesPage({ initialClients }: { initialClients?: Clie
       } />
 
       <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-4">
+        {ui.error && (
+          <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm" role="alert">
+            <AlertTriangle className="size-4 flex-shrink-0" />
+            <span className="flex-1">{ui.error}</span>
+            <button onClick={() => dispatch({ type: 'SET_ERROR', error: null })} className="text-red-400 hover:text-red-600" aria-label="Descartar error">&times;</button>
+          </div>
+        )}
+
         <ClientFilters
           search={ui.search}
           statusFilter={ui.statusFilter}
@@ -243,8 +260,8 @@ export default function ClientesPage({ initialClients }: { initialClients?: Clie
         onClose={closeDetail}
         onEdit={openEdit}
         onDelete={handleDelete}
+        onViewDetail={() => { if (ui.viewingClient) { closeDetail(); push(`/clientes/${ui.viewingClient.id}`); } }}
         deleting={ui.deleting}
-        loading={ui.loading && ui.showDetailModal}
       />
 
       {ui.editingClient && (

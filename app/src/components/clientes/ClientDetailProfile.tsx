@@ -34,9 +34,9 @@ export function ClientDetailProfile({ client }: ClientDetailProfileProps) {
                 </a>
               )}
               {client.instagram && (
-                <span className="flex items-center gap-1">
+                <a href={`https://instagram.com/${client.instagram.replace(/^@/, '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-salon-600 transition-colors">
                   <Instagram className="size-3.5" />{client.instagram}
-                </span>
+                </a>
               )}
             </div>
           </div>

@@ -6,7 +6,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   const client = await getClientById(id);
   if (!client) return { title: 'Clienta no encontrada — Ara Zevallos Studio' };
-  return { title: `${(client as Client).name} — Clientas — Ara Zevallos Studio` };
+  return { title: `${client.name} — Clientas — Ara Zevallos Studio` };
 }
 
 export default async function ClienteDetailPage({ params }: { params: Promise<{ id: string }> }) {
