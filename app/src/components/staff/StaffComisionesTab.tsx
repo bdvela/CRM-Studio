@@ -190,6 +190,7 @@ export function StaffComisionesTab({
   type="number"
   placeholder="0"
   min={0}
+  max={svc.price}
   value={fixedAmount ?? ''}
                             onChange={(value) => {
                               setOverrides((prev) => ({
