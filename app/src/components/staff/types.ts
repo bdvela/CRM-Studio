@@ -124,6 +124,11 @@ export interface StaffAppointmentHistoryProps {
   appointments: Appointment[];
 }
 
+export interface StaffDetailQuickInfoProps {
+  member: StaffWithDetails;
+  commissionOverridesCount?: number;
+}
+
 export const FORM_INIT: StaffFormState = {
   name: '',
   phone: '',

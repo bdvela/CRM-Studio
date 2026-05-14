@@ -185,11 +185,12 @@ export function StaffComisionesTab({
                       <div className="flex items-center justify-between sm:justify-end gap-2">
                         <div className="flex items-center gap-1.5 sm:gap-2">
                           <span className="text-xs text-emerald-700 font-medium hidden sm:inline">Founder:</span>
-                          <Input
-                            className="w-20 sm:w-24 text-center text-sm"
-                            type="number"
-                            placeholder="0"
-                            value={fixedAmount ?? ''}
+<Input
+  className="w-20 sm:w-24 text-center text-sm"
+  type="number"
+  placeholder="0"
+  min={0}
+  value={fixedAmount ?? ''}
                             onChange={(value) => {
                               setOverrides((prev) => ({
                                 ...prev,

@@ -2,7 +2,6 @@
 
 import type { StaffAppointmentHistoryProps } from './types';
 import { formatDate, formatTime, formatCurrency } from '@/lib/utils';
-import { APPOINTMENT_STATUS_LABELS } from '@/types/database';
 import { Badge } from '@/components/ui/badge';
 import { CalendarDays, UserRound } from 'lucide-react';
 

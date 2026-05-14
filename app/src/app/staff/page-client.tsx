@@ -113,6 +113,8 @@ export default function StaffPage({ initialData }: {
     if (ui.submitting) return;
     if (!form.name.trim()) { toast.error('El nombre es obligatorio'); return; }
     if (!form.role_id) { toast.error('Selecciona un rol'); return; }
+    if (form.commission_pct < 0 || form.commission_pct > 100) { toast.error('La comisión debe estar entre 0% y 100%'); return; }
+    if (form.phone && form.phone.replace(/\s/g, '').length < 9) { toast.error('Teléfono inválido — debe tener al menos 9 dígitos'); return; }
 
     const normalizedPhone = normalizePeruPhone(form.phone);
     const formToSave = { ...form, phone: normalizedPhone };

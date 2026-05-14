@@ -1,10 +1,10 @@
 'use client';
 
-import type { StaffDetailProfileProps } from './types';
+import type { StaffDetailQuickInfoProps } from './types';
 import { formatDate } from '@/lib/utils';
-import { Briefcase } from 'lucide-react';
+import { Briefcase, Cake, Percent } from 'lucide-react';
 
-export function StaffDetailQuickInfo({ member }: StaffDetailProfileProps) {
+export function StaffDetailQuickInfo({ member, commissionOverridesCount }: StaffDetailQuickInfoProps) {
   return (
     <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm">
       <div className="px-5 py-4">
@@ -29,6 +29,24 @@ export function StaffDetailQuickInfo({ member }: StaffDetailProfileProps) {
             <div className="flex justify-between items-center py-2 border-b border-zinc-50">
               <span className="text-sm text-zinc-600">Horario</span>
               <span className="text-sm font-semibold text-zinc-900">{member.schedule}</span>
+            </div>
+          )}
+          {member.birthday_date && (
+            <div className="flex justify-between items-center py-2 border-b border-zinc-50">
+              <span className="text-sm text-zinc-600 flex items-center gap-1.5">
+                <Cake className="size-3.5 text-rose-400" aria-hidden="true" />
+                Cumpleaños
+              </span>
+              <span className="text-sm font-semibold text-zinc-900">{formatDate(member.birthday_date)}</span>
+            </div>
+          )}
+          {commissionOverridesCount !== undefined && commissionOverridesCount > 0 && (
+            <div className="flex justify-between items-center py-2 border-b border-zinc-50">
+              <span className="text-sm text-zinc-600 flex items-center gap-1.5">
+                <Percent className="size-3.5 text-amber-500" aria-hidden="true" />
+                Excepciones
+              </span>
+              <span className="text-sm font-semibold text-amber-600">{commissionOverridesCount}</span>
             </div>
           )}
           {member.staff_stats?.last_appointment && (

@@ -7,6 +7,7 @@ import {
   getStaffPerformance,
   getStaffTopServices,
   getStaffAppointments,
+  getCommissionOverrides,
 } from '@/lib/db/queries';
 import type { Appointment } from '@/types/database';
 import { Header } from '@/components/layout/shell';
@@ -50,19 +51,33 @@ export default function StaffDetailClient({
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [period, setPeriod] = useState<Period>('30d');
   const [loadingPerf, setLoadingPerf] = useState(false);
+  const [commissionOverridesCount, setCommissionOverridesCount] = useState(0);
 
   const loadStaff = useCallback(async () => {
-    if (initialMember) return;
     setLoading(true);
     try {
-      const m = await getStaffById(staffId);
+      const [m, overrides] = await Promise.all([
+        staffId ? getStaffById(staffId) : Promise.resolve(null),
+        staffId ? getCommissionOverrides(staffId) : Promise.resolve([]),
+      ]);
       setMember(m as StaffWithDetails | null);
+      setCommissionOverridesCount(overrides.length);
     } catch {
       // silent
     } finally {
       setLoading(false);
     }
-  }, [staffId, initialMember]);
+  }, [staffId]);
+
+  useEffect(() => {
+    if (initialMember) {
+      getCommissionOverrides(staffId).then((data) => {
+        setCommissionOverridesCount(data.length);
+      });
+      return;
+    }
+    loadStaff();
+  }, [loadStaff, staffId, initialMember]);
 
   const loadPerformance = useCallback(async () => {
     setLoadingPerf(true);
@@ -83,7 +98,6 @@ export default function StaffDetailClient({
     }
   }, [staffId, period]);
 
-  useEffect(() => { loadStaff(); }, [loadStaff]);
   useEffect(() => { if (member) loadPerformance(); }, [member, loadPerformance]);
 
   if (loading) {
@@ -168,7 +182,7 @@ export default function StaffDetailClient({
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <StaffDetailTopServices services={topServices} />
 
-          <StaffDetailQuickInfo member={member} />
+          <StaffDetailQuickInfo member={member} commissionOverridesCount={commissionOverridesCount} />
         </div>
 
         <StaffAppointmentHistory appointments={appointments} />
