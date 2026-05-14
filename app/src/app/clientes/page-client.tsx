@@ -9,7 +9,7 @@ import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { useConfirm } from '@/context/confirm-context';
 import { normalizePeruPhone } from '@/lib/utils';
-import { PAGE_SIZE, FORM_INIT } from '@/components/clientes/constants';
+import { PAGE_SIZE } from '@/components/clientes/constants';
 import type { ClientesUIState, ClientesUIAction, StatusFilter, ClientWithStats } from '@/components/clientes/types';
 import { ClientFilters } from '@/components/clientes/ClientFilters';
 import { ClientListContent } from '@/components/clientes/ClientListContent';
@@ -173,7 +173,7 @@ export default function ClientesPage({ initialClients }: { initialClients?: Clie
   }, [ui.visibleCount]);
 
   const filteredClients = useMemo(() => {
-    const bySearch = (ui.clients as ClientWithStats[]).filter((c) =>
+    const bySearch = ui.clients.filter((c) =>
       c.name.toLowerCase().includes(ui.search.toLowerCase()) ||
       (c.phone || '').includes(ui.search) ||
       (c.instagram || '').toLowerCase().includes(ui.search.toLowerCase())
