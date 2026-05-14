@@ -14,13 +14,6 @@ import { TrendingUp, TrendingDown, Link2 } from 'lucide-react';
 export const PaymentCard = memo(function PaymentCard({ payment, onClick }: PaymentCardProps) {
   const isIngreso = payment.type === 'ingreso';
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      onClick();
-    }
-  };
-
   const isVinculado = !!(payment.appointment_id || payment.client_id);
 
   const formattedDate = useMemo(() => formatDate(payment.date), [payment.date]);
@@ -28,14 +21,11 @@ export const PaymentCard = memo(function PaymentCard({ payment, onClick }: Payme
   return (
     <Card
       className={cn(
-        'border-l-4 cursor-pointer hover:shadow-sm transition-all',
+        'border-l-4 cursor-pointer hover:shadow-sm transition-shadow',
         isIngreso ? 'border-l-emerald-400' : 'border-l-red-300'
       )}
       onClick={onClick}
-      role="button"
-      tabIndex={0}
       aria-label={`${isIngreso ? 'Ingreso' : 'Egreso'}: ${payment.concept} - ${formatCurrency(payment.amount)}`}
-      onKeyDown={handleKeyDown}
     >
       <CardContent className="flex items-center gap-4 py-3.5">
         <div

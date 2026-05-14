@@ -135,7 +135,7 @@ export function ClientDetailModal({
                 <p className="text-xs sm:text-sm text-zinc-400">Sin citas registradas</p>
               </div>
             ) : (
-              <div className="p-2.5 sm:p-3 rounded-xl border border-zinc-100 hover:border-zinc-200 hover:bg-zinc-50/50 transition-all">
+              <div className="p-2.5 sm:p-3 rounded-xl border border-zinc-100 hover:border-zinc-200 hover:bg-zinc-50/50 transition-colors">
                 <div className="flex items-start justify-between gap-2 mb-1.5 sm:mb-2">
                   <p className="font-medium text-xs sm:text-sm text-zinc-900 flex-1 min-w-0 truncate">{latestAppt.title}</p>
                   <p className="text-xs sm:text-sm font-semibold text-zinc-900 flex-shrink-0">{formatCurrency(latestAppt.total_price)}</p>

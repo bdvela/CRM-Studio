@@ -18,7 +18,7 @@ export function DashboardStatCard({ icon, value, label, iconBgClass, iconClass, 
   return (
     <Comp
       {...(onClick ? { type: 'button' as const, onClick } : {})}
-      className={`rounded-2xl bg-white border border-zinc-100 p-5 shadow-sm hover:shadow-md transition-all ${onClick ? 'cursor-pointer active:scale-[0.98]' : ''}`}
+      className={`rounded-2xl bg-white border border-zinc-100 p-5 shadow-sm hover:shadow-md transition-shadow ${onClick ? 'cursor-pointer active:scale-[0.98]' : ''}`}
     >
       <div className="flex items-center justify-between mb-4">
         <div className={`size-10 rounded-xl flex items-center justify-center ${iconBgClass}`}>

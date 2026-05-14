@@ -625,44 +625,19 @@ npm run start
 | Servicios no cargan al editar cita | ✅ Fixeado | Solución de RLS |
 | params síncronos en Next.js 15+ | ✅ Fixeado | Refactor a `await params` + validación UUID |
 | Turbopack loop infinito (2 package-lock.json) | ✅ Fixeado | Eliminar package.json del root |
-| `--no-turbopack` flag no válido | ✅ Fixeado | Cambiar a `next dev` (turbopack por defecto) o `--webpack` |
-| Dashboard 564 líneas en un archivo | ✅ Fixeado | Extraído a 13 componentes en `components/dashboard/` |
-| Tipado `any` en dashboard | ✅ Fixeado | Interfaces dedicadas en `components/dashboard/types.ts` |
-| Sin tendencias vs semana anterior | ✅ Fixeado | Week-over-week en StatCards + sparkline SVG |
-| Sin visualización de datos | ✅ Fixeado | Sparkline + barras de ocupación + capacidad visual |
-| Sin auto-refresh | ✅ Fixeado | 60s auto-refresh con stale-while-revalidate |
-| Monthly report no pre-fetcheado | ✅ Fixeado | `getMonthlyReport` desde Server Component |
-| Componentes inline duplicados | ✅ Fixeado | `StatCard`, `TodayAppointments`, `UpcomingBirthdays` extraídos |
-| CalendarView 672 líneas | ✅ Fixeado | Split en 4 archivos (MonthView, WeekView, DayView, calendar-utils) |
-| Tipado `any` en citas | ✅ Fixeado | Tipos AppointmentWithDetails, CalendarAppointment, eliminación total de any |
-| Sin DayView en toolbar | ✅ Fixeado | Agregado botón "Día" en toolbar del calendario |
-| Accesibilidad en citas | ✅ Fixeado | ARIA roles, focus-visible, aria-labels, reduced-motion |
-| Sin skeleton/empty states calendario | ✅ Fixeado | Skeleton loading + empty state con CTA |
-| Sin React.memo en componentes citas | ✅ Fixeado | memo en Card, Form, Selector, Config, CalendarView |
-| Columna hora desalineada en calendario | ✅ Fixeado | grid-cols-[56px_repeat(7,1fr)] fijo |
-| Hardcodeo depósito | ✅ Fixeado | Usa constante DEPOSIT_AMOUNT = 20 |
-| Servicios 939 líneas en page-client.tsx | ✅ Fixeado | Extraído a 6 componentes en `components/servicios/` |
-| Precios con raw inputs | ✅ Fixeado | PriceSection usa `<Input leftPrefix>` en vez de raw `<input>` |
-| Sin error state en load | ✅ Fixeado | Banner rojo con role="alert" cuando falla la carga |
-| Sin sort en servicios | ✅ Fixeado | Sort alfabético con localeCompare |
-| Clientas 588+268 líneas en page-client.tsx | ✅ Fixeado | Extraído a 10 componentes en `components/clientes/` (856→407 lns total) |
-| Tipado `any` en clientes | ✅ Fixeado | Discriminated union en reducer, props tipadas, sin any |
-| Dos modales edit separados con campos inconsistentes | ✅ Fixeado | ClientFormModal unificado con detección de cambios |
-| Edit modal detail page sin campo status | ✅ Fixeado | ClientFormModal incluye todos los campos consistentemente |
-| Sin avatar degradado ni border status | ✅ Fixeado | Avatar rose→purple gradient, border-l-4 por estado |
-| Sin "Ver detalle completo" en modal de lista | ✅ Fixeado | Botón navega a `/clientes/[id]` |
-| Instagram no clickeable (modal y perfil) | ✅ Fixeado | Convertido a `<a target="_blank">` |
-| Empty state sin CTA | ✅ Fixeado | Botón "Registrar primera clienta" sin filtros activos |
-| "Ver más" afecta todos los grupos | ✅ Fixeado | Vista agrupada muestra todos los items sin paginación |
-| Sin error banner inline en fallo de carga | ✅ Fixeado | Banner `role="alert"` con botón descartar |
-| Sin auto-refresh periódico | ✅ Fixeado | Intervalo 60s con cleanup |
-| Skeleton muerto en ClientDetailModal | ✅ Fixeado | Eliminado junto con prop dead |
-| `as any[]` en appointments (type leak) | ✅ Fixeado | Cambiado a `as Appointment[]` |
-| "Editando" como título incompleto | ✅ Fixeado | Cambiado a `"Editando: {nombre}"` |
+| Filtros de Lista contaminaban datos del Calendario | ✅ Fixeado | Separar estado de filtros (listFilterArtist/Status) + filtrado client-side |
+| Todas/Hoy/Semana disparaban fetch al servidor | ✅ Fixeado | Filtro de periodo 100% client-side sobre dataset base |
+| CalendarView se re-montaba al cambiar Mes/Semana/Día | ✅ Fixeado | Eliminado `key={ui.view}`, los 3 views coexisten con CSS toggle |
+| Modales cargaban en bundle inicial | ✅ Fixeado | Lazy-load con `React.lazy` + `Suspense` (3 chunks separados) |
+| Intervalo del reloj corría con tab oculta | ✅ Fixeado | `visibilitychange` pausa/reanuda el setInterval de 60s |
+| Sin lazy-loading en modales pesados | ✅ Fixeado | AppointmentFormModal, ServiceSelectorModal, ServiceConfigModal |
+| Sin animación fluida al cambiar vista calendario | ✅ Fixeado | `animate-fadeIn` en cada view activo sin re-mount |
+| Skeleton de detalle no coincidía con layout real | ✅ Fixeado | Rediseño del skeleton en `citas/[id]/page-client.tsx` — ahora replica las 5 secciones reales (header, notes, balance grid 3-cols, services card, commissions card) en vez de bloques genéricos `h-16`/`h-24` |
+| Detalle de cita sin stagger animations | ✅ Fixeado | Cada sección envuelta en `animate-fadeInUp` con stagger 1-4 (50ms delay) |
 
 ---
 
 ## Última Actualización
 - **Fecha**: 14 Mayo 2026
 - **Rama**: `main`
-- **Cambios recientes**: Refactor completo del módulo Staff. Extraídos 12 componentes a `components/staff/` (page-client.tsx 1079→308 lns, [id]/page-client.tsx 430→179 lns). Tipado fuerte eliminando `any` mediante interfaces dedicadas (StaffWithDetails, StaffFormState, StaffPerformance, StaffTopService). Accesibilidad: ARIA labels en avatar y cards, aria-live en resultados, role/teclado en cards, role progressbar en distribución. Performance: React.memo en StaffCard/StaffFilters, useMemo en filtered, useCallback en handlers del modal. UI/UX: avatar degradado rose→purple, border-t-4 del color del role (role.color), Founder con anillo amber, skeleton coincidente con cards reales, empty state con CTA, stats con iconos, distribución con barra animada. Extraído StaffDetailQuickInfo del inline del detalle. Botón Editar en StaffDetailProfile. Validaciones: nombre, rol, teléfono 9 dígitos, comisión 0-100%, override min=0 max=precio_servicio. Cumpleaños visible en detalle con icono Cake. Conteo de excepciones de comisión en detalle con icono Percent.
+- **Cambios recientes**: (1) Skeleton de `citas/[id]` rediseñado para replicar exactamente la estructura real de la vista detalle: header card → notes card → balance grid 3-cols → services card → commissions card (antes 2 bloques genéricos `h-16`/`h-24` que no representaban ningún componente real). (2) Stagger animations en vista detalle: cada sección con `animate-fadeInUp` y 50ms de delay incremental (stagger-1 a stagger-4), remplazando el `animate-in fade-in` genérico del contenedor.

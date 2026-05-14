@@ -17,7 +17,7 @@ export function StaffDetailDistribution({ performance }: StaffDetailDistribution
         </div>
         <div className="w-full h-3 bg-zinc-100 rounded-full overflow-hidden" role="progressbar" aria-valuenow={artistPct} aria-valuemin={0} aria-valuemax={100} aria-label={`Artista ${artistPct}%, Founder ${founderPct}%`}>
           <div
-            className="h-full bg-accent-500 rounded-full transition-all duration-500"
+            className="h-full bg-accent-500 rounded-full transition-[width] duration-500"
             style={{ width: `${artistPct}%` }}
           />
         </div>

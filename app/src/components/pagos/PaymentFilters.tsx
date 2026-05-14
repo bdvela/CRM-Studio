@@ -47,7 +47,7 @@ export const PaymentFilters = memo(function PaymentFilters({
             role="radio"
             aria-checked={filterType === opt.value}
             className={cn(
-              'px-4 py-2 text-sm font-medium rounded-lg transition-all',
+              'px-4 py-2 text-sm font-medium rounded-lg transition-colors',
               filterType === opt.value
                 ? 'bg-white text-zinc-900 shadow-sm'
                 : 'text-zinc-500 hover:text-zinc-700'

@@ -118,7 +118,7 @@ export function Select({
               'absolute left-0 right-0 z-50',
               'max-h-70 overflow-y-auto',
               'bg-white border border-zinc-200 rounded-xl shadow-xl',
-              'animate-in fade-in-0 zoom-in-95'
+               'animate-in fade-in-0 zoom-in-95 origin-top'
             )}
             style={{ maxHeight: '280px' }}
           >

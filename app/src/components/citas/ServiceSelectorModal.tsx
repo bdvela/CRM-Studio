@@ -61,7 +61,7 @@ function selectorReducer(state: SelectorState, action: SelectorAction): Selector
   }
 }
 
-function ServiceSelectorHeader({
+const ServiceSelectorHeader = memo(function ServiceSelectorHeader({
   search,
   categoryFilter,
   categoriesForFilter,
@@ -128,7 +128,7 @@ function ServiceSelectorHeader({
       )}
     </>
   );
-}
+});
 
 export const ServiceSelectorModalContent = memo(function ServiceSelectorModalContent({
   open, services, staff,
@@ -236,7 +236,7 @@ export const ServiceSelectorModalContent = memo(function ServiceSelectorModalCon
         onCategoryFilterChange={(categoryFilter) => dispatchSelector({ type: 'SET_CATEGORY_FILTER', categoryFilter })}
       />
 
-      <div className="space-y-1.5 max-h-80 overflow-y-auto">
+      <div className="space-y-1.5 max-h-64 sm:max-h-80 overflow-y-auto">
         {filteredServices.length === 0 ? (
           <div className="py-8 text-center text-zinc-400 text-sm">
             No hay servicios que coincidan

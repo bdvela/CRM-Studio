@@ -13,8 +13,8 @@ export function dataReducer(state: DataState, action: DataAction): DataState {
 export const initialUiState: UiState = {
   viewMode: 'list',
   listFilter: 'list',
-  filterArtist: '',
-  filterStatus: '',
+  listFilterArtist: '',
+  listFilterStatus: '',
   showModal: false,
   showDetail: false,
   showServiceConfig: false,
@@ -28,8 +28,8 @@ export function uiReducer(state: UiState, action: UiAction): UiState {
   switch (action.type) {
     case 'SET_VIEW_MODE': return { ...state, viewMode: action.viewMode };
     case 'SET_LIST_FILTER': return { ...state, listFilter: action.listFilter };
-    case 'SET_FILTER_ARTIST': return { ...state, filterArtist: action.filterArtist };
-    case 'SET_FILTER_STATUS': return { ...state, filterStatus: action.filterStatus };
+    case 'SET_LIST_FILTER_ARTIST': return { ...state, listFilterArtist: action.listFilterArtist };
+    case 'SET_LIST_FILTER_STATUS': return { ...state, listFilterStatus: action.listFilterStatus };
     case 'SET_SHOW_MODAL': return { ...state, showModal: action.showModal };
     case 'SET_SHOW_DETAIL': return { ...state, showDetail: action.showDetail };
     case 'SET_SHOW_SERVICE_CONFIG': return { ...state, showServiceConfig: action.showServiceConfig };
@@ -37,7 +37,7 @@ export function uiReducer(state: UiState, action: UiAction): UiState {
     case 'SET_OVERLAP_WARNING': return { ...state, overlapWarning: action.overlapWarning };
     case 'SET_PENDING_DATE': return { ...state, pendingDate: action.pendingDate };
     case 'SET_ADVANCE_PAID': return { ...state, advancePaid: action.advancePaid };
-    case 'CLEAR_FILTERS': return { ...state, filterArtist: '', filterStatus: '' };
+    case 'CLEAR_LIST_FILTERS': return { ...state, listFilterArtist: '', listFilterStatus: '' };
     default: return state;
   }
 }

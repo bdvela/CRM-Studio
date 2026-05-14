@@ -5,6 +5,7 @@ import type { ServiceConfigModalContentProps } from './types';
 import { getAvailableArtistsForService } from './helpers';
 import { formatCurrency, cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Select } from '@/components/ui/select';
 import { Clock, Sparkles, Trash2 } from 'lucide-react';
 
 type ConfigState = { artistId: string; customPrice: number | null };
@@ -61,17 +62,16 @@ export const ServiceConfigModalContent = memo(function ServiceConfigModalContent
     <div className="space-y-4">
       <div className="space-y-1">
         <label htmlFor="config-artist" className="text-sm font-medium text-zinc-700">Artista</label>
-        <select
+        <Select
           id="config-artist"
           value={configState.artistId}
-          onChange={(e) => dispatchConfig({ type: 'SET_ARTIST', artistId: e.target.value })}
-          className="w-full text-sm border border-zinc-200 rounded-xl px-3 py-2.5 bg-white focus:ring-2 focus:ring-salon-500 focus:border-transparent"
-        >
-          <option value="">Sin artista</option>
-          {availableArtists.map((s) => (
-            <option key={s.id} value={s.id}>{s.name}</option>
-          ))}
-        </select>
+          onChange={(v) => dispatchConfig({ type: 'SET_ARTIST', artistId: v })}
+          placeholder="Sin artista"
+          options={[
+            { value: '', label: 'Sin artista' },
+            ...availableArtists.map((s) => ({ value: s.id, label: s.name })),
+          ]}
+        />
         {isSelectedArtistSuggested && (
           <p className="text-xs text-salon-600 flex items-center gap-1">
             <Sparkles className="size-3" /> Sugerida para este servicio
@@ -98,6 +98,7 @@ export const ServiceConfigModalContent = memo(function ServiceConfigModalContent
             onChange={(e) => {
               dispatchConfig({ type: 'SET_PRICE', price: e.target.value ? parseFloat(e.target.value) : 0 });
             }}
+            onFocus={(e) => e.target.select()}
             placeholder={isVariablePrice
               ? (svc.price_from ? `Desde ${svc.price_from}` : '0')
               : (svc.price ? `${svc.price}` : '0')

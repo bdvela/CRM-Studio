@@ -1,12 +1,13 @@
 'use client';
 
 import { format, isToday, set, getHours, getMinutes } from 'date-fns';
+import { memo } from 'react';
 import { cn } from '@/lib/utils';
 import { isAppointmentPastOrCompleted } from '@/lib/utils';
 import { getApptColor, isPastCalendarDay, HOURS } from './calendar-utils';
 import type { CalendarAppointment } from './types';
 
-export function WeekView({ weekDays, formattedApptsByHour, now, onEmptyDayClick, onApptClick, onDragStart, onDragOver, onDrop }: {
+export const WeekView = memo(function WeekView({ weekDays, formattedApptsByHour, now, onEmptyDayClick, onApptClick, onDragStart, onDragOver, onDrop }: {
   weekDays: Date[];
   formattedApptsByHour: Map<string, Map<number, CalendarAppointment[]>>;
   now: Date;
@@ -21,7 +22,7 @@ export function WeekView({ weekDays, formattedApptsByHour, now, onEmptyDayClick,
   return (
     <div className="overflow-x-auto rounded-2xl border border-zinc-100">
     <div className="min-w-0 bg-white">
-      <div className="grid grid-cols-[56px_repeat(7,1fr)] border-b border-zinc-100">
+      <div className="grid grid-cols-[44px_repeat(7,1fr)] sm:grid-cols-[56px_repeat(7,1fr)] border-b border-zinc-100">
         <div className="p-2 text-xs text-zinc-400 border-r border-zinc-100 text-right pr-2">Hora</div>
         {weekDays.map((day, i) => (
           <div key={day.toISOString()} className={cn(
@@ -42,7 +43,7 @@ export function WeekView({ weekDays, formattedApptsByHour, now, onEmptyDayClick,
       <div className="relative" style={{ maxHeight: 'calc(100dvh - 340px)', overflowY: 'auto' }}>
         {weekDays.some(d => isToday(d)) && (
           <div
-            className="absolute left-16 right-0 z-10 pointer-events-none"
+            className="absolute left-11 sm:left-16 right-0 z-10 pointer-events-none"
             style={{ top: `${(getHours(now) - 7) * 64 + (getMinutes(now) / 60) * 64}px` }}
           >
             <div className="flex items-center">
@@ -53,7 +54,7 @@ export function WeekView({ weekDays, formattedApptsByHour, now, onEmptyDayClick,
         )}
 
         {HOURS.map(hour => (
-          <div key={hour} className="grid grid-cols-[56px_repeat(7,1fr)] border-b border-zinc-50 min-h-[64px]">
+          <div key={hour} className="grid grid-cols-[44px_repeat(7,1fr)] sm:grid-cols-[56px_repeat(7,1fr)] border-b border-zinc-50 min-h-[64px]">
             <div className="p-2 text-xs text-zinc-300 border-r border-zinc-100 text-right pr-2 relative -top-2">
               {String(hour).padStart(2, '0')}:00
             </div>
@@ -106,7 +107,7 @@ export function WeekView({ weekDays, formattedApptsByHour, now, onEmptyDayClick,
                         onDragStart={(e) => onDragStart(appt, e)}
                         onClick={(e) => onApptClick(appt, e)}
                         className={cn(
-                          'absolute left-0.5 right-0.5 text-left overflow-hidden transition-all',
+                          'absolute left-0.5 right-0.5 text-left overflow-hidden transition-shadow transition-colors',
                           'rounded-lg border-l-[4px] shadow-sm hover:shadow-md',
                           colors.bg, colors.border, colors.text,
                           isDead && 'opacity-50 line-through',
@@ -150,4 +151,4 @@ export function WeekView({ weekDays, formattedApptsByHour, now, onEmptyDayClick,
     </div>
     </div>
   );
-}
+});

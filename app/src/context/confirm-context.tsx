@@ -109,7 +109,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                 <button
                   type="button"
                   onClick={handleConfirm}
-                  className={`flex-1 px-4 py-2.5 text-sm font-medium text-white rounded-xl transition-colors ${styles.button}`}
+                  className={`flex-1 px-4 py-2.5 text-sm font-medium text-white rounded-xl transition-colors whitespace-nowrap ${styles.button}`}
                 >
                   {dialog.confirmText || 'Confirmar'}
                 </button>

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { getCommissionReport } from '@/lib/db/queries';
 import type { CommissionReportRow } from '@/types/database';
 import { Card, CardContent } from '@/components/ui/card';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { StatCard } from '@/components/ui/stat-card';
@@ -103,9 +104,9 @@ const ComisionesTab = memo(function ComisionesTab() {
           {filtered.map((row) => {
             const isFounder = row.artist_role_name === 'Dueña' || row.artist_role_name === 'Founder';
             return (
-              <Card key={row.artist_id || 'no-artist'}
+              <div key={row.artist_id || 'no-artist'}
                 onClick={() => row.artist_id ? push(`/staff/${row.artist_id}`) : undefined}
-                className="hover:shadow-md transition-all cursor-pointer w-full box-border"
+                className="rounded-2xl border border-zinc-200 bg-white shadow-sm hover:shadow-md transition-all cursor-pointer w-full box-border"
                 role="button"
                 tabIndex={0}
                 aria-label={`${row.artist_name || 'Sin artista'}: ${formatCurrency(row.total_artist_commission)} de comisión`}
@@ -115,7 +116,7 @@ const ComisionesTab = memo(function ComisionesTab() {
                     push(`/staff/${row.artist_id}`);
                   }
                 }}>
-                <CardContent className="py-4 sm:py-5 px-3 sm:px-4">
+                <div className="py-4 sm:py-5 px-3 sm:px-4">
                   <div className="flex items-start gap-3 sm:gap-4">
                     <div className={`size-10 sm:size-12 rounded-full flex items-center justify-center text-base sm:text-lg font-bold flex-shrink-0 ${
                       isFounder ? 'bg-amber-100 text-amber-600' : 'bg-accent-100 text-accent-600'
@@ -154,8 +155,8 @@ const ComisionesTab = memo(function ComisionesTab() {
                       )}
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             );
           })}
         </div>

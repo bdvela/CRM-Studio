@@ -45,7 +45,7 @@ export function ClientFormModal({
         dispatch({ ...FORM_INIT });
       }
     }
-  }, [open, initialData]);
+  }, [open]);
 
   const hasChanges = useMemo(() => {
     if (!isEdit || !initialData) return true;

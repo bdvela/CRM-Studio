@@ -12,7 +12,7 @@ export function AppointmentDetailActions({
   onMarkAsNoShow,
 }: AppointmentDetailActionsProps) {
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm">
+    <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm animate-fadeIn">
       <div className="px-5 py-4 space-y-3">
         {appointment.status === 'programada' && (
           <>

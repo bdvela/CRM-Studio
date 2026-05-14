@@ -63,8 +63,10 @@ export function StaffListContent({
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" aria-live="polite" aria-label="Lista de miembros del staff">
-      {members.map((member) => (
-        <StaffCard key={member.id} member={member} onEdit={onEdit} />
+      {members.map((member, i) => (
+        <div key={member.id} className="animate-fadeInUp" style={{ animationDelay: `${Math.min(i * 50, 300)}ms`, opacity: 0 }}>
+          <StaffCard member={member} onEdit={onEdit} />
+        </div>
       ))}
     </div>
   );

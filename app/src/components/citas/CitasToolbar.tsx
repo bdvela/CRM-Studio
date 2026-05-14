@@ -6,7 +6,7 @@ import { APPOINTMENT_STATUS_LABELS } from '@/types/database';
 import { Select } from '@/components/ui/select';
 
 export function CitasToolbar({
-  viewMode, listFilter, filterArtist, filterStatus,
+  viewMode, listFilter, listFilterArtist, listFilterStatus,
   staff, appointments,
   onViewModeChange, onListFilterChange,
   onFilterArtistChange, onFilterStatusChange, onClearFilters,
@@ -26,7 +26,7 @@ export function CitasToolbar({
         <button
           onClick={() => onListFilterChange('list')}
           className={cn(
-            'flex-1 md:flex-none px-3 py-2 text-sm font-medium rounded-lg transition-all',
+            'flex-1 md:flex-none px-3 py-2 text-sm font-medium rounded-lg transition-colors',
             listFilter === 'list' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'
           )}
         >
@@ -35,7 +35,7 @@ export function CitasToolbar({
         <button
           onClick={() => onListFilterChange('day')}
           className={cn(
-            'flex-1 md:flex-none px-3 py-2 text-sm font-medium rounded-lg transition-all',
+            'flex-1 md:flex-none px-3 py-2 text-sm font-medium rounded-lg transition-colors',
             listFilter === 'day' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'
           )}
         >
@@ -44,7 +44,7 @@ export function CitasToolbar({
         <button
           onClick={() => onListFilterChange('week')}
           className={cn(
-            'flex-1 md:flex-none px-3 py-2 text-sm font-medium rounded-lg transition-all',
+            'flex-1 md:flex-none px-3 py-2 text-sm font-medium rounded-lg transition-colors',
             listFilter === 'week' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'
           )}
         >
@@ -54,7 +54,7 @@ export function CitasToolbar({
 
       <div className="w-full md:w-48 lg:w-56">
         <Select
-          value={filterArtist}
+          value={listFilterArtist}
           onChange={onFilterArtistChange}
           options={artistOptions}
           placeholder="Todas las artistas"
@@ -63,7 +63,7 @@ export function CitasToolbar({
 
       <div className="w-full md:w-48 lg:w-56">
         <Select
-          value={filterStatus}
+          value={listFilterStatus}
           onChange={onFilterStatusChange}
           options={statusOptions}
           placeholder="Todos los estados"
@@ -71,7 +71,7 @@ export function CitasToolbar({
       </div>
 
       <div className="flex items-center justify-between gap-3 w-full">
-        {(filterArtist || filterStatus) ? (
+        {(listFilterArtist || listFilterStatus) ? (
           <button
             onClick={onClearFilters}
             className="text-xs text-salon-600 hover:text-salon-700 font-medium"

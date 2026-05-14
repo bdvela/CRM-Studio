@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { getClientById, getAppointments, updateClient, deleteClient } from '@/lib/db/queries';
 import type { Client, ClientInsert, Appointment } from '@/types/database';
@@ -81,6 +81,16 @@ export default function ClienteDetailClient({
     }
   }, [client, confirm, push]);
 
+  const formInitialData = useMemo(() => client ? {
+    name: client.name,
+    phone: client.phone || '',
+    email: client.email || '',
+    instagram: client.instagram || '',
+    status: client.status,
+    notes: client.notes || '',
+    photo_url: client.photo_url,
+  } as ClientInsert : undefined, [client]);
+
   if (!client) {
     return (
       <>
@@ -128,15 +138,7 @@ export default function ClienteDetailClient({
         open={editing}
         onClose={() => setEditing(false)}
         onSave={handleEditSave}
-        initialData={{
-          name: client.name,
-          phone: client.phone || '',
-          email: client.email || '',
-          instagram: client.instagram || '',
-          status: client.status,
-          notes: client.notes || '',
-          photo_url: client.photo_url,
-        }}
+        initialData={formInitialData}
         title="Editar clienta"
         submitting={saving}
       />

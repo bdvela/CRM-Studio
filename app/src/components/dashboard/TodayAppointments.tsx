@@ -99,7 +99,7 @@ export function TodayAppointments({ appointments, onNavigate }: Props) {
                   role="button"
                   tabIndex={0}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onNavigate('/citas'); }}
-                  className="flex items-center gap-4 p-3 rounded-xl hover:bg-zinc-50 transition-all cursor-pointer group active:scale-[0.99]"
+                  className="flex items-center gap-4 p-3 rounded-xl hover:bg-zinc-50 transition-colors cursor-pointer group active:scale-[0.99]"
                 >
                   <div className="text-center w-14 flex-shrink-0">
                     <p className="text-sm font-bold text-zinc-900">{formatTime(appt.start_time)}</p>

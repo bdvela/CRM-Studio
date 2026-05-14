@@ -48,7 +48,7 @@ export const AppointmentFormModalContent = memo(function AppointmentFormModalCon
         <button
           type="button"
           onClick={onOpenServiceSelector}
-          className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-zinc-300 text-zinc-600 hover:border-salon-300 hover:text-salon-600 hover:bg-salon-50 transition-all"
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-zinc-300 text-zinc-600 hover:border-salon-300 hover:text-salon-600 hover:bg-salon-50 transition-colors"
         >
           <Plus className="size-5" />
           <span className="text-sm font-medium">Agregar servicio</span>

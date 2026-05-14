@@ -30,7 +30,7 @@ export function StaffOccupancy({ staff }: Props) {
             <div className="flex-1">
               <div className="w-full bg-zinc-100 rounded-full h-2 overflow-hidden">
                 <div
-                  className={`h-full rounded-full transition-all duration-700 ease-out ${capacityColor(member.capacityPercent)}`}
+                  className={`h-full rounded-full transition-[width] duration-700 ease-out ${capacityColor(member.capacityPercent)}`}
                   style={{ width: `${Math.min(member.capacityPercent, 100)}%` }}
                 />
               </div>

@@ -57,7 +57,7 @@ export function WelcomeBanner({ todayAppointments }: { todayAppointments: { tota
             </div>
             <div className="w-full bg-white/10 rounded-full h-1.5 overflow-hidden">
               <div
-                className={`h-full rounded-full transition-all duration-700 ease-out ${getOccupancyColor(capacityPercent)}`}
+                className={`h-full rounded-full transition-[width] duration-700 ease-out ${getOccupancyColor(capacityPercent)}`}
                 style={{ width: `${capacityPercent}%` }}
               />
             </div>

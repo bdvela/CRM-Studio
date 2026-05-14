@@ -9,6 +9,7 @@ import { isPastCalendarDay } from './calendar-utils';
 import { MonthView } from './MonthView';
 import { WeekView } from './WeekView';
 import { DayView } from './DayView';
+import { useRouter } from 'next/navigation';
 import { AppointmentDetail } from '@/components/citas/AppointmentDetail';
 import type { AppointmentWithDetails, CalendarAppointment } from './types';
 import { toast } from 'sonner';
@@ -41,6 +42,7 @@ function calendarUIReducer(state: CalendarUIState, action: Partial<CalendarUISta
 }
 
 export const CalendarView = memo(function CalendarView({ appointments, staff, onEdit, onCancel, onNew, onUpdateDate, onAdvanceStatus, onMarkAsNoShow }: CalendarViewProps) {
+  const { push } = useRouter();
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [ui, dispatchUI] = useReducer(calendarUIReducer, CALENDAR_UI_INIT);
   const draggedAppt = useRef<CalendarAppointment | null>(null);
@@ -49,10 +51,24 @@ export const CalendarView = memo(function CalendarView({ appointments, staff, on
     return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   }, []);
   const [now, setNow] = useState(() => new Date());
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 60000);
-    return () => clearInterval(id);
+    const startTimer = () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      intervalRef.current = setInterval(() => setNow(new Date()), 60000);
+    };
+    const stopTimer = () => {
+      if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
+    };
+    const onVisibility = () => { document.hidden ? stopTimer() : startTimer(); };
+
+    document.addEventListener('visibilitychange', onVisibility);
+    startTimer();
+    return () => {
+      stopTimer();
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, []);
 
   const monthDays = useMemo(() => {
@@ -186,7 +202,7 @@ export const CalendarView = memo(function CalendarView({ appointments, staff, on
                 key={v}
                 onClick={() => dispatchUI({ view: v })}
                 className={cn(
-                   'flex-1 sm:flex-none px-3 sm:px-4 py-1.5 sm:py-2 text-sm font-medium rounded-lg transition-all',
+                   'flex-1 sm:flex-none px-3 sm:px-4 py-1.5 sm:py-2 text-sm font-medium rounded-lg transition-colors',
                    ui.view === v ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'
                  )}
               >
@@ -224,8 +240,8 @@ export const CalendarView = memo(function CalendarView({ appointments, staff, on
           </div>
        </div>
 
-      <div key={ui.view} className="animate-fadeIn">
-      {ui.view === 'month' ? (
+      <div>
+      <div className={ui.view === 'month' ? 'block animate-fadeIn' : 'hidden'}>
         <MonthView
           monthDays={monthDays}
           formattedAppts={formattedAppts}
@@ -235,7 +251,8 @@ export const CalendarView = memo(function CalendarView({ appointments, staff, on
           onEmptyDayClick={handleEmptyDayClick}
           onApptClick={handleApptClick}
         />
-      ) : ui.view === 'week' ? (
+      </div>
+      <div className={ui.view === 'week' ? 'block animate-fadeIn' : 'hidden'}>
         <WeekView
           weekDays={weekDays}
           formattedApptsByHour={formattedApptsByHour}
@@ -246,7 +263,8 @@ export const CalendarView = memo(function CalendarView({ appointments, staff, on
           onDragOver={handleDragOver}
           onDrop={handleDrop}
         />
-      ) : (
+      </div>
+      <div className={ui.view === 'day' ? 'block animate-fadeIn' : 'hidden'}>
         <DayView
           currentDate={currentDate}
           formattedApptsByHour={formattedApptsByHour}
@@ -257,7 +275,7 @@ export const CalendarView = memo(function CalendarView({ appointments, staff, on
           onDragOver={handleDragOver}
           onDrop={handleDrop}
         />
-      )}
+      </div>
 
       </div>
       {ui.showPopover && ui.selectedAppt && (
@@ -268,6 +286,7 @@ export const CalendarView = memo(function CalendarView({ appointments, staff, on
           onCancel={(appt) => { onCancel(appt); }}
           onAdvanceStatus={(appt) => { onAdvanceStatus?.(appt); }}
           onMarkAsNoShow={(appt) => { onMarkAsNoShow?.(appt); }}
+          onViewDetail={(appt) => { push(`/citas/${appt.id}`); }}
         />
       )}
     </div>

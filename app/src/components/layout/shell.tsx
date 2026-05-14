@@ -41,7 +41,7 @@ function SidebarNav({ collapsed, onNavClick }: { collapsed: boolean; onNavClick?
             prefetch
             onClick={onNavClick}
             className={cn(
-              'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
+              'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors',
               isActive ? 'bg-salon-50 text-salon-700' : 'text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900',
               collapsed && 'justify-center'
             )}
@@ -66,6 +66,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (isCalendarPage) setSidebarCollapsed(true);
   }, [isCalendarPage]);
+
+  useEffect(() => {
+    const noop = () => {};
+    document.addEventListener('touchstart', noop, { passive: true });
+    return () => document.removeEventListener('touchstart', noop);
+  }, []);
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -166,15 +172,15 @@ export function MobileNav() {
               href={item.href}
               prefetch
               className={cn(
-                'flex flex-col items-center justify-center gap-0.5 py-1.5 px-3 rounded-xl min-w-[52px] transition-all duration-200',
+                'flex flex-col items-center justify-center gap-0.5 py-1.5 px-3 rounded-xl min-w-[52px] transition-colors duration-200',
                 isActive
                   ? 'text-salon-600 bg-salon-100/60 shadow-inner'
                   : 'text-zinc-400 hover:text-zinc-600'
               )}
             >
-              <item.icon className={cn('size-5 transition-all duration-200', isActive && 'scale-110')} />
+              <item.icon className={cn('size-5 transition-transform duration-200', isActive && 'scale-110')} />
               <span className={cn(
-                'text-[10px] font-medium truncate w-full text-center transition-all duration-200',
+                'text-[10px] font-medium truncate w-full text-center transition-colors duration-200',
                 isActive && 'font-semibold'
               )}>{item.label}</span>
             </Link>

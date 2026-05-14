@@ -85,7 +85,7 @@ export function ServiceListContent({
           </CardContent>
         </Card>
       ) : categoryFilter === 'all' ? (
-        <div className="space-y-6 animate-fadeIn" key={`${categoryFilter}-${search}`}>
+        <div className="space-y-6" key={`${categoryFilter}-${search}`}>
           {Object.entries(grouped).map(([category, svcs]) => {
             const catColor = svcs[0]?.category?.color || '#6B7280';
             return (
@@ -95,15 +95,15 @@ export function ServiceListContent({
                   <span className="text-xs text-zinc-400">({svcs.length})</span>
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {svcs.map((svc) => <ServiceCard key={svc.id} service={svc} onClick={openEdit} />)}
+                  {svcs.map((svc, i) => <div key={svc.id} className="animate-fadeInUp" style={{ animationDelay: `${Math.min(i * 50, 300)}ms`, opacity: 0 }}><ServiceCard service={svc} onClick={openEdit} /></div>)}
                 </div>
               </div>
             );
           })}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 animate-fadeIn" key={`${categoryFilter}-${search}`}>
-          {filtered.map((svc) => <ServiceCard key={svc.id} service={svc} onClick={openEdit} />)}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" key={`${categoryFilter}-${search}`}>
+          {filtered.map((svc, i) => <div key={svc.id} className="animate-fadeInUp" style={{ animationDelay: `${Math.min(i * 50, 300)}ms`, opacity: 0 }}><ServiceCard service={svc} onClick={openEdit} /></div>)}
         </div>
       )}
     </div>

@@ -181,7 +181,7 @@ export interface Appointment {
   overlap_detected: boolean;
   created_at: string;
   updated_at: string;
-  client?: { name: string; phone: string | null };
+  client?: { name: string; phone: string | null; instagram?: string | null };
   artist?: { name: string; photo_url: string | null };
   appointment_services?: Array<{
     id: string;

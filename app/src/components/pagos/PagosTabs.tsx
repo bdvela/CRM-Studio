@@ -26,7 +26,7 @@ export const PagosTabs = memo(function PagosTabs({ activeTab, onTabChange }: Pag
           role="tab"
           aria-selected={activeTab === tab.id}
           className={cn(
-            'flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all whitespace-nowrap',
+            'flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors whitespace-nowrap',
             activeTab === tab.id
               ? 'bg-white text-zinc-900 shadow-sm'
               : 'text-zinc-500 hover:text-zinc-700'

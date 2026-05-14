@@ -7,7 +7,7 @@ import type {
   StaffMember,
 } from '@/types/database';
 
-type ListFilter = 'list' | 'day' | 'week';
+export type ListFilter = 'list' | 'day' | 'week';
 export type ViewMode = 'list' | 'calendar';
 
 export type AppointmentServiceWithDetails = NonNullable<DBAppointment['appointment_services']>[number];
@@ -62,8 +62,8 @@ export interface ServiceSelectorModalContentProps {
 export interface CitasToolbarProps {
   viewMode: ViewMode;
   listFilter: ListFilter;
-  filterArtist: string;
-  filterStatus: string;
+  listFilterArtist: string;
+  listFilterStatus: string;
   staff: StaffMember[];
   appointments: AppointmentWithDetails[];
   onViewModeChange: (mode: ViewMode) => void;
@@ -132,8 +132,8 @@ export type DataAction =
 export type UiState = {
   viewMode: ViewMode;
   listFilter: ListFilter;
-  filterArtist: string;
-  filterStatus: string;
+  listFilterArtist: string;
+  listFilterStatus: string;
   showModal: boolean;
   showDetail: boolean;
   showServiceConfig: boolean;
@@ -146,8 +146,8 @@ export type UiState = {
 export type UiAction =
   | { type: 'SET_VIEW_MODE'; viewMode: ViewMode }
   | { type: 'SET_LIST_FILTER'; listFilter: ListFilter }
-  | { type: 'SET_FILTER_ARTIST'; filterArtist: string }
-  | { type: 'SET_FILTER_STATUS'; filterStatus: string }
+  | { type: 'SET_LIST_FILTER_ARTIST'; listFilterArtist: string }
+  | { type: 'SET_LIST_FILTER_STATUS'; listFilterStatus: string }
   | { type: 'SET_SHOW_MODAL'; showModal: boolean }
   | { type: 'SET_SHOW_DETAIL'; showDetail: boolean }
   | { type: 'SET_SHOW_SERVICE_CONFIG'; showServiceConfig: boolean }
@@ -155,4 +155,4 @@ export type UiAction =
   | { type: 'SET_OVERLAP_WARNING'; overlapWarning: string | null }
   | { type: 'SET_PENDING_DATE'; pendingDate: Date | null }
   | { type: 'SET_ADVANCE_PAID'; advancePaid: boolean }
-  | { type: 'CLEAR_FILTERS' };
+  | { type: 'CLEAR_LIST_FILTERS' };

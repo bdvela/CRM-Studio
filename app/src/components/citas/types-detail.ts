@@ -5,8 +5,10 @@ import type { AppointmentWithDetails } from './types';
 
 export interface AppointmentDetailHeaderProps {
   appointment: AppointmentWithDetails;
-  onBack: () => void;
   onEdit: () => void;
+  onCancel: () => void;
+  onAdvanceStatus: () => void;
+  onMarkAsNoShow: () => void;
   onGoToClient: (clientId: string) => void;
 }
 

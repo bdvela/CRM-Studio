@@ -20,7 +20,7 @@ export function Checkbox({ checked, onChange, label, disabled, className }: Chec
       <div className="relative flex-shrink-0">
         <div
           className={cn(
-            'size-5 rounded-lg border-2 transition-all duration-200',
+            'size-5 rounded-lg border-2 transition-colors duration-200',
             'flex items-center justify-center',
             checked 
               ? 'bg-salon-500 border-salon-500' 

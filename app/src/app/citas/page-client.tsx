@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState, useRef, useReducer, useMemo, useCallback } from 'react';
+import { endOfWeek, isSameDay, startOfWeek } from 'date-fns';
+import { useEffect, useState, useRef, useReducer, useMemo, useCallback, memo, lazy, Suspense } from 'react';
 import { getAppointments, getClients, getStaff, getServices } from '@/lib/db/queries';
 import { useRouter } from 'next/navigation';
 import type { Client, Service, StaffMember } from '@/types/database';
@@ -10,17 +11,32 @@ import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { CalendarView } from '@/components/citas/CalendarView';
 import { AppointmentCard } from '@/components/citas/AppointmentCard';
-import { AppointmentFormModalContent } from '@/components/citas/AppointmentFormModal';
 import { CitasToolbar } from '@/components/citas/CitasToolbar';
 import { DetailPopover } from '@/components/citas/DetailPopover';
-import { ServiceConfigModalContent } from '@/components/citas/ServiceConfigModal';
-import { ServiceSelectorModalContent } from '@/components/citas/ServiceSelectorModal';
 import { useCitasHandlers } from '@/components/citas/hooks';
 import { dataReducer, uiReducer, initialUiState } from '@/components/citas/reducers';
-import type { AppointmentFormData, ViewMode, AppointmentWithDetails } from '@/components/citas/types';
-import { cn, startOfToday, endOfToday } from '@/lib/utils';
+import type { AppointmentFormData, ViewMode, AppointmentWithDetails, ListFilter } from '@/components/citas/types';
+import { cn, startOfToday } from '@/lib/utils';
 import { CalendarDays, Plus } from 'lucide-react';
 import { useConfirm } from '@/context/confirm-context';
+
+const AppointmentFormModalContent = lazy(() =>
+  import('@/components/citas/AppointmentFormModal').then(m => ({ default: m.AppointmentFormModalContent }))
+);
+const ServiceConfigModalContent = lazy(() =>
+  import('@/components/citas/ServiceConfigModal').then(m => ({ default: m.ServiceConfigModalContent }))
+);
+const ServiceSelectorModalContent = lazy(() =>
+  import('@/components/citas/ServiceSelectorModal').then(m => ({ default: m.ServiceSelectorModalContent }))
+);
+
+function ModalFallback() {
+  return (
+    <div className="p-8 flex items-center justify-center">
+      <div className="h-8 w-8 rounded-full border-2 border-salon-300 border-t-transparent animate-spin" />
+    </div>
+  );
+}
 
 function MobileViewTabs({ viewMode, onViewModeChange }: { viewMode: ViewMode; onViewModeChange: (mode: ViewMode) => void }) {
   return (
@@ -29,7 +45,7 @@ function MobileViewTabs({ viewMode, onViewModeChange }: { viewMode: ViewMode; on
         <button
           onClick={() => onViewModeChange('list')}
           className={cn(
-            'flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-all',
+            'flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-colors',
             viewMode === 'list' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500'
           )}
         >
@@ -38,7 +54,7 @@ function MobileViewTabs({ viewMode, onViewModeChange }: { viewMode: ViewMode; on
         <button
           onClick={() => onViewModeChange('calendar')}
           className={cn(
-            'flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-all',
+            'flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-colors',
             viewMode === 'calendar' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500'
           )}
         >
@@ -49,11 +65,11 @@ function MobileViewTabs({ viewMode, onViewModeChange }: { viewMode: ViewMode; on
   );
 }
 
-function AppointmentListView({ loading, clientGroupedByDate, filterArtist, filterStatus, statusColors, onSelectAppt, onNew }: {
+const AppointmentListView = memo(function AppointmentListView({ loading, clientGroupedByDate, listFilterArtist, listFilterStatus, statusColors, onSelectAppt, onNew }: {
   loading: boolean;
   clientGroupedByDate: Record<string, AppointmentWithDetails[]>;
-  filterArtist: string;
-  filterStatus: string;
+  listFilterArtist: string;
+  listFilterStatus: string;
   statusColors: Record<string, 'info' | 'warning' | 'success' | 'danger'>;
   onSelectAppt: (appt: AppointmentWithDetails) => void;
   onNew: () => void;
@@ -73,11 +89,11 @@ function AppointmentListView({ loading, clientGroupedByDate, filterArtist, filte
         <CardContent className="py-12 text-center">
           <CalendarDays className="size-12 mx-auto mb-3 text-zinc-300" />
           <p className="text-sm text-zinc-500 mb-4">
-            {filterArtist || filterStatus
+            {listFilterArtist || listFilterStatus
               ? 'No hay citas con estos filtros'
               : 'No hay citas en este período'}
           </p>
-          {!filterArtist && !filterStatus && (
+          {!listFilterArtist && !listFilterStatus && (
             <Button size="sm" onClick={onNew}>
               <Plus className="size-4 mr-1" /> Crear primera cita
             </Button>
@@ -87,27 +103,28 @@ function AppointmentListView({ loading, clientGroupedByDate, filterArtist, filte
     );
   }
   return (
-    <>
-      {Object.entries(clientGroupedByDate).map(([date, appts]) => (
-        <div key={date} className="space-y-3">
+    <div className="animate-fadeIn space-y-6">
+      {Object.entries(clientGroupedByDate).map(([date, appts], gi) => (
+        <div key={date} className="space-y-3" style={{ animationDelay: `${gi * 40}ms` }}>
           <h3 className="text-[11px] sm:text-sm font-semibold text-zinc-500 uppercase tracking-[0.18em] sm:tracking-wider px-0.5">
             {date}
           </h3>
           <div className="space-y-2 sm:space-y-2.5">
-            {appts.map((appt) => (
-              <AppointmentCard
-                key={appt.id}
-                appt={appt}
-                statusColors={statusColors}
-                onSelect={onSelectAppt}
-              />
+            {appts.map((appt, i) => (
+              <div key={appt.id} className="animate-fadeInUp" style={{ animationDelay: `${Math.min(i * 50, 300)}ms`, opacity: 0 }}>
+                <AppointmentCard
+                  appt={appt}
+                  statusColors={statusColors}
+                  onSelect={onSelectAppt}
+                />
+              </div>
             ))}
           </div>
         </div>
       ))}
-    </>
+    </div>
   );
-}
+});
 
 interface InitialData {
   appointments: AppointmentWithDetails[];
@@ -128,7 +145,7 @@ export default function CitasPage({ initialData }: { initialData?: InitialData }
   });
   const { appointments, staff, services, clients, loading, submitting } = data;
   const [ui, dispatchUi] = useReducer(uiReducer, initialUiState);
-  const { viewMode, listFilter, filterArtist, filterStatus, showModal, showDetail, showServiceConfig, showServiceSelector, overlapWarning, pendingDate, advancePaid } = ui;
+  const { viewMode, listFilter, listFilterArtist, listFilterStatus, showModal, showDetail, showServiceConfig, showServiceSelector, overlapWarning, pendingDate, advancePaid } = ui;
   const { push } = useRouter();
   const [selectedAppt, setSelectedAppt] = useState<AppointmentWithDetails | null>(null);
 
@@ -164,77 +181,43 @@ export default function CitasPage({ initialData }: { initialData?: InitialData }
     notes: '',
     color: '',
   });
-  const skipInitialAppointmentsLoad = useRef(true);
-
-  async function loadInitialData() {
-    dispatchData({ type: 'LOAD_START' });
-    try {
-      const [appts, s, svcs, cls] = await Promise.all([
-        getAppointments({ dateFrom: startOfToday() }),
-        getStaff(),
-        getServices(false),
-        getClients(),
-      ]);
-      dispatchData({
-        type: 'LOAD_COMPLETE',
-        appointments: appts as AppointmentWithDetails[],
-        staff: s as StaffMember[],
-        services: svcs as Service[],
-        clients: cls as Client[],
-      });
-    } catch (e) {
-      console.error(e);
-    }
-  }
 
   const loadAppointments = useCallback(async () => {
     dispatchData({ type: 'LOAD_START' });
     try {
-      let dateFrom: string | undefined;
-      let dateTo: string | undefined;
-
-      if (listFilter === 'list') {
-        dateFrom = startOfToday();
-      } else if (listFilter === 'day') {
-        dateFrom = startOfToday();
-        dateTo = endOfToday();
-      } else if (listFilter === 'week') {
-        dateFrom = startOfToday();
-      }
-
-      const filter: Record<string, string> = {};
-      if (dateFrom) filter.dateFrom = dateFrom;
-      if (dateTo) filter.dateTo = dateTo;
-      if (filterArtist) filter.artistId = filterArtist;
-      if (filterStatus) filter.status = filterStatus;
-
-      const appts = await getAppointments(filter);
+      const appts = await getAppointments({ dateFrom: startOfToday() });
       dispatchData({ type: 'SET_APPOINTMENTS', appointments: appts as AppointmentWithDetails[] });
     } catch (e) {
       console.error(e);
     }
-  }, [listFilter, filterArtist, filterStatus]);
+  }, []);
 
   useEffect(() => {
     if (initialData) return;
-    loadInitialData();
-  }, [initialData]);
-
-  useEffect(() => {
-    if (skipInitialAppointmentsLoad.current) {
-      skipInitialAppointmentsLoad.current = false;
-      return;
-    }
     loadAppointments();
-  }, [loadAppointments]);
+  }, [initialData, loadAppointments]);
 
   const visibleAppointments = useMemo(() => {
-    return appointments.filter((appt) => {
-      if (filterArtist && appt.artist_id !== filterArtist) return false;
-      if (filterStatus && appt.status !== filterStatus) return false;
-      return true;
-    });
-  }, [appointments, filterArtist, filterStatus]);
+    let filtered = appointments;
+
+    if (viewMode === 'list') {
+      if (listFilter === 'day') {
+        filtered = filtered.filter((appt) => isSameDay(new Date(appt.start_time), new Date()));
+      } else if (listFilter === 'week') {
+        const now = new Date();
+        const weekStart = startOfWeek(now, { weekStartsOn: 1 });
+        const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
+        filtered = filtered.filter((appt) => {
+          const start = new Date(appt.start_time);
+          return start >= weekStart && start <= weekEnd;
+        });
+      }
+      if (listFilterArtist) filtered = filtered.filter((appt) => appt.artist_id === listFilterArtist);
+      if (listFilterStatus) filtered = filtered.filter((appt) => appt.status === listFilterStatus);
+    }
+
+    return filtered;
+  }, [appointments, viewMode, listFilter, listFilterArtist, listFilterStatus]);
 
   const clientGroupedByDate = useMemo(() =>
     visibleAppointments.reduce((acc, appt) => {
@@ -252,7 +235,7 @@ export default function CitasPage({ initialData }: { initialData?: InitialData }
   } = useCitasHandlers({
     staff, services, appointments, editingAppt, selectedServices, serviceArtists,
     customPrices, overlapWarning, advancePaid, submitting, form, selectedAppt,
-    pendingDate, listFilter, filterArtist, filterStatus,
+    pendingDate, listFilter, listFilterArtist, listFilterStatus,
     setForm, setEditingAppt, setSelectedServices, setServiceArtists, setCustomPrices,
     dispatchData, dispatchUi, confirm, load: loadAppointments,
     initialForm, initialSelectedServices, initialServiceArtists,
@@ -267,7 +250,7 @@ export default function CitasPage({ initialData }: { initialData?: InitialData }
             <button
               onClick={() => dispatchUi({ type: 'SET_VIEW_MODE', viewMode: 'list' })}
               className={cn(
-                'px-4 py-1.5 text-sm font-medium rounded-lg transition-all flex items-center gap-1.5',
+                'px-4 py-1.5 text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5',
                 viewMode === 'list' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500'
               )}
             >
@@ -276,7 +259,7 @@ export default function CitasPage({ initialData }: { initialData?: InitialData }
             <button
               onClick={() => dispatchUi({ type: 'SET_VIEW_MODE', viewMode: 'calendar' })}
               className={cn(
-                'px-4 py-1.5 text-sm font-medium rounded-lg transition-all flex items-center gap-1.5',
+                'px-4 py-1.5 text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5',
                 viewMode === 'calendar' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500'
               )}
             >
@@ -296,15 +279,15 @@ export default function CitasPage({ initialData }: { initialData?: InitialData }
           <CitasToolbar
             viewMode={viewMode}
             listFilter={listFilter}
-            filterArtist={filterArtist}
-            filterStatus={filterStatus}
+            listFilterArtist={listFilterArtist}
+            listFilterStatus={listFilterStatus}
             staff={staff}
             appointments={visibleAppointments}
             onViewModeChange={(mode) => dispatchUi({ type: 'SET_VIEW_MODE', viewMode: mode })}
             onListFilterChange={(filter) => dispatchUi({ type: 'SET_LIST_FILTER', listFilter: filter })}
-            onFilterArtistChange={(artistId) => dispatchUi({ type: 'SET_FILTER_ARTIST', filterArtist: artistId })}
-            onFilterStatusChange={(status) => dispatchUi({ type: 'SET_FILTER_STATUS', filterStatus: status })}
-            onClearFilters={() => dispatchUi({ type: 'CLEAR_FILTERS' })}
+            onFilterArtistChange={(artistId) => dispatchUi({ type: 'SET_LIST_FILTER_ARTIST', listFilterArtist: artistId })}
+            onFilterStatusChange={(status) => dispatchUi({ type: 'SET_LIST_FILTER_STATUS', listFilterStatus: status })}
+            onClearFilters={() => dispatchUi({ type: 'CLEAR_LIST_FILTERS' })}
           />
         )}
 
@@ -340,8 +323,8 @@ export default function CitasPage({ initialData }: { initialData?: InitialData }
           <AppointmentListView
             loading={loading}
             clientGroupedByDate={clientGroupedByDate}
-            filterArtist={filterArtist}
-            filterStatus={filterStatus}
+            listFilterArtist={listFilterArtist}
+            listFilterStatus={listFilterStatus}
             statusColors={statusColors}
             onNew={openNew}
             onSelectAppt={(appt) => {
@@ -365,6 +348,7 @@ export default function CitasPage({ initialData }: { initialData?: InitialData }
       />
 
       <Modal open={showModal} onClose={() => { dispatchUi({ type: 'SET_SHOW_MODAL', showModal: false }); setEditingAppt(null); }} title={editingAppt ? `Editar Cita (${selectedServices.length} servicio${selectedServices.length !== 1 ? 's' : ''})` : selectedServices.length > 0 ? `Nueva Cita (${selectedServices.length} servicio${selectedServices.length !== 1 ? 's' : ''})` : 'Nueva Cita'}>
+        <Suspense fallback={<ModalFallback />}>
           <AppointmentFormModalContent
           open={showModal}
           editingAppt={editingAppt}
@@ -391,6 +375,7 @@ export default function CitasPage({ initialData }: { initialData?: InitialData }
           onOpenServiceConfig={(serviceId) => { setConfiguringServiceId(serviceId); dispatchUi({ type: 'SET_SHOW_SERVICE_CONFIG', showServiceConfig: true }); }}
           onToggleAdvancePaid={() => dispatchUi({ type: 'SET_ADVANCE_PAID', advancePaid: !advancePaid })}
         />
+        </Suspense>
       </Modal>
 
       <Modal
@@ -401,7 +386,8 @@ export default function CitasPage({ initialData }: { initialData?: InitialData }
           return `⚙️ Configurar: ${svc?.name || 'Servicio'}`;
         })()}
       >
-        <ServiceConfigModalContent
+        <Suspense fallback={<ModalFallback />}>
+          <ServiceConfigModalContent
           key={configuringServiceId || 'none'}
           open={showServiceConfig}
           serviceId={configuringServiceId}
@@ -446,6 +432,7 @@ export default function CitasPage({ initialData }: { initialData?: InitialData }
           }}
           onClose={() => dispatchUi({ type: 'SET_SHOW_SERVICE_CONFIG', showServiceConfig: false })}
         />
+        </Suspense>
       </Modal>
 
       <Modal
@@ -453,7 +440,8 @@ export default function CitasPage({ initialData }: { initialData?: InitialData }
         onClose={() => dispatchUi({ type: 'SET_SHOW_SERVICE_SELECTOR', showServiceSelector: false })}
         title="Seleccionar servicios"
       >
-        <ServiceSelectorModalContent
+        <Suspense fallback={<ModalFallback />}>
+          <ServiceSelectorModalContent
           open={showServiceSelector}
           services={services}
           staff={staff}
@@ -469,6 +457,7 @@ export default function CitasPage({ initialData }: { initialData?: InitialData }
           }}
           onClose={() => dispatchUi({ type: 'SET_SHOW_SERVICE_SELECTOR', showServiceSelector: false })}
         />
+        </Suspense>
       </Modal>
     </>
   );

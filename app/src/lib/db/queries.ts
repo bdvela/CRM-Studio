@@ -464,7 +464,7 @@ export async function getRoles(activeOnly = true) {
 }
 
 export async function getAppointments(filters?: any) {
-  return cachedQuery(cacheKey('appointments', filters || {}), 5_000, async () => {
+  return cachedQuery(cacheKey('appointments', filters || {}), 30_000, async () => {
     try {
       
       let q = supabase.from('appointments').select(`
@@ -492,50 +492,45 @@ export async function getAppointments(filters?: any) {
         );
       }
 
-       if (filtered && filtered.length > 0) {
-         const apptIds = filtered.map(a => a.id);
-         const { data: svcDataResult, error: svcError } = await supabase
-           .from('appointment_services')
-           .select('id, appointment_id, service_id, artist_id, service_price, service:services(name, price, duration_min, category_id, category:categories(*)), artist:staff(name, photo_url)')
-           .in('appointment_id', apptIds);
+        if (filtered && filtered.length > 0) {
+          const apptIds = filtered.map(a => a.id);
 
-         let svcData: any[] | null = null;
-         if (!svcError && svcDataResult) {
-           svcData = svcDataResult;
-         } else if (svcError) {
-           console.error('Error loading appointment services:', svcError);
-         }
-          
-          let commissionMap = new Map<string, any[]>();
-          try {
-            const { data: commData } = await supabase
+          const [svcResult, commData, balanceData] = await Promise.all([
+            supabase
+              .from('appointment_services')
+              .select('id, appointment_id, service_id, artist_id, service_price, service:services(name, price, duration_min, category_id, category:categories(*)), artist:staff(name, photo_url)')
+              .in('appointment_id', apptIds),
+            supabase
               .from('commission_details')
               .select('*')
-              .in('appointment_id', apptIds);
-            if (commData) {
-              for (const cd of commData) {
-                const existing = commissionMap.get(cd.appointment_id) || [];
-                existing.push(cd);
-                commissionMap.set(cd.appointment_id, existing);
-              }
-            }
-          } catch (e) {
-            console.log('commission details view may not exist yet', e);
-          }
-          
-          let balanceMap = new Map<string, any>();
-          try {
-            const { data: balanceData } = await supabase
+              .in('appointment_id', apptIds),
+            supabase
               .from('appointment_balance')
               .select('*')
-              .in('id', apptIds);
-            if (balanceData) {
-              for (const b of balanceData) {
-                balanceMap.set(b.id, b);
-              }
+              .in('id', apptIds),
+          ]);
+
+          let svcData: any[] | null = null;
+          if (!svcResult.error && svcResult.data) {
+            svcData = svcResult.data;
+          } else if (svcResult.error) {
+            console.error('Error loading appointment services:', svcResult.error);
+          }
+
+          let commissionMap = new Map<string, any[]>();
+          if (commData.data) {
+            for (const cd of commData.data) {
+              const existing = commissionMap.get(cd.appointment_id) || [];
+              existing.push(cd);
+              commissionMap.set(cd.appointment_id, existing);
             }
-          } catch (e) {
-            console.log('appointment_balance view may not exist yet', e);
+          }
+
+          let balanceMap = new Map<string, any>();
+          if (balanceData.data) {
+            for (const b of balanceData.data) {
+              balanceMap.set(b.id, b);
+            }
           }
           
           if (svcData) {

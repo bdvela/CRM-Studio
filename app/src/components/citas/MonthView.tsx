@@ -1,12 +1,13 @@
 'use client';
 
 import { format, isSameMonth, isToday } from 'date-fns';
+import { memo } from 'react';
 import { cn } from '@/lib/utils';
 import { isAppointmentPastOrCompleted } from '@/lib/utils';
 import { getApptColor, isPastCalendarDay } from './calendar-utils';
 import type { CalendarAppointment } from './types';
 
-export function MonthView({ monthDays, formattedAppts, currentDate, isMobile, now, onEmptyDayClick, onApptClick }: {
+export const MonthView = memo(function MonthView({ monthDays, formattedAppts, currentDate, isMobile, now, onEmptyDayClick, onApptClick }: {
   monthDays: Date[];
   formattedAppts: Map<string, CalendarAppointment[]>;
   currentDate: Date;
@@ -75,7 +76,7 @@ export function MonthView({ monthDays, formattedAppts, currentDate, isMobile, no
                       type="button"
                       onClick={(e) => onApptClick(appt, e)}
                       className={cn(
-                        'w-full text-left flex items-center gap-1 rounded-[4px] px-1 py-0.5 transition-all overflow-hidden',
+                        'w-full text-left flex items-center gap-1 rounded-[4px] px-1 py-0.5 transition-colors overflow-hidden',
                         colors.solid === 'bg-salon-500' ? 'bg-salon-100' : colors.bg,
                         colors.solid === 'bg-salon-500' ? 'border-l-[3px] border-salon-400' : `border-l-[3px] ${colors.border}`,
                         isDead && 'opacity-50 line-through',
@@ -99,4 +100,4 @@ export function MonthView({ monthDays, formattedAppts, currentDate, isMobile, no
       </div>
     </div>
   );
-}
+});

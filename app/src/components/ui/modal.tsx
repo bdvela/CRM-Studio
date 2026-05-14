@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useEffectEvent } from 'react';
+import { useEffect, useRef, useEffectEvent, useState } from 'react';
+import { cn } from '@/lib/utils';
 
 interface ModalProps {
   open: boolean;
@@ -13,9 +14,31 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const onCloseEvent = useEffectEvent(onClose);
+  const [mounted, setMounted] = useState(false);
+  const [exiting, setExiting] = useState(false);
+  const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (!open) return;
+    if (open) {
+      setMounted(true);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional exit animation trigger
+      setExiting(false);
+    } else if (mounted) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional exit animation trigger
+      setExiting(true);
+      exitTimerRef.current = setTimeout(() => {
+        setMounted(false);
+        setExiting(false);
+      }, 150);
+    }
+    return () => {
+      if (exitTimerRef.current) clearTimeout(exitTimerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mounted is intentionally excluded
+  }, [open]);
+
+  useEffect(() => {
+    if (!mounted || exiting) return;
 
     previousFocusRef.current = document.activeElement as HTMLElement;
 
@@ -61,16 +84,29 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
       document.removeEventListener('keydown', handleTab);
       previousFocusRef.current?.focus();
     };
-  }, [open]);
+  }, [mounted, exiting]);
 
-  if (!open) return null;
+  if (!mounted) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
-      <div className="fixed inset-0 bg-black/40" onClick={onClose} role="presentation" />
+      <div
+        className={cn(
+          'fixed inset-0',
+          exiting ? 'animate-[fadeOut_150ms_ease-out_forwards]' : 'animate-fadeIn'
+        )}
+        onClick={onClose}
+        role="presentation"
+        style={{ background: 'rgba(0,0,0,0.4)' }}
+      />
       <div
         ref={dialogRef}
-        className="relative w-full sm:max-w-lg md:max-w-xl lg:max-w-2xl bg-white rounded-t-3xl sm:rounded-2xl shadow-xl max-h-[85vh] sm:max-h-[90vh] overflow-y-auto"
+        className={cn(
+          'relative w-full sm:max-w-lg md:max-w-xl lg:max-w-2xl bg-white rounded-t-3xl sm:rounded-2xl shadow-xl max-h-[85vh] sm:max-h-[90vh] overflow-y-auto',
+          exiting
+            ? 'animate-[zoomOut95_150ms_cubic-bezier(0.23,1,0.32,1)_forwards]'
+            : 'animate-in zoom-in-95'
+        )}
         role="dialog"
         aria-modal="true"
         aria-label={title || 'Dialog'}

@@ -29,7 +29,7 @@ export function QuickActions() {
             key={action.label}
             type="button"
             onClick={() => push(action.href)}
-            className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-zinc-50 transition-all group text-left"
+            className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-zinc-50 transition-colors group text-left"
           >
             <div className={`size-9 rounded-lg flex items-center justify-center ${colorClasses[action.color]}`}>
               <action.icon className="size-4" />

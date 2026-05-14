@@ -8,7 +8,7 @@ import type {
 
 export type TabId = 'registrar' | 'pendientes' | 'resumen' | 'comisiones';
 
-export interface PaymentWithRelations extends Payment {
+export interface PaymentWithRelations extends Omit<Payment, 'client' | 'appointment'> {
   client?: { name: string; phone?: string | null; id?: string } | null;
   appointment?: {
     id?: string;

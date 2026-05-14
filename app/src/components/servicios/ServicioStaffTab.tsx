@@ -45,7 +45,7 @@ export function ServicioStaffTab({
                     onStaffToggle(staff.id);
                   }
                 }}
-                className={`p-3 rounded-xl border transition-all cursor-pointer ${
+                className={`p-3 rounded-xl border transition-colors cursor-pointer ${
                   isSelected
                     ? 'border-salon-400 bg-salon-50'
                     : 'border-zinc-200 hover:border-zinc-300'

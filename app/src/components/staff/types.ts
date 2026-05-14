@@ -21,9 +21,7 @@ export type FormAction =
   | { type: 'UPDATE'; payload: Partial<StaffFormState> }
   | { type: 'SET'; payload: StaffFormState };
 
-export interface StaffWithDetails extends StaffMember {
-  birthday_date?: string | null;
-}
+export interface StaffWithDetails extends StaffMember {}
 
 export interface StaffPerformance {
   totalAppointments: number;

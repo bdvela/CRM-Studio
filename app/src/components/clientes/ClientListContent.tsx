@@ -82,8 +82,10 @@ export function ClientListContent({
                 <span className="text-xs text-zinc-400">{items.length} clienta{items.length !== 1 ? 's' : ''}</span>
               </div>
               <div className="space-y-2">
-                {items.map((client) => (
-                  <ClientCard key={client.id} client={client} onClick={() => onClientClick(client)} />
+                {items.map((client, i) => (
+                  <div key={client.id} className="animate-fadeInUp" style={{ animationDelay: `${Math.min(i * 50, 300)}ms`, opacity: 0 }}>
+                    <ClientCard client={client} onClick={() => onClientClick(client)} />
+                  </div>
                 ))}
               </div>
             </div>
@@ -95,8 +97,10 @@ export function ClientListContent({
 
   return (
     <div className="space-y-2">
-      {clients.slice(0, visibleCount).map((client) => (
-        <ClientCard key={client.id} client={client} onClick={() => onClientClick(client)} />
+      {clients.slice(0, visibleCount).map((client, i) => (
+        <div key={client.id} className="animate-fadeInUp" style={{ animationDelay: `${Math.min(i * 50, 300)}ms`, opacity: 0 }}>
+          <ClientCard client={client} onClick={() => onClientClick(client)} />
+        </div>
       ))}
       {hasMore && (
         <button onClick={onShowMore} className="w-full py-3 text-sm text-salon-600 font-medium hover:text-salon-700 transition-colors text-center">

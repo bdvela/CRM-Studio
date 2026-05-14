@@ -23,7 +23,7 @@ export const AppointmentCard = memo(function AppointmentCard({ appt, statusColor
     <Card
       key={appt.id}
       className={cn(
-        "border-l-4 transition-all cursor-pointer overflow-hidden",
+        "border-l-4 transition-shadow transition-colors cursor-pointer overflow-hidden",
         statusBorder[appt.status] || 'border-l-salon-400',
         isAppointmentPastOrCompleted(appt) && "opacity-50"
       )}

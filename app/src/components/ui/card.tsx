@@ -12,7 +12,7 @@ export function Card({ children, className, onClick, 'aria-label': ariaLabel }: 
     return (
       <div
         className={cn(
-          'rounded-2xl border border-zinc-200 bg-white shadow-sm cursor-pointer hover:border-salon-300 hover:shadow-md transition-all',
+          'rounded-2xl border border-zinc-200 bg-white shadow-sm cursor-pointer hover:border-salon-300 hover:shadow-md transition-shadow transition-colors',
           className
         )}
         onClick={onClick}

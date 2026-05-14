@@ -2,13 +2,14 @@
 
 import { format, isSameDay, isToday, set, getHours, getMinutes } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { memo } from 'react';
 import { cn } from '@/lib/utils';
 import { isAppointmentPastOrCompleted } from '@/lib/utils';
 import { getApptColor, isPastCalendarDay, HOURS } from './calendar-utils';
 import { getServiceEmoji } from '@/components/citas/helpers';
 import type { CalendarAppointment } from './types';
 
-export function DayView({ currentDate, formattedApptsByHour, now, onEmptyDayClick, onApptClick, onDragStart, onDragOver, onDrop }: {
+export const DayView = memo(function DayView({ currentDate, formattedApptsByHour, now, onEmptyDayClick, onApptClick, onDragStart, onDragOver, onDrop }: {
   currentDate: Date;
   formattedApptsByHour: Map<string, Map<number, CalendarAppointment[]>>;
   now: Date;
@@ -23,7 +24,7 @@ export function DayView({ currentDate, formattedApptsByHour, now, onEmptyDayClic
 
   return (
     <div className="border border-zinc-100 rounded-2xl overflow-hidden bg-white">
-      <div className="grid grid-cols-[56px_1fr] border-b border-zinc-100">
+      <div className="grid grid-cols-[44px_1fr] sm:grid-cols-[56px_1fr] border-b border-zinc-100">
         <div className="p-2 text-xs text-zinc-400 border-r border-zinc-100 text-right pr-2">Hora</div>
         <div className={cn(
           'p-2 text-center',
@@ -42,7 +43,7 @@ export function DayView({ currentDate, formattedApptsByHour, now, onEmptyDayClic
       <div className="relative" style={{ maxHeight: 'calc(100dvh - 340px)', overflowY: 'auto' }}>
         {isSameDay(day, now) && (
           <div
-            className="absolute left-16 right-0 z-10 pointer-events-none"
+            className="absolute left-11 sm:left-16 right-0 z-10 pointer-events-none"
             style={{ top: `${(getHours(now) - 7) * 64 + (getMinutes(now) / 60) * 64}px` }}
           >
             <div className="flex items-center">
@@ -53,7 +54,7 @@ export function DayView({ currentDate, formattedApptsByHour, now, onEmptyDayClic
         )}
 
         {HOURS.map(hour => (
-          <div key={hour} className="grid grid-cols-[56px_1fr] border-b border-zinc-50 min-h-[64px]">
+          <div key={hour} className="grid grid-cols-[44px_1fr] sm:grid-cols-[56px_1fr] border-b border-zinc-50 min-h-[64px]">
             <div className="p-2 text-xs text-zinc-300 border-r border-zinc-100 text-right pr-2 relative -top-2">
               {String(hour).padStart(2, '0')}:00
             </div>
@@ -104,7 +105,7 @@ export function DayView({ currentDate, formattedApptsByHour, now, onEmptyDayClic
                         onDragStart={(e) => onDragStart(appt, e)}
                         onClick={(e) => onApptClick(appt, e)}
                         className={cn(
-                          'absolute left-0.5 right-0.5 rounded-lg border-l-[3px] px-1.5 py-1 text-left overflow-hidden transition-all shadow-sm hover:shadow-md',
+                          'absolute left-0.5 right-0.5 rounded-lg border-l-[3px] px-1.5 py-1 text-left overflow-hidden transition-shadow transition-colors shadow-sm hover:shadow-md',
                           colors.bg, colors.border, colors.text,
                           isCancelled && 'opacity-50 line-through',
                           isPastOrCompleted && !isCancelled && 'opacity-50 line-through',
@@ -134,4 +135,4 @@ export function DayView({ currentDate, formattedApptsByHour, now, onEmptyDayClic
       </div>
     </div>
   );
-}
+});

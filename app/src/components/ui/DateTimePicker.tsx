@@ -145,7 +145,7 @@ export function DateTimePicker({ value, onChange }: DateTimePickerProps) {
           id="datetime-date-btn"
           onClick={() => setPanel(panel === 'date' ? 'closed' : 'date')}
           className={cn(
-            'flex-1 flex items-center gap-2 rounded-xl border px-3 py-2.5 text-sm text-left transition-all',
+            'flex-1 flex items-center gap-2 rounded-xl border px-3 py-2.5 text-sm text-left transition-colors',
             panel === 'date'
               ? 'border-salon-500 ring-2 ring-salon-500/20 bg-white'
               : 'border-zinc-200 bg-white hover:border-zinc-300'
@@ -161,7 +161,7 @@ export function DateTimePicker({ value, onChange }: DateTimePickerProps) {
           type="button"
           onClick={() => { if (parsed) setPanel(panel === 'time' ? 'closed' : 'time'); }}
           className={cn(
-            'flex items-center gap-2 rounded-xl border px-3 py-2.5 text-sm transition-all min-w-[88px]',
+            'flex items-center gap-2 rounded-xl border px-3 py-2.5 text-sm transition-colors min-w-[88px]',
             !parsed && 'opacity-40 cursor-not-allowed',
             panel === 'time'
               ? 'border-salon-500 ring-2 ring-salon-500/20 bg-white'
@@ -215,7 +215,7 @@ export function DateTimePicker({ value, onChange }: DateTimePickerProps) {
                     onClick={() => d.curr && !d.isPast && selectDate(d.day)}
                     disabled={!d.curr || d.isPast}
                     className={cn(
-                      'h-9 w-full rounded-lg text-sm font-medium transition-all flex items-center justify-center',
+                      'h-9 w-full rounded-lg text-sm font-medium transition-colors flex items-center justify-center',
                       !d.curr && 'text-zinc-200 cursor-default',
                       d.isPast && 'text-zinc-300 cursor-default',
                       d.curr && !d.isSel && !d.isToday && !d.isPast && 'text-zinc-700 hover:bg-salon-50 hover:text-salon-700',
@@ -262,7 +262,7 @@ export function DateTimePicker({ value, onChange }: DateTimePickerProps) {
                       data-hour={t.h}
                       onClick={() => selectTime(t.h, t.m)}
                       className={cn(
-                        'py-2 rounded-lg text-sm font-medium transition-all tabular-nums',
+                        'py-2 rounded-lg text-sm font-medium transition-colors tabular-nums',
                         isSel
                           ? 'bg-salon-500 text-white shadow-sm'
                           : 'text-zinc-700 hover:bg-salon-50 hover:text-salon-700'

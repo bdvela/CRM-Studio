@@ -9,6 +9,7 @@ import { createAppointment, updateAppointment, checkOverlap, createPayment } fro
 import { DEPOSIT_AMOUNT } from '@/lib/constants';
 import { toast } from 'sonner';
 import { useConfirm } from '@/context/confirm-context';
+import { useRef } from 'react';
 
 interface ServiceData {
   service_id: string;
@@ -22,7 +23,7 @@ export function useCitasHandlers(ctx: {
   customPrices: Record<string, number>; overlapWarning: string | null;
   advancePaid: boolean; submitting: boolean; form: AppointmentFormData;
   selectedAppt: AppointmentWithDetails | null; pendingDate: Date | null;
-  listFilter: string; filterArtist: string; filterStatus: string;
+  listFilter: string; listFilterArtist: string; listFilterStatus: string;
   setForm: React.Dispatch<React.SetStateAction<AppointmentFormData>>;
   setEditingAppt: (v: AppointmentWithDetails | null) => void;
   setSelectedServices: (v: string[]) => void;
@@ -40,12 +41,14 @@ export function useCitasHandlers(ctx: {
   const {
     staff, services, appointments, editingAppt, selectedServices, serviceArtists,
     customPrices, overlapWarning, advancePaid, submitting, form, selectedAppt,
-    pendingDate, listFilter, filterArtist, filterStatus,
+    pendingDate, listFilter, listFilterArtist, listFilterStatus,
     setForm, setEditingAppt, setSelectedServices, setServiceArtists, setCustomPrices,
     dispatchData, dispatchUi, confirm, load,
     initialForm, initialSelectedServices, initialServiceArtists,
     initialCustomPrices, initialAdvancePaid,
   } = ctx;
+
+  const overlapTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const totalDuration = services
     .filter((s: Service) => selectedServices.includes(s.id))
@@ -85,40 +88,53 @@ export function useCitasHandlers(ctx: {
   }
 
   async function checkForOverlap() {
-    if (!form.start_time || totalDuration === 0) {
-      dispatchUi({ type: 'SET_OVERLAP_WARNING', overlapWarning: null });
-      return;
+    if (overlapTimeoutRef.current) {
+      clearTimeout(overlapTimeoutRef.current);
     }
-    const artistIds = selectedServices.flatMap((sid: string) => {
-      const id = serviceArtists[sid];
-      return id ? [id] : [];
+
+    return new Promise<void>((resolve) => {
+      overlapTimeoutRef.current = setTimeout(async () => {
+        if (!form.start_time || totalDuration === 0) {
+          dispatchUi({ type: 'SET_OVERLAP_WARNING', overlapWarning: null });
+          resolve();
+          return;
+        }
+        const artistIds = selectedServices.flatMap((sid: string) => {
+          const id = serviceArtists[sid];
+          return id ? [id] : [];
+        });
+        if (artistIds.length === 0) {
+          dispatchUi({ type: 'SET_OVERLAP_WARNING', overlapWarning: null });
+          resolve();
+          return;
+        }
+        const start = new Date(form.start_time);
+        const end = new Date(start.getTime() + totalDuration * 60000);
+        const excludeId = editingAppt?.id || undefined;
+        const staffNameMap = new Map(staff.map((s: StaffMember) => [s.id, s.name]));
+        const overlapResults = await Promise.all(artistIds.map((artistId: string) =>
+          checkOverlap(artistId, start.toISOString(), end.toISOString(), excludeId)
+        ));
+        for (let i = 0; i < artistIds.length; i++) {
+          const overlaps = overlapResults[i];
+          if (overlaps.length > 0) {
+            const artistName = staffNameMap.get(artistIds[i]) || 'artista';
+            dispatchUi({ type: 'SET_OVERLAP_WARNING', overlapWarning: `⚠️ Conflicto con: ${overlaps[0].title} (${artistName})` });
+            resolve();
+            return;
+          }
+        }
+        dispatchUi({ type: 'SET_OVERLAP_WARNING', overlapWarning: null });
+        resolve();
+      }, 400);
     });
-    if (artistIds.length === 0) {
-      dispatchUi({ type: 'SET_OVERLAP_WARNING', overlapWarning: null });
-      return;
-    }
-    const start = new Date(form.start_time);
-    const end = new Date(start.getTime() + totalDuration * 60000);
-    const excludeId = editingAppt?.id || undefined;
-    const staffNameMap = new Map(staff.map((s: StaffMember) => [s.id, s.name]));
-    const overlapResults = await Promise.all(artistIds.map((artistId: string) =>
-      checkOverlap(artistId, start.toISOString(), end.toISOString(), excludeId)
-    ));
-    for (let i = 0; i < artistIds.length; i++) {
-      const overlaps = overlapResults[i];
-      if (overlaps.length > 0) {
-        const artistName = staffNameMap.get(artistIds[i]) || 'artista';
-        dispatchUi({ type: 'SET_OVERLAP_WARNING', overlapWarning: `⚠️ Conflicto con: ${overlaps[0].title} (${artistName})` });
-        return;
-      }
-    }
-    dispatchUi({ type: 'SET_OVERLAP_WARNING', overlapWarning: null });
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (submitting) return;
     if (!form.client_id || !form.start_time) { toast.error('Selecciona clienta y fecha'); return; }
+    if (selectedServices.length === 0) { toast.error('Selecciona al menos un servicio'); return; }
     if (editingAppt && !haveChanges()) { toast.info('No hay cambios para guardar'); return; }
     dispatchData({ type: 'SET_SUBMITTING', submitting: true });
     try {
@@ -237,7 +253,7 @@ export function useCitasHandlers(ctx: {
   async function cancelAppt(appt: AppointmentWithDetails) {
     const confirmed = await confirm({ title: 'Cancelar cita', message: `¿Cancelar la cita "${appt.title}"?`, confirmText: 'Cancelar cita', cancelText: 'No cancelar', variant: 'warning' });
     if (!confirmed) return;
-    try { await updateAppointment(appt.id, { status: 'cancelada' }); toast.success('Cita cancelada'); load(); }
+    try { await updateAppointment(appt.id, { status: 'cancelada' }); toast.success('Cita cancelada'); dispatchUi({ type: 'SET_SHOW_DETAIL', showDetail: false }); load(); }
     catch { toast.error('Error al cancelar'); }
   }
 
@@ -245,6 +261,14 @@ export function useCitasHandlers(ctx: {
     const nextStatus: Record<string, string> = { 'programada': 'en_curso', 'en_curso': 'completada' };
     const newStatus = nextStatus[appt.status];
     if (!newStatus) return;
+    if (newStatus === 'en_curso') {
+      const confirmed = await confirm({
+        title: 'Iniciar cita',
+        message: `¿Iniciar la cita "${appt.title}"? La cita pasará a "En curso".`,
+        confirmText: 'Iniciar', cancelText: 'Volver', variant: 'info',
+      });
+      if (!confirmed) return;
+    }
     if (newStatus === 'completada') {
       const pendingBalance = Number(appt.appointment_balance?.pending_balance || 0);
       const confirmed = await confirm({
@@ -270,7 +294,7 @@ export function useCitasHandlers(ctx: {
   }
 
   async function markAsNoShow(appt: AppointmentWithDetails) {
-    const confirmed = await confirm({ title: 'Marcar como No Show', message: `¿Marcar la cita "${appt.title}" como no show?`, confirmText: 'Marcar como No Show', cancelText: 'Cancelar', variant: 'warning' });
+    const confirmed = await confirm({ title: 'Marcar como No Show', message: `¿Marcar la cita "${appt.title}" como no show?`, confirmText: 'Sí, No Show', cancelText: 'Cancelar', variant: 'warning' });
     if (!confirmed) return;
     try { await updateAppointment(appt.id, { status: 'no_show' }); toast.success('Cita marcada como No Show'); dispatchUi({ type: 'SET_SHOW_DETAIL', showDetail: false }); load(); }
     catch { toast.error('Error al marcar como No Show'); }
