@@ -625,10 +625,19 @@ npm run start
 | Dos modales edit separados con campos inconsistentes | ✅ Fixeado | ClientFormModal unificado con detección de cambios |
 | Edit modal detail page sin campo status | ✅ Fixeado | ClientFormModal incluye todos los campos consistentemente |
 | Sin avatar degradado ni border status | ✅ Fixeado | Avatar rose→purple gradient, border-l-4 por estado |
+| Sin "Ver detalle completo" en modal de lista | ✅ Fixeado | Botón navega a `/clientes/[id]` |
+| Instagram no clickeable (modal y perfil) | ✅ Fixeado | Convertido a `<a target="_blank">` |
+| Empty state sin CTA | ✅ Fixeado | Botón "Registrar primera clienta" sin filtros activos |
+| "Ver más" afecta todos los grupos | ✅ Fixeado | Vista agrupada muestra todos los items sin paginación |
+| Sin error banner inline en fallo de carga | ✅ Fixeado | Banner `role="alert"` con botón descartar |
+| Sin auto-refresh periódico | ✅ Fixeado | Intervalo 60s con cleanup |
+| Skeleton muerto en ClientDetailModal | ✅ Fixeado | Eliminado junto con prop dead |
+| `as any[]` en appointments (type leak) | ✅ Fixeado | Cambiado a `as Appointment[]` |
+| "Editando" como título incompleto | ✅ Fixeado | Cambiado a `"Editando: {nombre}"` |
 
 ---
 
 ## Última Actualización
 - **Fecha**: 13 Mayo 2026
 - **Rama**: `main`
-- **Cambios recientes**: Refactor completo del módulo Clientes. Extraídos 10 componentes a `components/clientes/` (page-client.tsx 588→262 lns, [id]/page-client.tsx 268→145 lns). Tipado fuerte eliminando `any` mediante discriminated union en reducer. Accesibilidad: ARIA labels en avatar y cards, aria-live en resultados, role/teclado en cards. Performance: React.memo en ClientCard/ClientFilters, useMemo en filtered/grouped, useCallback en handlers. UI/UX: avatar degradado rose→purple, border-l-4 por estado (prospecto=blue, activa=emerald, inactiva=zinc, vip=amber), skeleton con avatar circular, fadeIn en grid al cambiar filtros. Fixes: Modal edición unificado (ClientFormModal) entre lista y detalle, status field agregado al edit modal del detalle (antes faltaba).
+- **Cambios recientes**: Refactor completo del módulo Clientes. Extraídos 10 componentes a `components/clientes/` (page-client.tsx 588→262 lns, [id]/page-client.tsx 268→145 lns). Tipado fuerte eliminando `any` mediante discriminated union en reducer. Accesibilidad: ARIA labels en avatar y cards, aria-live en resultados, role/teclado en cards. Performance: React.memo en ClientCard/ClientFilters, useMemo en filtered/grouped, useCallback en handlers. UI/UX: avatar degradado rose→purple, border-l-4 por estado (prospecto=blue, activa=emerald, inactiva=zinc, vip=amber), skeleton con avatar circular, fadeIn en grid al cambiar filtros. Fixes: Modal edición unificado (ClientFormModal) entre lista y detalle, status field agregado al edit modal del detalle (antes faltaba). Auditoría y fixes posteriores: navegación "Ver detalle completo", Instagram clickeable, empty state con CTA, error banner inline (role="alert"), auto-refresh 60s, paginación por grupo removida, skeletons muertos eliminados, type leak corregido.
