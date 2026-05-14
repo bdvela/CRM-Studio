@@ -39,7 +39,7 @@ function uiReducer(state: ClientesUIState, action: ClientesUIAction): ClientesUI
     case 'SET_SUBMITTING': return { ...state, submitting: action.submitting };
     case 'SET_SHOW_CREATE_MODAL': return { ...state, showCreateModal: action.show };
     case 'SET_SHOW_DETAIL_MODAL': return { ...state, showDetailModal: action.show };
-    case 'SET_VIEWING_CLIENT': return { ...state, viewingClient: action.client, clientAppointments: action.appointments || state.clientAppointments, showDetailModal: true, activeModalTab: 'info' as const };
+    case 'SET_VIEWING_CLIENT': return { ...state, viewingClient: action.client, clientAppointments: action.appointments || state.clientAppointments, showDetailModal: true };
     case 'SET_EDITING_CLIENT': return { ...state, editingClient: action.client };
     case 'SET_SEARCH': return { ...state, search: action.search, visibleCount: PAGE_SIZE };
     case 'SET_STATUS_FILTER': return { ...state, statusFilter: action.status, visibleCount: PAGE_SIZE };

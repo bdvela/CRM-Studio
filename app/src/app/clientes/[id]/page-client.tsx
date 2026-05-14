@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { getClientById, getAppointments, updateClient, deleteClient } from '@/lib/db/queries';
 import type { Client, ClientInsert, Appointment } from '@/types/database';
@@ -31,32 +31,27 @@ export default function ClienteDetailClient({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  async function load() {
-    if (!client?.id) return;
-    setLoading(true);
-    try {
-      const [c, a] = await Promise.all([
-        getClientById(client.id),
-        getAppointments({ clientId: client.id }),
-      ]);
-      if (c) setClient(c as Client);
-      if (a) setAppointments(a as Appointment[]);
-    } catch {
-      // silent
-    } finally {
-      setLoading(false);
-    }
-  }
-
   const handleEditSave = useCallback(async (data: ClientInsert) => {
-    if (!client) return;
+    if (!client?.id) return;
     setSaving(true);
     try {
       const normalized = normalizePeruPhone(data.phone);
       await updateClient(client.id, { ...data, phone: normalized });
       toast.success('Datos actualizados');
       setEditing(false);
-      load();
+      setLoading(true);
+      try {
+        const [c, a] = await Promise.all([
+          getClientById(client.id),
+          getAppointments({ clientId: client.id }),
+        ]);
+        if (c) setClient(c as Client);
+        if (a) setAppointments(a as Appointment[]);
+      } catch {
+        // silent
+      } finally {
+        setLoading(false);
+      }
     } catch {
       toast.error('Error al actualizar');
     } finally {

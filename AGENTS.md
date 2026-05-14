@@ -153,6 +153,17 @@ CRM Studio/
 │   │   │   │   ├── ServiceListContent.tsx # Orquestador con skeleton/empty/fadeIn
 │   │   │   │   ├── ServicioStaffTab.tsx  # Checkbox list staff + badge sugerido
 │   │   │   │   └── ServicioFormModal.tsx # Modal 2 tabs (Datos + Staff)
+│   │   │   ├── clientes/               # Componentes de Clientes (refactorizados)
+│   │   │   │   ├── types.ts            # Tipos: ClientWithStats, discriminated unions
+│   │   │   │   ├── constants.ts        # Status labels, border colors, form init
+│   │   │   │   ├── ClientCard.tsx      # Card con avatar degradado, border status, stats (memo)
+│   │   │   │   ├── ClientFilters.tsx   # Búsqueda + filtro estado (memo)
+│   │   │   │   ├── ClientFormModal.tsx # Modal crear/editar reutilizable (cambio detectado)
+│   │   │   │   ├── ClientDetailModal.tsx # Modal view-only con perfil, contacto, stats, últ. cita
+│   │   │   │   ├── ClientListContent.tsx # Orquestador: skeleton con avatar, empty, grouped, paginación
+│   │   │   │   ├── ClientDetailProfile.tsx # Cabecera detalle: avatar, nombre, contacto
+│   │   │   │   ├── ClientDetailStats.tsx   # Grid 3 stats con iconos
+│   │   │   │   └── ClientAppointmentHistory.tsx # Tabla historial con badges servicios
 │   │   │   ├── confirm/                 # ConfirmDialog
 │   │   │   └── providers.tsx            # ConfirmProvider
 │   │   ├── lib/
@@ -313,27 +324,14 @@ payment_kind: ['reserva', 'pago_completo', 'pago_final']
 - Línea de tiempo actual (roja)
 - Colores por artista o color personalizado
 
-### 3. Clientes (`/clientes`)
-#### Funcionalidades
-- **Lista**:
-  - Filtro por estado (Todos/Prospecto/Activa/Inactiva/VIP)
-  - Filtro por artista
-  - Buscador
-  - Vista "Todos" agrupada por estado
-- **Detalle de Clienta**:
-  - Datos personales
-  - Historial de citas
-  - Estadísticas (total_spent, total_appointments)
-- **Estados**:
-  - `prospecto`: Clienta nueva, sin citas completadas
-  - `activa`: Clienta con citas recientes
-  - `inactiva`: Clienta sin citas en mucho tiempo
-  - `vip`: Clienta especial
-
-#### Patrón UI
-- Cards clickeables (no botones editar/eliminar)
-- Edición por modal
-- Botón eliminar DENTRO del modal
+### 3. Clientes (`/clientes`) — Refactorizado
+- **Componentes extraídos**: 10 archivos en `components/clientes/` (antes todo inline en `page-client.tsx` y `[id]/page-client.tsx`)
+- **Lista**: Filtro por estado (Todos/Prospecto/Activa/Inactiva/VIP), buscador (nombre/teléfono/instagram), vista "Todos" agrupada por estado, paginación "Ver más"
+- **Detalle de Clienta**: Componentes separados para perfil, estadísticas e historial
+- **Crear/Editar**: Modal unificado (`ClientFormModal`) con detección de cambios, teléfono con prefijo Perú
+- **Estados**: `prospecto` (blue, nueva), `activa` (emerald, citas recientes), `inactiva` (zinc, sin visitas), `vip` (amber, especial)
+- **Performance**: React.memo en ClientCard/ClientFilters, useMemo en filtered/grouped, useCallback en handlers
+- **Accesibilidad**: ARIA labels en avatar y cards, aria-live en resultados, role/teclado en cards
 
 ### 4. Servicios (`/servicios`) — Refactorizado
 - **Componentes extraídos**: 6 archivos en `components/servicios/` (antes todo inline en `page-client.tsx`)
@@ -622,10 +620,15 @@ npm run start
 | Precios con raw inputs | ✅ Fixeado | PriceSection usa `<Input leftPrefix>` en vez de raw `<input>` |
 | Sin error state en load | ✅ Fixeado | Banner rojo con role="alert" cuando falla la carga |
 | Sin sort en servicios | ✅ Fixeado | Sort alfabético con localeCompare |
+| Clientas 588+268 líneas en page-client.tsx | ✅ Fixeado | Extraído a 10 componentes en `components/clientes/` (856→407 lns total) |
+| Tipado `any` en clientes | ✅ Fixeado | Discriminated union en reducer, props tipadas, sin any |
+| Dos modales edit separados con campos inconsistentes | ✅ Fixeado | ClientFormModal unificado con detección de cambios |
+| Edit modal detail page sin campo status | ✅ Fixeado | ClientFormModal incluye todos los campos consistentemente |
+| Sin avatar degradado ni border status | ✅ Fixeado | Avatar rose→purple gradient, border-l-4 por estado |
 
 ---
 
 ## Última Actualización
 - **Fecha**: 13 Mayo 2026
 - **Rama**: `main`
-- **Cambios recientes**: Refactor completo del módulo Servicios. Extraídos 6 componentes a `components/servicios/` (page-client.tsx 939→423 lns). Tipado fuerte eliminando `any`. Accesibilidad: ARIA labels, role=alert en errores, aria-hidden en iconos. Performance: React.memo en ServiceCard/ServiceFilters, useMemo/useCallback en computaciones y handlers. UI/UX: skeleton anidado por grupos de categoría, empty state con CTA, fadeIn al cambiar filtros, sort alfabético, error state con banner. Fixes: PriceSection unificada usando `<Input leftPrefix>`, `getStaffForCategory` como función pura fuera del componente, `isFormValid`/`resetForm` memoizados, 4 ESLint warnings eliminados. Fix: `Card` component ahora acepta `aria-label`.
+- **Cambios recientes**: Refactor completo del módulo Clientes. Extraídos 10 componentes a `components/clientes/` (page-client.tsx 588→262 lns, [id]/page-client.tsx 268→145 lns). Tipado fuerte eliminando `any` mediante discriminated union en reducer. Accesibilidad: ARIA labels en avatar y cards, aria-live en resultados, role/teclado en cards. Performance: React.memo en ClientCard/ClientFilters, useMemo en filtered/grouped, useCallback en handlers. UI/UX: avatar degradado rose→purple, border-l-4 por estado (prospecto=blue, activa=emerald, inactiva=zinc, vip=amber), skeleton con avatar circular, fadeIn en grid al cambiar filtros. Fixes: Modal edición unificado (ClientFormModal) entre lista y detalle, status field agregado al edit modal del detalle (antes faltaba).
