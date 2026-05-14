@@ -342,18 +342,25 @@ payment_kind: ['reserva', 'pago_completo', 'pago_final']
 - **Accesibilidad**: ARIA labels en cards/search/delete, role=alert en errores y warnings, aria-hidden en iconos
 - **UI/UX**: Skeleton anidado por grupos, empty state con CTA, fadeIn en cambio de filtros, sort alfabético
 
-### 5. Staff (`/staff`)
-#### Funcionalidades
-- **Roles Dinámicos**:
-  - Nail Artist, Lashista, Pedicurista, Maquillista, Dueña
-  - Cada rol con color personalizado
-- **Especialidades**: Por categoría de servicio
-- **Comisión**: Porcentaje de comisión
-- **Founder Protegida**: Araceli Zevallos no se puede eliminar
-
-#### Patrón UI
-- Avatar: `bg-accent-100 text-accent-600`
-- Cards clickeables
+### 5. Staff (`/staff`) — Refactorizado
+- **Componentes extraídos**: 11 archivos en `components/staff/` (page-client.tsx 1079→308 lns, [id]/page-client.tsx 430→179 lns)
+- **Tipado fuerte**: interfaces `StaffWithDetails`, `StaffFormState`, `StaffPerformance`, `StaffTopService`, `StaffCardProps` — eliminación total de `any`
+- **UI/UX**: Cards con avatar degradado rose→purple, `border-t-4` del color del role, Founder con anillo amber, fadeIn en grid, skeleton coincidente con cards reales, empty state con CTA "Registrar primer miembro"
+- **Performance**: React.memo en StaffCard/StaffFilters, useMemo en filtered, useCallback en handlers del modal
+- **Accesibilidad**: ARIA labels en avatar y cards, `role="button"`, `tabIndex`, `onKeyDown`, `aria-live` en resultados, `aria-label` en periodo filter, `role="progressbar"` en distribución
+- **Responsividad**: `sm:grid-cols-2 lg:grid-cols-3` en lista, `grid-cols-2 lg:grid-cols-4` en stats, tabs modo scroll horizontal en móvil, detail con sidebar layout en desktop
+- **Componentes**:
+  - `StaffCard.tsx` — Card con border-t role-color, gradient avatar, role badge dinámico, especialidades, stats, commission%, founder ring
+  - `StaffFilters.tsx` — Búsqueda por nombre/rol/teléfono (memo)
+  - `StaffListContent.tsx` — Orquestador: skeleton, empty state, grid (memo)
+  - `StaffFormModal.tsx` — Modal 3 tabs (Datos, Especialidades, Comisiones) con detección de cambios
+  - `StaffComisionesTab.tsx` — Tab de comisiones con override por servicio, calculadora en vivo
+  - `StaffDetailProfile.tsx` — Cabecera detalle: avatar, role badges, stats, botones Editar/Comisiones
+  - `StaffDetailStats.tsx` — Grid 4 stats con iconos (citas, revenue, comisión, última cita)
+  - `StaffDetailTopServices.tsx` — Lista top servicios rankeada
+  - `StaffDetailDistribution.tsx` — Barra progreso distribución artista vs founder
+  - `StaffDetailQuickInfo.tsx` — Resumen rápido (comisión, especialidades, rol, horario)
+  - `StaffAppointmentHistory.tsx` — Tabla historial citas con badges de estado
 
 ### 6. Pagos (`/pagos`) — Hub con 4 tabs
 - **Registrar**: Lista de pagos + modal crear (ingreso/egreso)
@@ -640,4 +647,4 @@ npm run start
 ## Última Actualización
 - **Fecha**: 13 Mayo 2026
 - **Rama**: `main`
-- **Cambios recientes**: Refactor completo del módulo Clientes. Extraídos 10 componentes a `components/clientes/` (page-client.tsx 588→262 lns, [id]/page-client.tsx 268→145 lns). Tipado fuerte eliminando `any` mediante discriminated union en reducer. Accesibilidad: ARIA labels en avatar y cards, aria-live en resultados, role/teclado en cards. Performance: React.memo en ClientCard/ClientFilters, useMemo en filtered/grouped, useCallback en handlers. UI/UX: avatar degradado rose→purple, border-l-4 por estado (prospecto=blue, activa=emerald, inactiva=zinc, vip=amber), skeleton con avatar circular, fadeIn en grid al cambiar filtros. Fixes: Modal edición unificado (ClientFormModal) entre lista y detalle, status field agregado al edit modal del detalle (antes faltaba). Auditoría y fixes posteriores: navegación "Ver detalle completo", Instagram clickeable, empty state con CTA, error banner inline (role="alert"), auto-refresh 60s, paginación por grupo removida, skeletons muertos eliminados, type leak corregido.
+- **Cambios recientes**: Refactor completo del módulo Staff. Extraídos 11 componentes a `components/staff/` (page-client.tsx 1079→308 lns, [id]/page-client.tsx 430→179 lns). Tipado fuerte eliminando `any` mediante interfaces dedicadas (StaffWithDetails, StaffFormState, StaffPerformance, StaffTopService). Accesibilidad: ARIA labels en avatar y cards, aria-live en resultados, role/teclado en cards, role progressbar en distribución. Performance: React.memo en StaffCard/StaffFilters, useMemo en filtered, useCallback en handlers del modal. UI/UX: avatar degradado rose→purple, border-t-4 del color del role (role.color), Founder con anillo amber, skeleton coincidente con cards reales (avatar + 3 líneas + badges), empty state con CTA "Registrar primer miembro", stats de rendimiento con iconos por card, distribución visual con barra de progreso animada. Extraído StaffDetailQuickInfo del inline del detalle. Agregado botón Editar en StaffDetailProfile que navega a /staff. Eliminación total de casts `as any` en page-client y [id]/page-client.
