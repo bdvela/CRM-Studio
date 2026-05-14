@@ -1,10 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useReducer } from 'react';
+import { useEffect, useMemo, useReducer, memo } from 'react';
 import type { ServiceSelectorModalContentProps } from './types';
 import { getAvailableArtistsForService } from './helpers';
 import { formatCurrency, cn } from '@/lib/utils';
-import type { StaffMember } from '@/types/database';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { Search, Check, Sparkles } from 'lucide-react';
@@ -131,7 +130,7 @@ function ServiceSelectorHeader({
   );
 }
 
-export function ServiceSelectorModalContent({
+export const ServiceSelectorModalContent = memo(function ServiceSelectorModalContent({
   open, services, staff,
   initialSelectedIds, initialArtists, initialPrices,
   onConfirm, onClose,
@@ -411,4 +410,4 @@ export function ServiceSelectorModalContent({
       </div>
     </div>
   );
-}
+});

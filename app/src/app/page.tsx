@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { getDashboardMetrics } from '@/lib/db/queries';
+import { getDashboardMetrics, getMonthlyReport } from '@/lib/db/queries';
 import ClientPage from './page-client';
 
 export const metadata: Metadata = {
@@ -9,6 +9,15 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic';
 
 export default async function Page() {
-  const initialMetrics = await getDashboardMetrics();
-  return <ClientPage initialMetrics={initialMetrics} />;
+  const now = new Date();
+  const [initialMetrics, initialMonthlyReport] = await Promise.all([
+    getDashboardMetrics(),
+    getMonthlyReport(now.getFullYear(), now.getMonth() + 1),
+  ]);
+  return (
+    <ClientPage
+      initialMetrics={initialMetrics}
+      initialMonthlyReport={initialMonthlyReport}
+    />
+  );
 }

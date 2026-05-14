@@ -1,4 +1,4 @@
-import type { Service, ServiceInsert, Category, StaffMember, PriceType, StaffService } from '@/types/database';
+import type { Service, ServiceInsert, Category, StaffMember, PriceType } from '@/types/database';
 
 export interface ServiceForm extends Omit<ServiceInsert, 'price_type' | 'price_from' | 'price_to'> {
   price_type: PriceType;
@@ -15,6 +15,7 @@ export interface ServiciosDataState {
   categories: Category[];
   allStaff: StaffMember[];
   loading: boolean;
+  error: string | null;
 }
 
 export interface ServiciosUIState {
@@ -48,6 +49,7 @@ export interface ServiceListContentProps {
   onCategoryFilterChange: (v: string) => void;
   filterOptions: { value: string; label: string }[];
   loading: boolean;
+  error: string | null;
   filtered: Service[];
   grouped: Record<string, Service[]>;
   categories: Category[];

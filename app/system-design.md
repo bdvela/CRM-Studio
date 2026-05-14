@@ -74,25 +74,33 @@ app/src/
 │   │   ├── skeleton.tsx
 │   │   ├── stat-card.tsx
 │   │   ├── tabs.tsx
-│   │   └── textarea.tsx
+│   │   ├── textarea.tsx
+│   │   ├── empty-state.tsx
+│   │   └── error-banner.tsx
 │   ├── citas/
-│   │   ├── AppointmentCard.tsx       # Card individual en lista
-│   │   ├── AppointmentDetail.tsx      # Panel detalle ticket-style
-│   │   ├── AppointmentFormModal.tsx   # Modal crear/editar cita
-│   │   ├── CalendarView.tsx          # Calendario (mes/semana) + detail popover
-│   │   ├── CitasToolbar.tsx         # Toolbar de filtros y cambio de vista
-│   │   ├── ClientCombobox.tsx        # Selector de clientas con búsqueda
-│   │   ├── DetailPopover.tsx         # Popover de detalle en calendario
-│   │   ├── ServiceConfigModal.tsx    # Configuración de artista/precio
-│   │   ├── ServiceSelectorModal.tsx # Selector de servicios con filtros
-│   │   ├── helpers.ts               # generateAppointmentTitle, toLocalISO
-│   │   ├── hooks.ts                 # Custom hooks para lógica de citas
-│   │   ├── reducers.ts              # Reducers para estado de datos y UI
-│   │   └── types.ts                 # Tipos e interfaces
+│   │   ├── AppointmentCard.tsx           # Card con borde color por status
+│   │   ├── AppointmentDetail.tsx         # Re-export de AppointmentTicket
+│   │   ├── AppointmentFormModal.tsx      # Modal crear/editar cita
+│   │   ├── AppointmentTicket.tsx         # Ticket detalle + stepper progreso
+│   │   ├── CalendarView.tsx              # Orquestador calendario (~80 lns)
+│   │   ├── MonthView.tsx                 # Subvista mes (~80 lns)
+│   │   ├── WeekView.tsx                  # Subvista semana (~140 lns)
+│   │   ├── DayView.tsx                   # Subvista día (~120 lns)
+│   │   ├── calendar-utils.ts             # Colores, horas, helpers
+│   │   ├── CitasToolbar.tsx              # Toolbar filtros
+│   │   ├── ClientCombobox.tsx            # Selector clientas con búsqueda
+│   │   ├── DetailPopover.tsx             # Popover detalle calendario
+│   │   ├── ServiceConfigModal.tsx        # Config artista/precio
+│   │   ├── ServiceSelectorModal.tsx      # Selector servicios con filtros
+│   │   ├── helpers.ts                    # generateAppointmentTitle, toLocalISO
+│   │   ├── hooks.ts                      # Custom hooks lógica citas
+│   │   ├── reducers.ts                   # Reducers datos y UI
+│   │   └── types.ts                      # Tipos e interfaces
 │   ├── confirm/confirm.tsx       # Confirm dialog (context-based)
 │   └── providers.tsx             # ConfirmProvider wrapper
 │
 ├── lib/
+│   ├── constants.ts              # DEPOSIT_AMOUNT = 20, etc.
 │   ├── db/
 │   │   ├── queries.ts            # All Supabase queries + mock fallback + cache
 │   │   └── mock-data.ts          # Mock data for development

@@ -52,7 +52,7 @@ export function CitasToolbar({
         </button>
       </div>
 
-      <div className="w-full md:w-44">
+      <div className="w-full md:w-48 lg:w-56">
         <Select
           value={filterArtist}
           onChange={onFilterArtistChange}
@@ -61,7 +61,7 @@ export function CitasToolbar({
         />
       </div>
 
-      <div className="w-full md:w-44">
+      <div className="w-full md:w-48 lg:w-56">
         <Select
           value={filterStatus}
           onChange={onFilterStatusChange}

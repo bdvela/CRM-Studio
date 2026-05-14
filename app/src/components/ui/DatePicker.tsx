@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { Select } from './select';
 
@@ -51,12 +51,9 @@ function toIsoDate(day: number, month: number, year: number): string {
 
 export function DatePicker({ value, onChange, label }: DatePickerProps) {
   const [dp, setDp] = useState<DateParts>(() => dateFromValue(value));
-  const prevValue = useRef(value);
 
-  if (value !== prevValue.current) {
-    prevValue.current = value;
-    setDp(dateFromValue(value));
-  }
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { setDp(dateFromValue(value)); }, [value]);
 
   const currentYear = new Date().getFullYear();
   const minYear = 1940;

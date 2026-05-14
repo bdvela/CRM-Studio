@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useEffectEvent } from 'react';
+import { useEffect, useRef, useEffectEvent } from 'react';
 
 interface ModalProps {
   open: boolean;
@@ -10,14 +10,57 @@ interface ModalProps {
 }
 
 export function Modal({ open, onClose, title, children }: ModalProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
   const onCloseEvent = useEffectEvent(onClose);
+
   useEffect(() => {
     if (!open) return;
+
+    previousFocusRef.current = document.activeElement as HTMLElement;
+
     function handleEscape(e: KeyboardEvent) {
       if (e.key === 'Escape') onCloseEvent();
     }
+
+    function handleTab(e: KeyboardEvent) {
+      if (e.key !== 'Tab' || !dialogRef.current) return;
+      const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (e.shiftKey) {
+        if (document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else {
+        if (document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    }
+
     document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
+    document.addEventListener('keydown', handleTab);
+
+    requestAnimationFrame(() => {
+      const first = dialogRef.current?.querySelector<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      first?.focus();
+    });
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.removeEventListener('keydown', handleTab);
+      previousFocusRef.current?.focus();
+    };
   }, [open]);
 
   if (!open) return null;
@@ -26,7 +69,8 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
       <div className="fixed inset-0 bg-black/40" onClick={onClose} role="presentation" />
       <div
-        className="relative w-full sm:max-w-lg md:max-w-xl bg-white rounded-t-3xl sm:rounded-2xl shadow-xl max-h-[85vh] sm:max-h-[90vh] overflow-y-auto"
+        ref={dialogRef}
+        className="relative w-full sm:max-w-lg md:max-w-xl lg:max-w-2xl bg-white rounded-t-3xl sm:rounded-2xl shadow-xl max-h-[85vh] sm:max-h-[90vh] overflow-y-auto"
         role="dialog"
         aria-modal="true"
         aria-label={title || 'Dialog'}

@@ -26,6 +26,15 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   yape_plin: 'Yape/Plin',
 };
 
+export const PAYMENT_CATEGORY_LABELS: Record<PaymentCategory, string> = {
+  servicio: 'Servicio',
+  insumo: 'Insumo',
+  alquiler: 'Alquiler',
+  marketing: 'Marketing',
+  comisiones: 'Comisiones',
+  otro: 'Otro',
+};
+
 export interface Category {
   id: string;
   name: string;
@@ -108,7 +117,7 @@ export interface StaffService {
   staff?: StaffMember;
 }
 
-interface CommissionDetail {
+export interface CommissionDetail {
   appointment_service_id: string;
   appointment_id: string;
   service_id: string;
@@ -157,7 +166,7 @@ export interface CommissionReportRow {
 
 export type StaffMemberInsert = Omit<StaffMember, 'id' | 'created_at' | 'updated_at' | 'staff_stats' | 'role' | 'staff_specialties'>;
 
-interface Appointment {
+export interface Appointment {
   id: string;
   client_id: string | null;
   artist_id: string | null;
@@ -175,8 +184,10 @@ interface Appointment {
   client?: { name: string; phone: string | null };
   artist?: { name: string; photo_url: string | null };
   appointment_services?: Array<{
+    id: string;
     service_id: string;
     artist_id: string | null;
+    service_price: number | null;
     service: { name: string; price: number; duration_min: number; category_id: string; category?: Category };
     artist?: { name: string; photo_url: string | null };
     commission_detail?: CommissionDetail;

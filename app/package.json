@@ -8,9 +8,16 @@
     "dev:turbo": "next dev --turbo",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint 'src/**/*.{ts,tsx}' --max-warnings=100",
     "db:seed": "node ./scripts/seed-db.mjs",
-    "db:backup": "node ./scripts/backup-db.mjs"
+    "db:backup": "node ./scripts/backup-db.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:ui": "vitest --ui",
+    "e2e": "playwright test --config=e2e/playwright.config.ts",
+    "e2e:ui": "playwright test --ui --config=e2e/playwright.config.ts",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.47.0",
@@ -23,11 +30,22 @@
     "sonner": "^1.7.0"
   },
   "devDependencies": {
+    "@eslint/compat": "^2.1.0",
+    "@eslint/eslintrc": "^3.3.5",
     "@tailwindcss/postcss": "^4.3.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^22.10.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^6.0.1",
+    "@vitest/coverage-v8": "^4.1.6",
+    "c8": "^11.0.0",
+    "eslint-config-next": "^16.2.6",
+    "jsdom": "^29.1.1",
     "tailwindcss": "^4.3.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.6"
   }
 }

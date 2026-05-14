@@ -36,6 +36,13 @@
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "**/__tests__/**",
+    "**/*.test.*",
+    "**/*.spec.*",
+    "e2e/**",
+    "coverage/**",
+    "playwright-report/**",
+    "test-results/**"
   ]
 }

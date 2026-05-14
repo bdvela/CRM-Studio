@@ -4,20 +4,27 @@ import type { StaffMember, Service, AppointmentInsert } from '@/types/database';
 import { APPOINTMENT_STATUS_LABELS } from '@/types/database';
 import { formatCurrency } from '@/lib/utils';
 import { generateAppointmentTitle, toLocalISO } from './helpers';
-import type { AppointmentFormData, DataAction, UiAction } from './types';
+import type { AppointmentFormData, DataAction, UiAction, AppointmentWithDetails } from './types';
 import { createAppointment, updateAppointment, checkOverlap, createPayment } from '@/lib/db/queries';
+import { DEPOSIT_AMOUNT } from '@/lib/constants';
 import { toast } from 'sonner';
 import { useConfirm } from '@/context/confirm-context';
 
+interface ServiceData {
+  service_id: string;
+  artist_id: string | null;
+  service_price: number;
+}
+
 export function useCitasHandlers(ctx: {
-  staff: StaffMember[]; services: Service[]; appointments: any[];
-  editingAppt: any; selectedServices: string[]; serviceArtists: Record<string, string>;
+  staff: StaffMember[]; services: Service[]; appointments: AppointmentWithDetails[];
+  editingAppt: AppointmentWithDetails | null; selectedServices: string[]; serviceArtists: Record<string, string>;
   customPrices: Record<string, number>; overlapWarning: string | null;
   advancePaid: boolean; submitting: boolean; form: AppointmentFormData;
-  selectedAppt: any; pendingDate: Date | null;
+  selectedAppt: AppointmentWithDetails | null; pendingDate: Date | null;
   listFilter: string; filterArtist: string; filterStatus: string;
   setForm: React.Dispatch<React.SetStateAction<AppointmentFormData>>;
-  setEditingAppt: (v: any) => void;
+  setEditingAppt: (v: AppointmentWithDetails | null) => void;
   setSelectedServices: (v: string[]) => void;
   setServiceArtists: (v: Record<string, string> | ((prev: Record<string, string>) => Record<string, string>)) => void;
   setCustomPrices: (v: Record<string, number> | ((prev: Record<string, number>) => Record<string, number>)) => void;
@@ -65,8 +72,8 @@ export function useCitasHandlers(ctx: {
     if (form.status !== initialForm.current.status) return true;
     if (form.notes !== initialForm.current.notes) return true;
     if (form.color !== initialForm.current.color) return true;
-    const sortedSelected = selectedServices.toSorted();
-    const sortedInitial = initialSelectedServices.current.toSorted();
+    const sortedSelected = [...selectedServices].sort();
+    const sortedInitial = [...initialSelectedServices.current].sort();
     if (sortedSelected.length === sortedInitial.length && sortedSelected.every((id, i) => id === sortedInitial[i])) {
       for (const svcId of sortedSelected) {
         if (serviceArtists[svcId] !== initialServiceArtists.current[svcId]) return true;
@@ -92,7 +99,7 @@ export function useCitasHandlers(ctx: {
     }
     const start = new Date(form.start_time);
     const end = new Date(start.getTime() + totalDuration * 60000);
-    const excludeId = editingAppt?.id || null;
+    const excludeId = editingAppt?.id || undefined;
     const staffNameMap = new Map(staff.map((s: StaffMember) => [s.id, s.name]));
     const overlapResults = await Promise.all(artistIds.map((artistId: string) =>
       checkOverlap(artistId, start.toISOString(), end.toISOString(), excludeId)
@@ -118,15 +125,15 @@ export function useCitasHandlers(ctx: {
       const startTime = new Date(form.start_time);
       const endTime = new Date(startTime.getTime() + totalDuration * 60000);
       const calculatedTotalPrice = calculateTotalPrice();
-      const servicesData = selectedServices.map((sid: string) => {
+      const servicesData: ServiceData[] = selectedServices.map((sid: string) => {
         const svc = services.find((s: Service) => s.id === sid);
         const price = customPrices[sid] !== undefined
           ? customPrices[sid]
           : svc?.price_type === 'variable' ? (svc.price_from || 0) : (svc?.price || 0);
         return { service_id: sid, artist_id: serviceArtists[sid] || null, service_price: price };
       });
-      const firstArtistId = servicesData.find((s: any) => s.artist_id)?.artist_id || null;
-      const apptData: AppointmentInsert & { services?: any[]; serviceIds?: string[] } = {
+      const firstArtistId = servicesData.find((s) => s.artist_id)?.artist_id || null;
+      const apptData: AppointmentInsert & { services: ServiceData[] } = {
         title: generateAppointmentTitle(selectedServices, services),
         client_id: form.client_id || '',
         artist_id: firstArtistId,
@@ -147,7 +154,7 @@ export function useCitasHandlers(ctx: {
         const newAppt = await createAppointment(apptData);
         if (advancePaid) {
           await createPayment({
-            concept: 'Adelanto de cita', amount: 20, type: 'ingreso', category: 'servicio',
+            concept: 'Adelanto de cita', amount: DEPOSIT_AMOUNT, type: 'ingreso', category: 'servicio',
             appointment_id: newAppt.id, client_id: form.client_id || null,
           });
         }
@@ -156,14 +163,14 @@ export function useCitasHandlers(ctx: {
       dispatchUi({ type: 'SET_SHOW_MODAL', showModal: false });
       setEditingAppt(null);
       load();
-    } catch (e: any) {
-      toast.error('Error: ' + (e.message || 'No se pudo guardar'));
+    } catch (e: unknown) {
+      toast.error('Error: ' + ((e as Error).message || 'No se pudo guardar'));
     } finally {
       dispatchData({ type: 'SET_SUBMITTING', submitting: false });
     }
   }
 
-  function openEdit(appt: any) {
+  function openEdit(appt: AppointmentWithDetails) {
     setEditingAppt(appt);
     const formData: AppointmentFormData = {
       client_id: appt.client_id || '',
@@ -174,14 +181,14 @@ export function useCitasHandlers(ctx: {
     };
     const svcIds: string[] = [];
     const svcArtistMap: Record<string, string> = {};
-    (appt.appointment_services || []).forEach((as: any) => {
+    (appt.appointment_services || []).forEach((as) => {
       if (as.service_id) { svcIds.push(as.service_id); if (as.artist_id) svcArtistMap[as.service_id] = as.artist_id; }
     });
     setForm(formData);
     setSelectedServices(svcIds);
     setServiceArtists(svcArtistMap);
     const pricemap: Record<string, number> = {};
-    (appt.appointment_services || []).forEach((as: any) => {
+    (appt.appointment_services || []).forEach((as) => {
       if (as.service_id && as.service_price != null) pricemap[as.service_id] = Number(as.service_price);
     });
     setCustomPrices(pricemap);
@@ -227,14 +234,14 @@ export function useCitasHandlers(ctx: {
     dispatchUi({ type: 'SET_SHOW_MODAL', showModal: true });
   }
 
-  async function cancelAppt(appt: any) {
+  async function cancelAppt(appt: AppointmentWithDetails) {
     const confirmed = await confirm({ title: 'Cancelar cita', message: `¿Cancelar la cita "${appt.title}"?`, confirmText: 'Cancelar cita', cancelText: 'No cancelar', variant: 'warning' });
     if (!confirmed) return;
     try { await updateAppointment(appt.id, { status: 'cancelada' }); toast.success('Cita cancelada'); load(); }
-    catch (e) { toast.error('Error al cancelar'); }
+    catch { toast.error('Error al cancelar'); }
   }
 
-  async function advanceStatus(appt: any) {
+  async function advanceStatus(appt: AppointmentWithDetails) {
     const nextStatus: Record<string, string> = { 'programada': 'en_curso', 'en_curso': 'completada' };
     const newStatus = nextStatus[appt.status];
     if (!newStatus) return;
@@ -259,14 +266,14 @@ export function useCitasHandlers(ctx: {
       toast.success(`Cita marcada como ${statusLabel}`);
       dispatchUi({ type: 'SET_SHOW_DETAIL', showDetail: false });
       load();
-    } catch (e) { toast.error('Error al actualizar estado'); }
+    } catch { toast.error('Error al actualizar estado'); }
   }
 
-  async function markAsNoShow(appt: any) {
+  async function markAsNoShow(appt: AppointmentWithDetails) {
     const confirmed = await confirm({ title: 'Marcar como No Show', message: `¿Marcar la cita "${appt.title}" como no show?`, confirmText: 'Marcar como No Show', cancelText: 'Cancelar', variant: 'warning' });
     if (!confirmed) return;
     try { await updateAppointment(appt.id, { status: 'no_show' }); toast.success('Cita marcada como No Show'); dispatchUi({ type: 'SET_SHOW_DETAIL', showDetail: false }); load(); }
-    catch (e) { toast.error('Error al marcar como No Show'); }
+    catch { toast.error('Error al marcar como No Show'); }
   }
 
   async function deleteAppt() {
@@ -274,25 +281,25 @@ export function useCitasHandlers(ctx: {
     const confirmed = await confirm({ title: 'Eliminar cita', message: `¿Eliminar la cita "${editingAppt.title}"?`, confirmText: 'Eliminar', cancelText: 'Cancelar', variant: 'danger' });
     if (!confirmed) return;
     try { await updateAppointment(editingAppt.id, { status: 'cancelada' }); toast.success('Cita eliminada'); dispatchUi({ type: 'SET_SHOW_MODAL', showModal: false }); setEditingAppt(null); load(); }
-    catch (e) { toast.error('Error al eliminar'); }
+    catch { toast.error('Error al eliminar'); }
   }
 
   async function updateApptDate(apptId: string, newStart: Date) {
     try {
-      const appt = appointments.find((a: any) => a.id === apptId);
+      const appt = appointments.find((a) => a.id === apptId);
       if (!appt) return;
       const duration = appt.total_duration_min || 60;
       const newEnd = new Date(newStart.getTime() + duration * 60000);
       await updateAppointment(apptId, { start_time: newStart.toISOString(), end_time: newEnd.toISOString() });
       load();
-    } catch (e) { toast.error('Error al mover la cita'); }
+    } catch { toast.error('Error al mover la cita'); }
   }
 
   const statusColors: Record<string, 'info' | 'warning' | 'success' | 'danger'> = {
     programada: 'info', en_curso: 'warning', completada: 'success', cancelada: 'danger', no_show: 'danger',
   };
 
-  const canDeleteAppt = editingAppt && editingAppt.status !== 'cancelada' && editingAppt.status !== 'completada';
+  const canDeleteAppt = !!(editingAppt && editingAppt.status !== 'cancelada' && editingAppt.status !== 'completada');
 
   return {
     totalDuration, calculateTotalPrice, haveChanges, checkForOverlap, handleSubmit,

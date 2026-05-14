@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { AppLayout, MobileNav } from '@/components/layout/shell';
 import { Providers } from '@/components/providers';
+import { Toaster } from 'sonner';
 
 export const metadata: Metadata = {
   title: {
@@ -31,6 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Providers>
           <AppLayout>{children}</AppLayout>
           <MobileNav />
+          <Toaster richColors position="top-center" />
         </Providers>
       </body>
     </html>

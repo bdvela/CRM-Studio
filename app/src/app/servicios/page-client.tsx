@@ -22,7 +22,7 @@ import { ServicioFormModal } from '@/components/servicios/ServicioFormModal';
 import type { ServiceForm, FormAction, ServiciosDataState, ServiciosUIState } from '@/components/servicios/types';
 
 const SERVICIOS_DATA_INIT: ServiciosDataState = {
-  services: [], categories: [], allStaff: [], loading: true,
+  services: [], categories: [], allStaff: [], loading: true, error: null,
 };
 
 function serviciosDataReducer(state: ServiciosDataState, action: Partial<ServiciosDataState>): ServiciosDataState {
@@ -85,6 +85,7 @@ export default function ServiciosPage({ initialData }: {
           categories: initialData.categories,
           allStaff: initialData.allStaff,
           loading: false,
+          error: null,
         }
       : SERVICIOS_DATA_INIT,
   );
@@ -119,8 +120,10 @@ export default function ServiciosPage({ initialData }: {
         categories: categoriesData as Category[],
         allStaff: staffData as StaffMember[],
         loading: false,
+        error: null,
       });
     } catch (e) {
+      dispatchData({ loading: false, error: 'Error al cargar servicios. Intenta de nuevo.' });
       console.error(e);
     }
   }
@@ -134,30 +137,37 @@ export default function ServiciosPage({ initialData }: {
     load();
   }, []);
 
+  const sortByName = (a: Service, b: Service) => a.name.localeCompare(b.name);
+
   const filteredBySearch = useMemo(() =>
-    data.services.filter((s) =>
-      s.name.toLowerCase().includes(ui.search.toLowerCase()) ||
-      getCategoryName(s).toLowerCase().includes(ui.search.toLowerCase())
-    ),
+    data.services
+      .filter((s) =>
+        s.name.toLowerCase().includes(ui.search.toLowerCase()) ||
+        getCategoryName(s).toLowerCase().includes(ui.search.toLowerCase())
+      )
+      .sort(sortByName),
     [data.services, ui.search]
   );
 
-  const filtered = useMemo(() =>
-    ui.categoryFilter === 'all'
+  const filtered = useMemo(() => {
+    const result = ui.categoryFilter === 'all'
       ? filteredBySearch
-      : filteredBySearch.filter(s => s.category_id === ui.categoryFilter),
-    [filteredBySearch, ui.categoryFilter]
-  );
+      : filteredBySearch.filter(s => s.category_id === ui.categoryFilter);
+    return result;
+  }, [filteredBySearch, ui.categoryFilter]);
 
-  const grouped = useMemo(() =>
-    filtered.reduce((acc, svc) => {
+  const grouped = useMemo(() => {
+    const groups: Record<string, Service[]> = {};
+    for (const svc of filtered) {
       const cat = getCategoryName(svc);
-      if (!acc[cat]) acc[cat] = [];
-      acc[cat].push(svc);
-      return acc;
-    }, {} as Record<string, Service[]>),
-    [filtered]
-  );
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(svc);
+    }
+    for (const cat of Object.keys(groups)) {
+      groups[cat].sort(sortByName);
+    }
+    return groups;
+  }, [filtered]);
 
   const filterOptions = useMemo(() =>
     getFilterOptions(data.services, data.categories),
@@ -390,6 +400,7 @@ export default function ServiciosPage({ initialData }: {
         onCategoryFilterChange={handleCategoryFilterChange}
         filterOptions={filterOptions}
         loading={data.loading}
+        error={data.error}
         filtered={filtered}
         grouped={grouped}
         categories={data.categories}

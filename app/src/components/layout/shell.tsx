@@ -6,32 +6,66 @@ import { cn } from '@/lib/utils';
 import {
   LayoutDashboard, Users, Palette, UserRound,
   CalendarDays, DollarSign, ChevronLeft, ChevronRight,
-  TrendingUp, Menu, X,
+  Menu, X,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
-const navItems = [
+const mainNav = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/citas', label: 'Citas', icon: CalendarDays },
-  { href: '/clientes', label: 'Clientes', icon: Users },
   { href: '/servicios', label: 'Servicios', icon: Palette },
+  { href: '/clientes', label: 'Clientas', icon: Users },
   { href: '/staff', label: 'Staff', icon: UserRound },
   { href: '/pagos', label: 'Pagos', icon: DollarSign },
-  { href: '/reportes/comisiones', label: 'Comisiones', icon: TrendingUp },
 ];
 
 const mobileNavItems = [
   { href: '/', label: 'Inicio', icon: LayoutDashboard },
   { href: '/citas', label: 'Citas', icon: CalendarDays },
-  { href: '/clientes', label: 'Clientes', icon: Users },
+  { href: '/clientes', label: 'Clientas', icon: Users },
   { href: '/staff', label: 'Staff', icon: UserRound },
   { href: '/pagos', label: 'Pagos', icon: DollarSign },
 ];
 
-export function AppLayout({ children }: { children: React.ReactNode }) {
-  const [tabletMenuOpen, setTabletMenuOpen] = useState(false);
+function SidebarNav({ collapsed, onNavClick }: { collapsed: boolean; onNavClick?: () => void }) {
   const pathname = usePathname();
+
+  return (
+    <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
+      {mainNav.map((item) => {
+        const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href + '/'));
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            prefetch
+            onClick={onNavClick}
+            className={cn(
+              'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
+              isActive ? 'bg-salon-50 text-salon-700' : 'text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900',
+              collapsed && 'justify-center'
+            )}
+            title={collapsed ? item.label : undefined}
+          >
+            <item.icon className="size-5 flex-shrink-0" />
+            {!collapsed && <span>{item.label}</span>}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+export function AppLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const [tabletMenuOpen, setTabletMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  const isCalendarPage = pathname === '/citas' || pathname.startsWith('/citas/');
+
+  useEffect(() => {
+    if (isCalendarPage) setSidebarCollapsed(true);
+  }, [isCalendarPage]);
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -52,26 +86,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           )}
         </div>
 
-        <nav className="flex-1 py-4 px-3 space-y-1">
-          {navItems.map((item) => {
-            const isActive = pathname === item.href;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                prefetch
-                className={cn(
-                  'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
-                  isActive ? 'bg-salon-50 text-salon-700' : 'text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900',
-                  sidebarCollapsed && 'justify-center'
-                )}
-              >
-                <item.icon className="size-5 flex-shrink-0" />
-                {!sidebarCollapsed && <span>{item.label}</span>}
-              </Link>
-            );
-          })}
-        </nav>
+        <SidebarNav collapsed={sidebarCollapsed} />
 
         <div className="p-3 border-t border-zinc-100">
           <button
@@ -114,105 +129,26 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <X className="size-5 text-zinc-500" />
             </button>
           </div>
-          
-          <nav className="p-3 space-y-1">
-            {navItems.map((item) => {
-              const isActive = pathname === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  prefetch
-                  onClick={() => setTabletMenuOpen(false)}
-                  className={cn(
-                    'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
-                    isActive ? 'bg-salon-50 text-salon-700' : 'text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900'
-                  )}
-                >
-                  <item.icon className="size-5" />
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
-          </nav>
+
+          <SidebarNav collapsed={false} onNavClick={() => setTabletMenuOpen(false)} />
         </aside>
       </>
-      
+
       {/* Tablet menu button */}
-      <button 
+      <button
         onClick={() => setTabletMenuOpen(true)}
         className="hidden md:flex lg:hidden fixed top-3 left-3 z-30 p-2 rounded-lg bg-white border border-zinc-200 shadow-md"
       >
         <Menu className="size-5 text-zinc-700" />
       </button>
-      
+
       <div className="flex-1 flex flex-col overflow-hidden">
-        <main className="flex-1 overflow-y-auto pb-24 md:pb-0">
-          <div className="hidden md:block lg:hidden h-12" /> {/* Spacer for tablet menu button */}
+        <main className="flex-1 overflow-y-auto pb-24 md:pb-0" style={{ paddingBottom: 'max(6rem, calc(env(safe-area-inset-bottom) + 1.5rem))' }}>
+          <div className="hidden md:block lg:hidden h-12" />
           {children}
         </main>
       </div>
     </div>
-  );
-}
-
-function Sidebar() {
-  const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false);
-
-  return (
-    <aside className={cn(
-      'hidden lg:flex flex-col border-r border-zinc-200 bg-white transition-all duration-300',
-      collapsed ? 'lg:w-20' : 'lg:w-64'
-    )}>
-      {/* Logo */}
-      <div className="flex items-center gap-3 p-4 lg:p-5 border-b border-zinc-100">
-        <div className="size-10 rounded-xl bg-gradient-to-br from-salon-500 to-accent-600 flex items-center justify-center flex-shrink-0">
-          <span className="text-white text-lg">🌸</span>
-        </div>
-        {!collapsed && (
-          <div className="overflow-hidden">
-            <h1 className="text-base font-semibold text-zinc-900 leading-tight">Ara Zevallos Studio</h1>
-            <p className="text-xs text-zinc-400">Gestión integral</p>
-          </div>
-        )}
-      </div>
-
-      {/* Navigation */}
-      <nav className="flex-1 py-3 lg:py-4 px-2 lg:px-3 space-y-1">
-        {navItems.map((item) => {
-          const isActive = pathname === item.href;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              prefetch
-              className={cn(
-                'w-full flex items-center gap-2 lg:gap-3 px-2 lg:px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
-                isActive
-                  ? 'bg-salon-50 text-salon-700'
-                  : 'text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900',
-                collapsed && 'justify-center'
-              )}
-            >
-              <item.icon className="size-5 flex-shrink-0" />
-              {!collapsed && <span>{item.label}</span>}
-            </Link>
-          );
-        })}
-      </nav>
-
-      {/* Collapse toggle */}
-      <div className="p-2 lg:p-3 border-t border-zinc-100 hidden lg:block">
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="w-full flex items-center justify-center gap-2 px-2 lg:px-3 py-2 rounded-xl text-zinc-400 hover:bg-zinc-50 hover:text-zinc-600 transition-colors"
-        >
-          {collapsed ? <ChevronRight className="size-4" /> : <ChevronLeft className="size-4" />}
-          {!collapsed && <span className="text-xs">Colapsar</span>}
-        </button>
-      </div>
-    </aside>
   );
 }
 

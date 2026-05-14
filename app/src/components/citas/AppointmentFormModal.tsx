@@ -1,9 +1,10 @@
 'use client';
 
-import { useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import type { AppointmentFormModalContentProps } from './types';
 import { getAvailableArtistsForService } from './helpers';
 import { formatCurrency, cn } from '@/lib/utils';
+import { DEPOSIT_AMOUNT } from '@/lib/constants';
 import { ClientCombobox } from '@/components/citas/ClientCombobox';
 import { DateTimePicker } from '@/components/ui/DateTimePicker';
 import { Button } from '@/components/ui/button';
@@ -25,7 +26,7 @@ const COLOR_OPTIONS = [
   { value: 'indigo', label: 'Índigo', bg: 'bg-indigo-500' },
 ];
 
-export function AppointmentFormModalContent({
+export const AppointmentFormModalContent = memo(function AppointmentFormModalContent({
   open, editingAppt, form, clients, selectedServices, serviceArtists, customPrices,
   services, staff, overlapWarning, advancePaid, submitting, canDelete,
   totalDuration, haveChanges, calculateTotalPrice,
@@ -135,7 +136,7 @@ export function AppointmentFormModalContent({
       )}
 
       {overlapWarning && (
-        <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-50 text-amber-700 text-sm">
+        <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-50 text-amber-700 text-sm" role="alert">
           <AlertTriangle className="size-4 flex-shrink-0" />
           {overlapWarning}
         </div>
@@ -163,7 +164,7 @@ export function AppointmentFormModalContent({
       {!editingAppt && (
         <div className="flex items-center justify-between p-3 bg-zinc-50 rounded-xl">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-zinc-700">Adelanto de S/20</span>
+            <span className="text-sm font-medium text-zinc-700">Adelanto de S/{DEPOSIT_AMOUNT}</span>
             <span className="text-xs text-zinc-500">(para separar la cita)</span>
           </div>
           <button
@@ -200,11 +201,11 @@ export function AppointmentFormModalContent({
         <div className="hidden sm:block flex-1" />
         <div className="flex flex-1 sm:flex-none gap-2 order-first sm:order-none">
           <Button type="button" variant="outline" className="flex-1" onClick={onClose}>Cancelar</Button>
-          <Button type="submit" className="flex-1" loading={submitting} disabled={!form.start_time || (editingAppt && !haveChanges())}>
+          <Button type="submit" className="flex-1" loading={submitting} disabled={!form.start_time || !!(editingAppt && !haveChanges())}>
             {submitting ? 'Guardando...' : (editingAppt ? 'Actualizar' : 'Crear cita')}
           </Button>
         </div>
       </div>
     </form>
   );
-}
+});

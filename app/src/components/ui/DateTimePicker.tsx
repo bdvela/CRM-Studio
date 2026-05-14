@@ -37,13 +37,14 @@ export function DateTimePicker({ value, onChange }: DateTimePickerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const timeRef = useRef<HTMLDivElement>(null);
 
-  const parsed = value ? new Date(value) : null;
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const parsed = useMemo(() => (value ? new Date(value) : null), [value]);
+  const today = useMemo(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  }, []);
 
-  useEffect(() => {
-    setMonth(value ? new Date(value) : new Date());
-  }, [value]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { setMonth(value ? new Date(value) : new Date()); }, [value]);
 
   const daysInMonth = useMemo(() => getDaysInMonth(month.getFullYear(), month.getMonth()), [month]);
   const firstDay = useMemo(() => getFirstDayOfWeek(month.getFullYear(), month.getMonth()), [month]);

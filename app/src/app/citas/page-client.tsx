@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef, useReducer, useMemo } from 'react';
+import { useEffect, useState, useRef, useReducer, useMemo, useCallback } from 'react';
 import { getAppointments, getClients, getStaff, getServices } from '@/lib/db/queries';
 import type { Client, Service, StaffMember } from '@/types/database';
 import { Header } from '@/components/layout/shell';
@@ -16,7 +16,7 @@ import { ServiceConfigModalContent } from '@/components/citas/ServiceConfigModal
 import { ServiceSelectorModalContent } from '@/components/citas/ServiceSelectorModal';
 import { useCitasHandlers } from '@/components/citas/hooks';
 import { dataReducer, uiReducer, initialUiState } from '@/components/citas/reducers';
-import type { AppointmentFormData, ViewMode } from '@/components/citas/types';
+import type { AppointmentFormData, ViewMode, AppointmentWithDetails } from '@/components/citas/types';
 import { cn, startOfToday, endOfToday } from '@/lib/utils';
 import { CalendarDays, Plus } from 'lucide-react';
 import { useConfirm } from '@/context/confirm-context';
@@ -48,13 +48,14 @@ function MobileViewTabs({ viewMode, onViewModeChange }: { viewMode: ViewMode; on
   );
 }
 
-function AppointmentListView({ loading, clientGroupedByDate, filterArtist, filterStatus, statusColors, onSelectAppt }: {
+function AppointmentListView({ loading, clientGroupedByDate, filterArtist, filterStatus, statusColors, onSelectAppt, onNew }: {
   loading: boolean;
-  clientGroupedByDate: Record<string, any[]>;
+  clientGroupedByDate: Record<string, AppointmentWithDetails[]>;
   filterArtist: string;
   filterStatus: string;
   statusColors: Record<string, 'info' | 'warning' | 'success' | 'danger'>;
-  onSelectAppt: (appt: any) => void;
+  onSelectAppt: (appt: AppointmentWithDetails) => void;
+  onNew: () => void;
 }) {
   if (loading) {
     return (
@@ -68,13 +69,18 @@ function AppointmentListView({ loading, clientGroupedByDate, filterArtist, filte
   if (Object.keys(clientGroupedByDate).length === 0) {
     return (
       <Card>
-        <CardContent className="py-12 text-center text-zinc-400">
-          <CalendarDays className="size-12 mx-auto mb-3 opacity-30" />
-          <p className="text-sm">
+        <CardContent className="py-12 text-center">
+          <CalendarDays className="size-12 mx-auto mb-3 text-zinc-300" />
+          <p className="text-sm text-zinc-500 mb-4">
             {filterArtist || filterStatus
               ? 'No hay citas con estos filtros'
               : 'No hay citas en este período'}
           </p>
+          {!filterArtist && !filterStatus && (
+            <Button size="sm" onClick={onNew}>
+              <Plus className="size-4 mr-1" /> Crear primera cita
+            </Button>
+          )}
         </CardContent>
       </Card>
     );
@@ -87,7 +93,7 @@ function AppointmentListView({ loading, clientGroupedByDate, filterArtist, filte
             {date}
           </h3>
           <div className="space-y-2 sm:space-y-2.5">
-            {(appts as any[]).map((appt) => (
+            {appts.map((appt) => (
               <AppointmentCard
                 key={appt.id}
                 appt={appt}
@@ -102,23 +108,30 @@ function AppointmentListView({ loading, clientGroupedByDate, filterArtist, filte
   );
 }
 
-export default function CitasPage({ initialData }: { initialData?: { appointments: any[]; staff: StaffMember[]; services: Service[]; clients: Client[] } }) {
+interface InitialData {
+  appointments: AppointmentWithDetails[];
+  staff: StaffMember[];
+  services: Service[];
+  clients: Client[];
+}
+
+export default function CitasPage({ initialData }: { initialData?: InitialData }) {
   const { confirm } = useConfirm();
   const [data, dispatchData] = useReducer(dataReducer, {
-    appointments: initialData?.appointments || [] as any[],
-    staff: initialData?.staff || [] as StaffMember[],
-    services: initialData?.services || [] as Service[],
-    clients: initialData?.clients || [] as Client[],
+    appointments: initialData?.appointments || [],
+    staff: initialData?.staff || [],
+    services: initialData?.services || [],
+    clients: initialData?.clients || [],
     loading: !initialData,
     submitting: false,
   });
   const { appointments, staff, services, clients, loading, submitting } = data;
   const [ui, dispatchUi] = useReducer(uiReducer, initialUiState);
   const { viewMode, listFilter, filterArtist, filterStatus, showModal, showDetail, showServiceConfig, showServiceSelector, overlapWarning, pendingDate, advancePaid } = ui;
-  const [selectedAppt, setSelectedAppt] = useState<any>(null);
+  const [selectedAppt, setSelectedAppt] = useState<AppointmentWithDetails | null>(null);
 
   const [formMeta, setFormMeta] = useState({
-    editingAppt: null as any,
+    editingAppt: null as AppointmentWithDetails | null,
     selectedServices: [] as string[],
     serviceArtists: {} as Record<string, string>,
     customPrices: {} as Record<string, number>,
@@ -126,7 +139,7 @@ export default function CitasPage({ initialData }: { initialData?: { appointment
   });
   const { editingAppt, selectedServices, serviceArtists, customPrices, configuringServiceId } = formMeta;
 
-  function setEditingAppt(v: any) { setFormMeta(prev => ({ ...prev, editingAppt: v })); }
+  function setEditingAppt(v: AppointmentWithDetails | null) { setFormMeta(prev => ({ ...prev, editingAppt: v })); }
   function setSelectedServices(v: string[]) { setFormMeta(prev => ({ ...prev, selectedServices: v })); }
   function setServiceArtists(v: Record<string, string> | ((prev: Record<string, string>) => Record<string, string>)) {
     setFormMeta(prev => ({ ...prev, serviceArtists: typeof v === 'function' ? v(prev.serviceArtists) : v }));
@@ -162,7 +175,7 @@ export default function CitasPage({ initialData }: { initialData?: { appointment
       ]);
       dispatchData({
         type: 'LOAD_COMPLETE',
-        appointments: appts as any[],
+        appointments: appts as AppointmentWithDetails[],
         staff: s as StaffMember[],
         services: svcs as Service[],
         clients: cls as Client[],
@@ -172,7 +185,7 @@ export default function CitasPage({ initialData }: { initialData?: { appointment
     }
   }
 
-  async function loadAppointments() {
+  const loadAppointments = useCallback(async () => {
     dispatchData({ type: 'LOAD_START' });
     try {
       let dateFrom: string | undefined;
@@ -187,18 +200,18 @@ export default function CitasPage({ initialData }: { initialData?: { appointment
         dateFrom = startOfToday();
       }
 
-      const filter: any = {};
+      const filter: Record<string, string> = {};
       if (dateFrom) filter.dateFrom = dateFrom;
       if (dateTo) filter.dateTo = dateTo;
       if (filterArtist) filter.artistId = filterArtist;
       if (filterStatus) filter.status = filterStatus;
 
       const appts = await getAppointments(filter);
-      dispatchData({ type: 'SET_APPOINTMENTS', appointments: appts as any[] });
+      dispatchData({ type: 'SET_APPOINTMENTS', appointments: appts as AppointmentWithDetails[] });
     } catch (e) {
       console.error(e);
     }
-  }
+  }, [listFilter, filterArtist, filterStatus]);
 
   useEffect(() => {
     if (initialData) return;
@@ -211,7 +224,7 @@ export default function CitasPage({ initialData }: { initialData?: { appointment
       return;
     }
     loadAppointments();
-  }, [listFilter]);
+  }, [loadAppointments]);
 
   const visibleAppointments = useMemo(() => {
     return appointments.filter((appt) => {
@@ -227,7 +240,7 @@ export default function CitasPage({ initialData }: { initialData?: { appointment
       if (!acc[date]) acc[date] = [];
       acc[date].push(appt);
       return acc;
-    }, {} as Record<string, any[]>)
+    }, {} as Record<string, AppointmentWithDetails[]>)
   , [visibleAppointments]);
 
   const {
@@ -294,16 +307,33 @@ export default function CitasPage({ initialData }: { initialData?: { appointment
         )}
 
         {viewMode === 'calendar' ? (
+          loading ? (
+            <div className="space-y-3">
+              <div className="h-10 rounded-xl bg-zinc-100 animate-pulse" />
+              <div className="h-96 rounded-2xl bg-zinc-100 animate-pulse" />
+            </div>
+          ) : visibleAppointments.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <CalendarDays className="size-12 mx-auto mb-3 text-zinc-300" />
+                <p className="text-sm text-zinc-500 mb-4">No hay citas en este período</p>
+                <Button size="sm" onClick={openNew}>
+                  <Plus className="size-4 mr-1" /> Crear primera cita
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
             <CalendarView
-            appointments={visibleAppointments}
-            staff={staff}
-            onEdit={openEdit}
-            onCancel={cancelAppt}
-            onNew={(date) => openNewForDate(date)}
-            onUpdateDate={updateApptDate}
-            onAdvanceStatus={advanceStatus}
-            onMarkAsNoShow={markAsNoShow}
-          />
+              appointments={visibleAppointments}
+              staff={staff}
+              onEdit={openEdit}
+              onCancel={cancelAppt}
+              onNew={(date) => openNewForDate(date)}
+              onUpdateDate={updateApptDate}
+              onAdvanceStatus={advanceStatus}
+              onMarkAsNoShow={markAsNoShow}
+            />
+          )
         ) : (
           <AppointmentListView
             loading={loading}
@@ -311,6 +341,7 @@ export default function CitasPage({ initialData }: { initialData?: { appointment
             filterArtist={filterArtist}
             filterStatus={filterStatus}
             statusColors={statusColors}
+            onNew={openNew}
             onSelectAppt={(appt) => {
               setSelectedAppt(appt);
               dispatchUi({ type: 'SET_SHOW_DETAIL', showDetail: true });
@@ -330,7 +361,7 @@ export default function CitasPage({ initialData }: { initialData?: { appointment
         onMarkAsNoShow={markAsNoShow}
       />
 
-      <Modal open={showModal} onClose={() => { dispatchUi({ type: 'SET_SHOW_MODAL', showModal: false }); setEditingAppt(null); }} title={editingAppt ? 'Editar Cita' : 'Nueva Cita'}>
+      <Modal open={showModal} onClose={() => { dispatchUi({ type: 'SET_SHOW_MODAL', showModal: false }); setEditingAppt(null); }} title={editingAppt ? `Editar Cita (${selectedServices.length} servicio${selectedServices.length !== 1 ? 's' : ''})` : selectedServices.length > 0 ? `Nueva Cita (${selectedServices.length} servicio${selectedServices.length !== 1 ? 's' : ''})` : 'Nueva Cita'}>
           <AppointmentFormModalContent
           open={showModal}
           editingAppt={editingAppt}

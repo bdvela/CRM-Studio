@@ -1,17 +1,39 @@
-import type { AppointmentInsert, Client, Service, StaffMember } from '@/types/database';
+import type {
+  Appointment as DBAppointment,
+  AppointmentInsert,
+  AppointmentStatus,
+  Client,
+  Service,
+  StaffMember,
+} from '@/types/database';
 
 type ListFilter = 'list' | 'day' | 'week';
 export type ViewMode = 'list' | 'calendar';
 
+export type AppointmentServiceWithDetails = NonNullable<DBAppointment['appointment_services']>[number];
+export type AppointmentBalance = NonNullable<DBAppointment['appointment_balance']>;
+
+export interface AppointmentWithDetails extends DBAppointment {
+  appointment_services?: AppointmentServiceWithDetails[];
+  appointment_balance?: AppointmentBalance;
+}
+
+export interface CalendarAppointment extends AppointmentWithDetails {
+  _timeStr: string;
+  _dateStr: string;
+  _hour: number;
+  _minute: number;
+}
+
 export interface DetailPopoverProps {
   show: boolean;
-  selectedAppt: any;
+  selectedAppt: AppointmentWithDetails | null;
   statusColors: Record<string, 'info' | 'warning' | 'success' | 'danger'>;
   onClose: () => void;
-  onEdit: (appt: any) => void;
-  onCancel: (appt: any) => void;
-  onAdvanceStatus: (appt: any) => void;
-  onMarkAsNoShow: (appt: any) => void;
+  onEdit: (appt: AppointmentWithDetails) => void;
+  onCancel: (appt: AppointmentWithDetails) => void;
+  onAdvanceStatus: (appt: AppointmentWithDetails) => void;
+  onMarkAsNoShow: (appt: AppointmentWithDetails) => void;
 }
 
 export interface ServiceConfigModalContentProps {
@@ -43,7 +65,7 @@ export interface CitasToolbarProps {
   filterArtist: string;
   filterStatus: string;
   staff: StaffMember[];
-  appointments: any[];
+  appointments: AppointmentWithDetails[];
   onViewModeChange: (mode: ViewMode) => void;
   onListFilterChange: (filter: ListFilter) => void;
   onFilterArtistChange: (artistId: string) => void;
@@ -52,14 +74,14 @@ export interface CitasToolbarProps {
 }
 
 export interface AppointmentCardProps {
-  appt: any;
+  appt: AppointmentWithDetails;
   statusColors: Record<string, 'info' | 'warning' | 'success' | 'danger'>;
-  onSelect: (appt: any) => void;
+  onSelect: (appt: AppointmentWithDetails) => void;
 }
 
 export interface AppointmentFormModalContentProps {
   open: boolean;
-  editingAppt: any;
+  editingAppt: AppointmentWithDetails | null;
   form: AppointmentFormData;
   clients: Client[];
   selectedServices: string[];
@@ -87,13 +109,13 @@ export interface AppointmentFormModalContentProps {
 export interface AppointmentFormData {
   client_id: string;
   start_time: string;
-  status: AppointmentInsert['status'];
+  status: AppointmentStatus;
   notes: string;
   color: string;
 }
 
 export type DataState = {
-  appointments: any[];
+  appointments: AppointmentWithDetails[];
   staff: StaffMember[];
   services: Service[];
   clients: Client[];
@@ -103,8 +125,8 @@ export type DataState = {
 
 export type DataAction =
   | { type: 'LOAD_START' }
-  | { type: 'LOAD_COMPLETE'; appointments: any[]; staff: StaffMember[]; services: Service[]; clients: Client[] }
-  | { type: 'SET_APPOINTMENTS'; appointments: any[] }
+  | { type: 'LOAD_COMPLETE'; appointments: AppointmentWithDetails[]; staff: StaffMember[]; services: Service[]; clients: Client[] }
+  | { type: 'SET_APPOINTMENTS'; appointments: AppointmentWithDetails[] }
   | { type: 'SET_SUBMITTING'; submitting: boolean };
 
 export type UiState = {

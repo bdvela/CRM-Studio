@@ -82,10 +82,10 @@ function comboboxReducer(state: ComboboxState, action: ComboboxAction): Combobox
 // ---- Subcomponents ----
 
 function LastVisitDate({ date }: { date: string }) {
-  const [display, setDisplay] = useState('');
-  useEffect(() => {
-    setDisplay(new Date(date).toLocaleDateString('es-PE', { day: 'numeric', month: 'short' }));
-  }, [date]);
+  const display = useMemo(
+    () => new Date(date).toLocaleDateString('es-PE', { day: 'numeric', month: 'short' }),
+    [date]
+  );
   if (!display) return null;
   return <>{`Últ. visita: ${display}`}</>;
 }
@@ -256,8 +256,8 @@ export function ClientCombobox({ value, onChange, initialClients }: ClientCombob
     return () => { if (justCreatedRef.current) clearTimeout(justCreatedRef.current); };
   }, []);
 
-  const recentClients = useMemo(() => state.allClients
-    .toSorted((a, b) => {
+  const recentClients = useMemo(() => [...state.allClients]
+    .sort((a, b) => {
       const aDate = a.client_stats?.last_visit;
       const bDate = b.client_stats?.last_visit;
       if (!aDate && !bDate) return 0;

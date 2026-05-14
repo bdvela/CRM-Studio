@@ -444,7 +444,7 @@ function StaffFormModal({
   overrides, setOverrides,
   submitting, deletingId,
   activeStaffTab, setActiveStaffTab,
-  initialFormRef, initialSpecialtiesRef, initialOverridesRef,
+  initialForm, initialSpecialties, initialOverrides,
   handleSubmit, handleDelete, isOwnerMember,
 }: {
   open: boolean;
@@ -463,9 +463,9 @@ function StaffFormModal({
   deletingId: string | null;
   activeStaffTab: StaffModalTab;
   setActiveStaffTab: React.Dispatch<React.SetStateAction<StaffModalTab>>;
-  initialFormRef: React.MutableRefObject<any>;
-  initialSpecialtiesRef: React.MutableRefObject<string[]>;
-  initialOverridesRef: React.MutableRefObject<Record<string, number | null>>;
+  initialForm: any;
+  initialSpecialties: string[];
+  initialOverrides: Record<string, number | null>;
   handleSubmit: (e: React.FormEvent) => Promise<void>;
   handleDelete: (member: StaffMember) => Promise<void>;
   isOwnerMember: (member: StaffMember | null) => boolean;
@@ -681,9 +681,9 @@ function StaffFormModal({
             };
 
             const isEditing = !!editingMember;
-            const formChanged = JSON.stringify(form) !== JSON.stringify(initialFormRef.current);
-            const specialtiesChanged = !arraysEqual(specialtySelections, initialSpecialtiesRef.current);
-            const overridesChanged = !recordsEqual(overrides, initialOverridesRef.current);
+            const formChanged = JSON.stringify(form) !== JSON.stringify(initialForm);
+            const specialtiesChanged = !arraysEqual(specialtySelections, initialSpecialties);
+            const overridesChanged = !recordsEqual(overrides, initialOverrides);
 
             const hasChanges = !isEditing || formChanged || specialtiesChanged || overridesChanged;
 
@@ -803,9 +803,9 @@ export default function StaffPage({ initialData }: {
     last_commission_paid: null, birthday_date: null,
   });
 
-  const initialFormRef = useRef<any>(null);
-  const initialSpecialtiesRef = useRef<string[]>([]);
-  const initialOverridesRef = useRef<Record<string, number | null>>({});
+  const [initialForm, setInitialForm] = useState<any>(null);
+  const [initialSpecialties, setInitialSpecialties] = useState<string[]>([]);
+  const [initialOverrides, setInitialOverrides] = useState<Record<string, number | null>>({});
   const skipInitialLoad = useRef(!!initialData);
 
   async function load() {
@@ -925,9 +925,9 @@ export default function StaffPage({ initialData }: {
       }
     });
 
-    initialFormRef.current = { ...newForm };
-    initialSpecialtiesRef.current = [...currentSpecIds];
-    initialOverridesRef.current = { ...map };
+    setInitialForm({ ...newForm });
+    setInitialSpecialties([...currentSpecIds]);
+    setInitialOverrides({ ...map });
 
     dispatchUI({
       editingMember: member,
@@ -945,13 +945,13 @@ export default function StaffPage({ initialData }: {
       commission_pct: 0, schedule: '', photo_url: null,
       active: true, last_commission_paid: null, birthday_date: null,
     }});
-    initialFormRef.current = {
+    setInitialForm({
       name: '', phone: '', role_id: activeRoles[0]?.id || '',
       commission_pct: 0, schedule: '', photo_url: null,
       active: true, last_commission_paid: null, birthday_date: null,
-    };
-    initialSpecialtiesRef.current = [];
-    initialOverridesRef.current = {};
+    });
+    setInitialSpecialties([]);
+    setInitialOverrides({});
 
     dispatchUI({
       editingMember: null,
@@ -1067,9 +1067,9 @@ export default function StaffPage({ initialData }: {
         deletingId={ui.deletingId}
         activeStaffTab={ui.activeStaffTab}
         setActiveStaffTab={(v) => dispatchUI({ activeStaffTab: typeof v === 'function' ? v(ui.activeStaffTab) : v })}
-        initialFormRef={initialFormRef}
-        initialSpecialtiesRef={initialSpecialtiesRef}
-        initialOverridesRef={initialOverridesRef}
+        initialForm={initialForm}
+        initialSpecialties={initialSpecialties}
+        initialOverrides={initialOverrides}
         handleSubmit={handleSubmit}
         handleDelete={handleDelete}
         isOwnerMember={isOwnerMember}

@@ -1,10 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useReducer } from 'react';
+import { useEffect, useMemo, useReducer, memo } from 'react';
 import type { ServiceConfigModalContentProps } from './types';
 import { getAvailableArtistsForService } from './helpers';
 import { formatCurrency, cn } from '@/lib/utils';
-import type { StaffMember } from '@/types/database';
 import { Button } from '@/components/ui/button';
 import { Clock, Sparkles, Trash2 } from 'lucide-react';
 
@@ -23,7 +22,7 @@ function configReducer(state: ConfigState, action: ConfigAction): ConfigState {
   }
 }
 
-export function ServiceConfigModalContent({
+export const ServiceConfigModalContent = memo(function ServiceConfigModalContent({
   open, serviceId, services, staff,
   currentArtistId, currentPrice,
   onSave, onRemove, onClose,
@@ -69,7 +68,7 @@ export function ServiceConfigModalContent({
           className="w-full text-sm border border-zinc-200 rounded-xl px-3 py-2.5 bg-white focus:ring-2 focus:ring-salon-500 focus:border-transparent"
         >
           <option value="">Sin artista</option>
-          {availableArtists.map((s: StaffMember) => (
+          {availableArtists.map((s) => (
             <option key={s.id} value={s.id}>{s.name}</option>
           ))}
         </select>
@@ -156,4 +155,4 @@ export function ServiceConfigModalContent({
       </div>
     </div>
   );
-}
+});
