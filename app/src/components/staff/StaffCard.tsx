@@ -14,7 +14,7 @@ export const StaffCard = memo(function StaffCard({ member, onEdit }: StaffCardPr
   return (
     <div
       onClick={() => onEdit(member)}
-      className={`rounded-2xl border border-zinc-200 bg-white shadow-sm cursor-pointer hover:shadow-md hover:border-salon-300 transition-shadow transition-colors active:scale-[0.97] ${!member.active ? 'opacity-60' : ''} ${isOwner ? 'ring-2 ring-amber-300' : ''}`}
+      className={`rounded-2xl border border-zinc-200 bg-white shadow-sm cursor-pointer hover:shadow-md hover:border-salon-300 transition-shadow transition-colors active:scale-[0.97] ${!member.active ? 'opacity-60' : ''}`}
       role="button"
       tabIndex={0}
       aria-label={`Editar ${member.name}`}
