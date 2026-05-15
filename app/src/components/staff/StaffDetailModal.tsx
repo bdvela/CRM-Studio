@@ -183,21 +183,24 @@ export const StaffDetailModal = memo(function StaffDetailModal({
           </div>
 
           {/* Specialties — full width field */}
-          <div className="col-span-2 flex items-start gap-2 px-3 py-2.5 rounded-xl bg-zinc-50/60">
+          <div className="col-span-2 flex items-start gap-2 px-3 py-3 rounded-xl bg-zinc-50/60">
             <Sparkles className="size-3.5 text-zinc-400 flex-shrink-0 mt-0.5" aria-hidden="true" />
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] text-zinc-400 mb-1">Especialidades</p>
+              <p className="text-[10px] text-zinc-400 mb-2">Especialidades</p>
               {member.staff_specialties && member.staff_specialties.length > 0 ? (
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-2">
                   {member.staff_specialties.map((spec) => (
-                    <Badge
+                    <span
                       key={spec.id || spec.category_id}
-                      variant="custom"
-                      color={spec.category?.color || '#6B7280'}
-                      className="text-[10px]"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm"
+                      style={{
+                        backgroundColor: `${spec.category?.color || '#6B7280'}18`,
+                        color: spec.category?.color || '#6B7280',
+                      }}
                     >
-                      {spec.category?.icon || ''} {spec.category?.name}
-                    </Badge>
+                      <span className="text-sm leading-none">{spec.category?.icon || ''}</span>
+                      {spec.category?.name}
+                    </span>
                   ))}
                 </div>
               ) : (
