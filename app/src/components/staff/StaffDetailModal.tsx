@@ -8,8 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import {
-  CalendarDays, DollarSign, TrendingUp, Clock, Phone,
-  Pencil, Cake, MessageCircle, Sparkles, ArrowUpRight,
+  Phone, Pencil, Cake, Clock, CalendarDays, Sparkles, ArrowUpRight,
 } from 'lucide-react';
 
 interface StaffDetailModalProps {
@@ -19,11 +18,6 @@ interface StaffDetailModalProps {
   onEdit: (member: StaffWithDetails) => void;
   commissionOverridesCount?: number;
   recentPerformance?: StaffPerformance | null;
-}
-
-function waUrl(phone: string): string {
-  const digits = phone.replace(/\D/g, '');
-  return `https://wa.me/51${digits}`;
 }
 
 function birthdayLabel(birthdayDate: string | null): { label: string; isSoon: boolean } | null {
@@ -46,22 +40,6 @@ function Dot() {
 
 function ThinDivider() {
   return <div className="w-full h-px bg-gradient-to-r from-transparent via-rose-200/50 to-transparent my-1" />;
-}
-
-// ─── Color utilities ─────────────────────────────────────────────────────
-
-const avatarGradients = [
-  'from-rose-400 via-pink-400 to-rose-300',
-  'from-violet-400 via-purple-400 to-fuchsia-300',
-  'from-amber-400 via-orange-400 to-rose-300',
-  'from-emerald-400 via-teal-400 to-cyan-300',
-  'from-blue-400 via-indigo-400 to-violet-300',
-];
-
-function avatarGradient(name: string): string {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  return avatarGradients[Math.abs(hash) % avatarGradients.length];
 }
 
 // ─── Component ────────────────────────────────────────────────────────────
@@ -158,122 +136,79 @@ export const StaffDetailModal = memo(function StaffDetailModal({
 
         <ThinDivider />
 
-        {/* ─── Info cards — 2-column refined grid ─── */}
+        {/* ─── Info cards — 2-column grid ─── */}
         <div className="px-4 py-4 grid grid-cols-2 gap-2">
-          {/* Phone + WhatsApp */}
-          {member.phone && (
-            <div className="group flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-white/60 transition-colors">
-              <div className="size-8 rounded-lg bg-rose-100/60 flex items-center justify-center flex-shrink-0 group-hover:bg-rose-100 transition-colors">
-                <Phone className="size-3.5 text-rose-400" aria-hidden="true" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[10px] text-zinc-400 mb-0.5">Telefono</p>
-                <p className="text-xs font-medium text-zinc-700 truncate">{member.phone}</p>
-              </div>
-            </div>
-          )}
-
-          {/* WhatsApp button — paired with phone in same row */}
-          {member.phone && (
-            <div className="flex items-center justify-end px-3 py-2.5">
-              <a
-                href={waUrl(member.phone)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 hover:bg-emerald-100 text-xs font-medium text-emerald-700 transition-colors"
-                aria-label={`Enviar WhatsApp a ${member.name}`}
-              >
-                <MessageCircle className="size-3.5" />
-                WhatsApp
-              </a>
-            </div>
-          )}
-
-          {/* Birthday */}
-          {bd && (
-            <div className={`group flex items-center gap-2 px-3 py-2.5 rounded-xl transition-colors ${bd.isSoon ? 'bg-rose-50/80 border border-rose-100' : 'hover:bg-white/60'}`}>
-              <div className={`size-8 rounded-lg flex items-center justify-center flex-shrink-0 ${bd.isSoon ? 'bg-rose-200' : 'bg-rose-100/60 group-hover:bg-rose-100'} transition-colors`}>
-                <Cake className={`size-3.5 ${bd.isSoon ? 'text-rose-600' : 'text-rose-400'}`} aria-hidden="true" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-[10px] text-zinc-400 mb-0.5">Cumpleaños</p>
-                <p className={`text-xs font-medium truncate ${bd.isSoon ? 'text-rose-700' : 'text-zinc-700'}`}>
-                  {bd.label}
-                </p>
-              </div>
-              {bd.isSoon && <span className="text-[10px] bg-rose-200 text-rose-700 px-1.5 py-0.5 rounded-full flex-shrink-0 ml-auto">hoy?</span>}
-            </div>
-          )}
-
-          {/* Schedule */}
-          {member.schedule && (
-            <div className="group flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-white/60 transition-colors">
-              <div className="size-8 rounded-lg bg-violet-100/60 flex items-center justify-center flex-shrink-0 group-hover:bg-violet-100 transition-colors">
-                <Clock className="size-3.5 text-violet-400" aria-hidden="true" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-[10px] text-zinc-400 mb-0.5">Horario</p>
-                <p className="text-xs font-medium text-zinc-700 truncate">{member.schedule}</p>
-              </div>
-            </div>
-          )}
-
-          {/* Last appointment */}
-          {stats?.last_appointment && (
-            <div className="group flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-white/60 transition-colors">
-              <div className="size-8 rounded-lg bg-sky-100/60 flex items-center justify-center flex-shrink-0 group-hover:bg-sky-100 transition-colors">
-                <CalendarDays className="size-3.5 text-sky-400" aria-hidden="true" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-[10px] text-zinc-400 mb-0.5">Ultima cita</p>
-                <p className="text-xs font-medium text-zinc-700 truncate">{formatDate(stats.last_appointment)}</p>
-              </div>
-            </div>
-          )}
-
-          {/* Specialties — visual cloud */}
-          {member.staff_specialties && member.staff_specialties.length > 0 && (
-            <div className="group flex items-start gap-2 px-3 py-2.5 rounded-xl hover:bg-white/60 transition-colors col-span-2">
-              <div className="size-8 rounded-lg bg-amber-100/60 flex items-center justify-center flex-shrink-0 mt-0.5 group-hover:bg-amber-100 transition-colors">
-                <Sparkles className="size-3.5 text-amber-400" aria-hidden="true" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-[10px] text-zinc-400 mb-1.5">Especialidades</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {member.staff_specialties.map((spec) => (
-                    <span
-                      key={spec.id || spec.category_id}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors"
-                      style={{
-                        backgroundColor: `${spec.category?.color || '#e2e8f0'}18`,
-                        color: spec.category?.color || '#64748b',
-                        border: `1px solid ${spec.category?.color || '#e2e8f0'}30`,
-                      }}
-                    >
-                      {spec.category?.icon || ''} {spec.category?.name}
-                    </span>
-                  ))}
+          {/* Left column: Phone + Birthday */}
+          <div className="space-y-2">
+            {member.phone && (
+              <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-zinc-50/60">
+                <Phone className="size-3.5 text-zinc-400 flex-shrink-0" aria-hidden="true" />
+                <div className="min-w-0">
+                  <p className="text-[10px] text-zinc-400">Telefono</p>
+                  <p className="text-xs font-medium text-zinc-700 truncate">{member.phone}</p>
                 </div>
               </div>
-            </div>
-          )}
+            )}
+            {bd && (
+              <div className={`flex items-center gap-2 px-3 py-2.5 rounded-xl ${bd.isSoon ? 'bg-rose-50 border border-rose-100' : 'bg-zinc-50/60'}`}>
+                <Cake className={`size-3.5 flex-shrink-0 ${bd.isSoon ? 'text-rose-500' : 'text-zinc-400'}`} aria-hidden="true" />
+                <div className="min-w-0">
+                  <p className="text-[10px] text-zinc-400">Cumpleaños</p>
+                  <p className={`text-xs font-medium truncate ${bd.isSoon ? 'text-rose-700' : 'text-zinc-700'}`}>
+                    {bd.label}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
 
-          {/* Filler cells to maintain grid when items are missing */}
-          {!member.phone && !bd && !member.schedule && !stats?.last_appointment && (
-            <div className="col-span-2 text-center py-4">
-              <p className="text-xs text-zinc-300">Sin informacion adicional</p>
+          {/* Right column: Schedule + Last appointment */}
+          <div className="space-y-2">
+            {member.schedule && (
+              <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-zinc-50/60">
+                <Clock className="size-3.5 text-zinc-400 flex-shrink-0" aria-hidden="true" />
+                <div className="min-w-0">
+                  <p className="text-[10px] text-zinc-400">Horario</p>
+                  <p className="text-xs font-medium text-zinc-700 truncate">{member.schedule}</p>
+                </div>
+              </div>
+            )}
+            {stats?.last_appointment && (
+              <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-zinc-50/60">
+                <CalendarDays className="size-3.5 text-zinc-400 flex-shrink-0" aria-hidden="true" />
+                <div className="min-w-0">
+                  <p className="text-[10px] text-zinc-400">Ultima cita</p>
+                  <p className="text-xs font-medium text-zinc-700 truncate">{formatDate(stats.last_appointment)}</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Specialties — full width row */}
+          {member.staff_specialties && member.staff_specialties.length > 0 && (
+            <div className="col-span-2 flex flex-wrap gap-1.5 pt-1">
+              {member.staff_specialties.map((spec) => (
+                <Badge
+                  key={spec.id || spec.category_id}
+                  variant="custom"
+                  color={spec.category?.color || '#6B7280'}
+                  className="text-[10px]"
+                >
+                  {spec.category?.icon || ''} {spec.category?.name}
+                </Badge>
+              ))}
             </div>
           )}
         </div>
 
         <ThinDivider />
 
-        {/* ─── Actions ─── */}
-        <div className="px-4 py-4 flex gap-3">
+        {/* ─── Actions — right aligned ─── */}
+        <div className="px-4 py-4 flex items-center justify-end gap-3">
           <Button
             type="button"
             variant="outline"
-            className="flex-1 border-zinc-200/80 text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50 hover:border-zinc-300 rounded-xl py-5 text-sm font-medium transition-all duration-200"
+            className="border-zinc-200/80 text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50 hover:border-zinc-300 rounded-xl text-sm font-medium transition-colors"
             onClick={onClose}
           >
             Cerrar
@@ -285,7 +220,7 @@ export const StaffDetailModal = memo(function StaffDetailModal({
                 onClose();
                 onEdit(member);
               }}
-              className="flex-1 flex items-center justify-center gap-2 py-5 rounded-xl text-sm font-semibold text-white transition-all duration-200 hover:shadow-lg hover:shadow-rose-200/40 active:scale-[0.97]"
+              className="flex items-center justify-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold text-white hover:shadow-lg hover:shadow-rose-200/40 active:scale-[0.97] transition-all duration-200"
               style={{ background: `linear-gradient(135deg, ${roleColor}cc, ${roleColor})` }}
             >
               <Pencil className="size-4" aria-hidden="true" />
