@@ -13,8 +13,10 @@ import {
   getCommissionOverrides,
   upsertCommissionOverride,
   deleteCommissionOverride,
+  getStaffPerformance,
 } from '@/lib/db/queries';
 import type { Role, Category, Service } from '@/types/database';
+import type { StaffPerformance } from '@/components/staff/types';
 import { Header } from '@/components/layout/shell';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
@@ -58,6 +60,8 @@ interface UIState {
   showDetailModal: boolean;
   editingMember: StaffWithDetails | null;
   viewingMember: StaffWithDetails | null;
+  viewingPerformance: StaffPerformance | null;
+  viewingOverridesCount: number;
   search: string;
   activeTab: StaffModalTab;
   specialtySelections: string[];
@@ -66,7 +70,8 @@ interface UIState {
 
 const UI_INIT: UIState = {
   submitting: false, deletingId: null, showModal: false, showDetailModal: false,
-  editingMember: null, viewingMember: null, search: '', activeTab: 'basicos',
+  editingMember: null, viewingMember: null, viewingPerformance: null, viewingOverridesCount: 0,
+  search: '', activeTab: 'basicos',
   specialtySelections: [], overrides: {},
 };
 
@@ -111,12 +116,29 @@ export default function StaffPage({ initialData }: {
 
   const handleSearchChange = useCallback((v: string) => dispatchUI({ search: v }), []);
 
-  const openDetail = useCallback((member: StaffWithDetails) => {
+  const openDetail = useCallback(async (member: StaffWithDetails) => {
     dispatchUI({ viewingMember: member, showDetailModal: true });
+
+    const now = new Date();
+    const from = new Date(now);
+    from.setDate(from.getDate() - 30);
+
+    try {
+      const [perf, overrides] = await Promise.all([
+        getStaffPerformance(member.id, from.toISOString().split('T')[0], now.toISOString().split('T')[0]),
+        getCommissionOverrides(member.id),
+      ]);
+      dispatchUI({
+        viewingPerformance: perf as unknown as StaffPerformance,
+        viewingOverridesCount: overrides.length,
+      });
+    } catch {
+      // silent — modal already visible with basic data
+    }
   }, []);
 
   const closeDetail = useCallback(() => {
-    dispatchUI({ showDetailModal: false, viewingMember: null });
+    dispatchUI({ showDetailModal: false, viewingMember: null, viewingPerformance: null, viewingOverridesCount: 0 });
   }, []);
 
   useEffect(() => {
@@ -327,6 +349,8 @@ export default function StaffPage({ initialData }: {
           member={ui.viewingMember}
           onClose={closeDetail}
           onEdit={openEdit}
+          recentPerformance={ui.viewingPerformance}
+          commissionOverridesCount={ui.viewingOverridesCount}
         />
       </Suspense>
 
