@@ -1,6 +1,6 @@
 # Especificaciones — Historias de Usuario
 
-> **26 HUs** organizadas por módulo funcional.
+> **27 HUs** organizadas por módulo funcional.
 
 ## Módulos
 
@@ -12,6 +12,7 @@
 | HU-03 | Estado de clienta | Media | ✅ |
 | HU-04 | Historial de clienta | Alta | ✅ |
 | HU-05 | Reactivar clientas | Baja | ✅ |
+| HU-26 | Transición automática de estados | Media | ⏳ |
 
 ### 02 — Servicios
 | HU | Descripción | Prioridad | Estado |

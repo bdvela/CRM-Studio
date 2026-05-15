@@ -607,8 +607,10 @@ npm run start
 | HU-23 | Roles dinamicos | ✅ |
 | HU-24 | Comisiones dinamicas | ✅ |
 | HU-25 | Panel servicios mejoras | ✅ |
+| HU-26 | Transición automática de estados de clienta | ⏳ |
 
 ### Próximas Sesiones (no son HU)
+- HU-26 — Transición automática de estados de clienta
 - Tests unitarios y E2E
 - Autenticación/Login (Supabase Auth)
 
@@ -660,4 +662,4 @@ npm run start
 ## Última Actualización
 - **Fecha**: 14 Mayo 2026
 - **Rama**: `main`
-- **Cambios recientes**: Optimización completa del módulo Clientes — 14 mejoras: (1) Bug fix: CTA "Registrar primera clienta" en empty state ahora usa prop `onOpenNew` en vez de `getElementById` roto; (2) Bug fix: `client.name?.[0]?.toUpperCase() ?? '?'` evita crash si name está vacío; (3) Auto-refresh ahora usa `visibilitychange` para pausar cuando la pestaña está oculta; (4-5) `ClientFormModal` y `ClientDetailModal` con lazy-load (`React.lazy` + `Suspense`); (6-9) Memoización de 4 componentes: `ClientDetailModal`, `ClientDetailProfile`, `ClientDetailStats`, `ClientAppointmentHistory` con `memo()`; (10) `ClientCard` con `active:scale-[0.97]` para feedback táctil; (11) `animate-fadeIn` en empty state; (12) Toast en error de recarga del detail page (antes `// silent`); (13) `APPT_STATUS_STYLES` tipado como `Record<AppointmentStatus, string>`; (14) Botón delete ahora usa `variant="danger"` y `disabled={deleting}`; (15) Stagger animations en detail page [id]. 0 errores de lint.
+- **Cambios recientes**: Optimización completa del módulo Clientes — 14 mejoras (ver Issues Conocidos). Spec de HU-26 (Transición automática de estados de clienta) creada en `docs/specs/01-clientes/HU-26-transicion-auto-estados.md`. Estandarizados colores de borde en ClientCard para coincidir con badges de estado. Botones del ClientDetailModal refinados: delete outline con borde rojo sutil, edit con estilo salon-200 (matching citas modal), ver detalle con borde dashed.
