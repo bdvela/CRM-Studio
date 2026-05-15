@@ -82,7 +82,7 @@ export const StaffDetailModal = memo(function StaffDetailModal({
 
   return (
     <Modal open={open} onClose={onClose} title="">
-      <div className="relative overflow-hidden rounded-xl" style={{ background: 'linear-gradient(180deg, #fdf2f8 0%, #faf5ff 40%, #ffffff 100%)' }}>
+      <div className="relative overflow-hidden rounded-xl bg-white">
 
         {/* ─── Header section ─── */}
         <div className="relative pt-6 pb-4 px-5">
