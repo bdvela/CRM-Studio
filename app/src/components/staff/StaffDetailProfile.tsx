@@ -1,14 +1,15 @@
 'use client';
 
+import { memo } from 'react';
 import type { StaffDetailProfileProps } from './types';
 import { isOwnerMember } from './types';
 import { formatCurrency } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
-import { Pencil, ExternalLink } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 
-export function StaffDetailProfile({ member }: StaffDetailProfileProps) {
+export const StaffDetailProfile = memo(function StaffDetailProfile({ member }: StaffDetailProfileProps) {
   const { push } = useRouter();
   const isOwner = isOwnerMember(member);
   const roleColor = member.role?.color || '#6B7280';
@@ -59,10 +60,7 @@ export function StaffDetailProfile({ member }: StaffDetailProfileProps) {
             </div>
           </div>
           <div className="flex-shrink-0 flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => push('/staff')}>
-              <Pencil className="size-4 mr-1" aria-hidden="true" /> Editar
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => window.location.href = '/reportes/comisiones'}>
+            <Button variant="outline" size="sm" onClick={() => push('/reportes/comisiones')}>
               <ExternalLink className="size-4 mr-1" aria-hidden="true" /> Comisiones
             </Button>
           </div>
@@ -70,4 +68,4 @@ export function StaffDetailProfile({ member }: StaffDetailProfileProps) {
       </div>
     </div>
   );
-}
+});

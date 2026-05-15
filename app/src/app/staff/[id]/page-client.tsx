@@ -70,14 +70,16 @@ export default function StaffDetailClient({
   }, [staffId]);
 
   useEffect(() => {
-    if (initialMember) {
-      getCommissionOverrides(staffId).then((data) => {
-        setCommissionOverridesCount(data.length);
-      });
-      return;
-    }
+    if (initialMember) return;
     loadStaff();
-  }, [loadStaff, staffId, initialMember]);
+  }, [loadStaff, initialMember]);
+
+  useEffect(() => {
+    if (!initialMember) return;
+    getCommissionOverrides(staffId).then((data) => {
+      setCommissionOverridesCount(data.length);
+    });
+  }, [staffId, initialMember]);
 
   const loadPerformance = useCallback(async () => {
     setLoadingPerf(true);
@@ -98,7 +100,28 @@ export default function StaffDetailClient({
     }
   }, [staffId, period]);
 
+  const handlePeriodChange = useCallback((p: Period) => setPeriod(p), []);
+
   useEffect(() => { if (member) loadPerformance(); }, [member, loadPerformance]);
+
+  // Pause performance fetching when tab is hidden
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval> | null = null;
+
+    function handleVisibility() {
+      if (document.hidden && interval) {
+        clearInterval(interval);
+        interval = null;
+      } else if (!document.hidden && !interval && member) {
+        loadPerformance();
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      if (interval) clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [member, loadPerformance]);
 
   if (loading) {
     return (
@@ -153,16 +176,18 @@ export default function StaffDetailClient({
       />
 
       <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
-        <StaffDetailProfile member={member} />
+        <div className="animate-fadeInUp stagger-1">
+          <StaffDetailProfile member={member} />
+        </div>
 
-        <div className="flex items-center gap-2 overflow-x-auto">
+        <div className="animate-fadeInUp stagger-2 flex items-center gap-2 overflow-x-auto">
           <span className="text-sm text-zinc-500 flex-shrink-0">Período:</span>
           <div className="flex gap-1 p-1 bg-zinc-100 rounded-xl">
             {(['7d', '30d', '90d'] as Period[]).map((p) => (
               <button
                 key={p}
-                onClick={() => setPeriod(p)}
-                className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${
+                onClick={() => handlePeriodChange(p)}
+                className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors whitespace-nowrap ${
                   period === p ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'
                 }`}
                 aria-label={`Período de ${p === '7d' ? '7 días' : p === '30d' ? '30 días' : '90 días'}`}
@@ -173,19 +198,25 @@ export default function StaffDetailClient({
           </div>
         </div>
 
-        <StaffDetailStats performance={performance} loading={loadingPerf} />
+        <div className="animate-fadeInUp stagger-3">
+          <StaffDetailStats performance={performance} loading={loadingPerf} />
+        </div>
 
         {performance && performance.totalRevenue > 0 && (
-          <StaffDetailDistribution performance={performance} />
+          <div className="animate-fadeInUp stagger-4">
+            <StaffDetailDistribution performance={performance} />
+          </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="animate-fadeInUp stagger-5 grid grid-cols-1 lg:grid-cols-2 gap-6">
           <StaffDetailTopServices services={topServices} />
 
           <StaffDetailQuickInfo member={member} commissionOverridesCount={commissionOverridesCount} />
         </div>
 
-        <StaffAppointmentHistory appointments={appointments} />
+        <div className="animate-fadeInUp stagger-6">
+          <StaffAppointmentHistory appointments={appointments} />
+        </div>
       </div>
     </>
   );

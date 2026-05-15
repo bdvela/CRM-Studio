@@ -1,9 +1,10 @@
 'use client';
 
+import { memo } from 'react';
 import type { StaffDetailDistributionProps } from './types';
 import { formatCurrency } from '@/lib/utils';
 
-export function StaffDetailDistribution({ performance }: StaffDetailDistributionProps) {
+export const StaffDetailDistribution = memo(function StaffDetailDistribution({ performance }: StaffDetailDistributionProps) {
   const artistPct = Math.round((performance.totalCommission / performance.totalRevenue) * 100);
   const founderPct = 100 - artistPct;
 
@@ -24,4 +25,4 @@ export function StaffDetailDistribution({ performance }: StaffDetailDistribution
       </div>
     </div>
   );
-}
+});

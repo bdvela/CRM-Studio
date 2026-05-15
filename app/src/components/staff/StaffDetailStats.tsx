@@ -1,15 +1,24 @@
 'use client';
 
+import { memo } from 'react';
 import type { StaffDetailStatsProps } from './types';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { CalendarDays, DollarSign, TrendingUp, Clock } from 'lucide-react';
 
-export function StaffDetailStats({ performance, loading }: StaffDetailStatsProps) {
+export const StaffDetailStats = memo(function StaffDetailStats({ performance, loading }: StaffDetailStatsProps) {
   if (loading) {
     return (
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4" aria-label="Cargando estadísticas">
         {[1, 2, 3, 4].map(i => (
-          <div key={i} className="h-24 rounded-2xl bg-zinc-100 animate-pulse" />
+          <div key={i} className="rounded-2xl border border-zinc-200 bg-white shadow-sm animate-pulse">
+            <div className="px-5 py-4 flex items-center gap-3">
+              <div className="size-10 rounded-xl bg-zinc-100" />
+              <div className="space-y-2 flex-1">
+                <div className="h-3 w-24 bg-zinc-100 rounded" />
+                <div className="h-5 w-16 bg-zinc-100 rounded" />
+              </div>
+            </div>
+          </div>
         ))}
       </div>
     );
@@ -85,4 +94,4 @@ export function StaffDetailStats({ performance, loading }: StaffDetailStatsProps
       </div>
     </div>
   );
-}
+});

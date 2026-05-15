@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef, useReducer, useCallback } from 'react';
+import { useEffect, useState, useRef, useReducer, useCallback, lazy, Suspense } from 'react';
 import {
   getStaff,
   createStaff,
@@ -26,7 +26,10 @@ import type { StaffModalTab, StaffWithDetails, StaffFormState, FormAction } from
 import { FORM_INIT, formReducer, isOwnerMember, isOwnerRoleName } from '@/components/staff/types';
 import { StaffFilters } from '@/components/staff/StaffFilters';
 import { StaffListContent } from '@/components/staff/StaffListContent';
-import { StaffFormModal } from '@/components/staff/StaffFormModal';
+
+const StaffFormModal = lazy(() =>
+  import('@/components/staff/StaffFormModal').then(m => ({ default: m.StaffFormModal }))
+);
 
 interface DataState {
   members: StaffWithDetails[];
@@ -100,6 +103,8 @@ export default function StaffPage({ initialData }: {
     }
   }, []);
 
+  const handleSearchChange = useCallback((v: string) => dispatchUI({ search: v }), []);
+
   useEffect(() => {
     if (skipInitialLoad.current) {
       skipInitialLoad.current = false;
@@ -107,6 +112,32 @@ export default function StaffPage({ initialData }: {
     }
     load();
   }, [load]);
+
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval> | null = setInterval(load, 60000);
+
+    function handleVisibility() {
+      if (document.hidden && interval) {
+        clearInterval(interval);
+        interval = null;
+      } else if (!document.hidden && !interval) {
+        interval = setInterval(load, 60000);
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      if (interval) clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [load]);
+
+  // Prefetch modal chunk after page load
+  useEffect(() => {
+    const id = setTimeout(() => {
+      import('@/components/staff/StaffFormModal');
+    }, 500);
+    return () => clearTimeout(id);
+  }, []);
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -265,7 +296,7 @@ export default function StaffPage({ initialData }: {
       } />
 
       <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-4">
-        <StaffFilters search={ui.search} onSearchChange={(v) => dispatchUI({ search: v })} />
+        <StaffFilters search={ui.search} onSearchChange={handleSearchChange} />
         <StaffListContent
           loading={data.loading}
           members={filtered}
@@ -275,8 +306,9 @@ export default function StaffPage({ initialData }: {
         />
       </div>
 
-      <StaffFormModal
-        open={ui.showModal}
+      <Suspense fallback={null}>
+        <StaffFormModal
+          open={ui.showModal}
         onClose={() => dispatchUI({ showModal: false, editingMember: null })}
         editingMember={ui.editingMember}
         form={form}
@@ -305,6 +337,7 @@ export default function StaffPage({ initialData }: {
         onDelete={handleDelete}
         isOwner={isOwnerMember}
       />
+      </Suspense>
     </>
   );
 }

@@ -1,10 +1,11 @@
 'use client';
 
+import { memo } from 'react';
 import type { StaffDetailQuickInfoProps } from './types';
 import { formatDate } from '@/lib/utils';
 import { Briefcase, Cake, Percent } from 'lucide-react';
 
-export function StaffDetailQuickInfo({ member, commissionOverridesCount }: StaffDetailQuickInfoProps) {
+export const StaffDetailQuickInfo = memo(function StaffDetailQuickInfo({ member, commissionOverridesCount }: StaffDetailQuickInfoProps) {
   return (
     <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm">
       <div className="px-5 py-4">
@@ -59,4 +60,4 @@ export function StaffDetailQuickInfo({ member, commissionOverridesCount }: Staff
       </div>
     </div>
   );
-}
+});

@@ -96,13 +96,11 @@ export function StaffFormModal({
             <button
               type="button"
               onClick={() => dispatch({ type: 'UPDATE', payload: { active: !form.active } })}
-              className="relative w-14 h-7 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-salon-500 focus:ring-offset-2"
-              style={{ backgroundColor: form.active ? '#22c55e' : '#d1d5db' }}
+              className={`relative w-14 h-7 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-salon-500 focus:ring-offset-2 ${form.active ? 'bg-green-500' : 'bg-zinc-400'}`}
               aria-label={form.active ? 'Desactivar miembro' : 'Activar miembro'}
             >
               <div
-                className="absolute top-0.5 size-5 bg-white rounded-full shadow transition-transform"
-                style={{ left: form.active ? '2rem' : '0.25rem' }}
+                className={`absolute top-0.5 size-5 bg-white rounded-full shadow transition-transform ${form.active ? 'left-7' : 'left-1'}`}
               />
             </button>
           </div>

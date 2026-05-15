@@ -1,11 +1,15 @@
 'use client';
 
+import { memo } from 'react';
 import type { StaffAppointmentHistoryProps } from './types';
+import type { AppointmentStatus } from '@/types/database';
 import { formatDate, formatTime, formatCurrency } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { CalendarDays, UserRound } from 'lucide-react';
 
-const APPOINTMENT_BADGE: Record<string, 'success' | 'danger' | 'warning' | 'default'> = {
+type BadgeVariant = 'success' | 'danger' | 'warning' | 'default';
+
+const APPOINTMENT_BADGE: Record<AppointmentStatus, BadgeVariant> = {
   completada: 'success',
   cancelada: 'danger',
   no_show: 'warning',
@@ -13,7 +17,7 @@ const APPOINTMENT_BADGE: Record<string, 'success' | 'danger' | 'warning' | 'defa
   en_curso: 'warning',
 };
 
-const APPOINTMENT_LABELS: Record<string, string> = {
+const APPOINTMENT_LABELS: Record<AppointmentStatus, string> = {
   completada: 'Completada',
   cancelada: 'Cancelada',
   no_show: 'No show',
@@ -21,7 +25,7 @@ const APPOINTMENT_LABELS: Record<string, string> = {
   en_curso: 'En curso',
 };
 
-export function StaffAppointmentHistory({ appointments }: StaffAppointmentHistoryProps) {
+export const StaffAppointmentHistory = memo(function StaffAppointmentHistory({ appointments }: StaffAppointmentHistoryProps) {
   return (
     <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm">
       <div className="px-5 py-4">
@@ -89,4 +93,4 @@ export function StaffAppointmentHistory({ appointments }: StaffAppointmentHistor
       </div>
     </div>
   );
-}
+});

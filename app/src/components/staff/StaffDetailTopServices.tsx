@@ -1,10 +1,11 @@
 'use client';
 
+import { memo } from 'react';
 import type { StaffDetailTopServicesProps } from './types';
 import { formatCurrency } from '@/lib/utils';
 import { Star } from 'lucide-react';
 
-export function StaffDetailTopServices({ services }: StaffDetailTopServicesProps) {
+export const StaffDetailTopServices = memo(function StaffDetailTopServices({ services }: StaffDetailTopServicesProps) {
   return (
     <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm">
       <div className="px-5 py-4">
@@ -33,4 +34,4 @@ export function StaffDetailTopServices({ services }: StaffDetailTopServicesProps
       </div>
     </div>
   );
-}
+});

@@ -42,7 +42,7 @@ export function StaffListContent({
   if (members.length === 0) {
     return (
       <Card>
-        <div className="py-12 text-center text-zinc-400 px-5">
+        <div className="py-12 text-center text-zinc-400 px-5" role="status" aria-live="polite">
           <UserRound className="size-12 mx-auto mb-3 opacity-30" aria-hidden="true" />
           <p className="text-sm">
             {search ? 'No hay miembros del staff que coincidan' : 'No hay miembros del staff registrados'}

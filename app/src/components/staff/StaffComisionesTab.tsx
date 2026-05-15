@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import type { StaffComisionesTabProps } from './types';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
@@ -30,10 +30,13 @@ export function StaffComisionesTab({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [handleClickOutside]);
 
-  const filteredServices = services.filter(
-    (svc) =>
-      svc.name.toLowerCase().includes(overrideSearch.toLowerCase()) &&
-      !overrides[svc.id]
+  const filteredServices = useMemo(() =>
+    services.filter(
+      (svc) =>
+        svc.name.toLowerCase().includes(overrideSearch.toLowerCase()) &&
+        !overrides[svc.id]
+    ),
+    [services, overrideSearch, overrides]
   );
 
   return (
@@ -118,7 +121,7 @@ export function StaffComisionesTab({
                     }}
                     onFocus={() => setOverrideDropdownOpen(true)}
                     placeholder="Buscar servicio para agregar excepción..."
-                    className="w-full rounded-xl border border-zinc-300 bg-white pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-salon-500 focus:border-transparent"
+                    className="w-full rounded-xl border border-zinc-300 bg-white pl-10 pr-4 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-salon-500 focus:border-transparent"
                     aria-label="Buscar servicio para excepción de comisión"
                   />
                 </div>
