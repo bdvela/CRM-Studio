@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useReducer, useRef, useMemo, useCallback } from 'react';
+import { useEffect, useReducer, useRef, useMemo, useCallback, lazy, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { getClients, createClient, updateClient, deleteClient, getClientById, getAppointments } from '@/lib/db/queries';
 import type { Client, ClientInsert, Appointment } from '@/types/database';
@@ -14,8 +14,13 @@ import { PAGE_SIZE } from '@/components/clientes/constants';
 import type { ClientesUIState, ClientesUIAction, StatusFilter, ClientWithStats } from '@/components/clientes/types';
 import { ClientFilters } from '@/components/clientes/ClientFilters';
 import { ClientListContent } from '@/components/clientes/ClientListContent';
-import { ClientFormModal } from '@/components/clientes/ClientFormModal';
-import { ClientDetailModal } from '@/components/clientes/ClientDetailModal';
+
+const ClientFormModal = lazy(() =>
+  import('@/components/clientes/ClientFormModal').then(m => ({ default: m.ClientFormModal }))
+);
+const ClientDetailModal = lazy(() =>
+  import('@/components/clientes/ClientDetailModal').then(m => ({ default: m.ClientDetailModal }))
+);
 
 const UI_INIT: ClientesUIState = {
   clients: [],
@@ -78,8 +83,21 @@ export default function ClientesPage({ initialClients }: { initialClients?: Clie
 
   // Auto-refresh every 60s, pause when tab hidden
   useEffect(() => {
-    const interval = setInterval(load, 60000);
-    return () => clearInterval(interval);
+    let interval: ReturnType<typeof setInterval> | null = setInterval(load, 60000);
+
+    function handleVisibility() {
+      if (document.hidden && interval) {
+        clearInterval(interval);
+        interval = null;
+      } else if (!document.hidden && !interval) {
+        interval = setInterval(load, 60000);
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      if (interval) clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, []);
 
   const openDetail = useCallback(async (client: ClientWithStats) => {
@@ -242,37 +260,44 @@ export default function ClientesPage({ initialClients }: { initialClients?: Clie
             onShowMore={handleShowMore}
             visibleCount={ui.visibleCount}
             totalVisible={totalVisible}
+            onOpenNew={() => dispatch({ type: 'SET_SHOW_CREATE_MODAL', show: true })}
           />
         </div>
       </div>
 
-      <ClientFormModal
-        open={ui.showCreateModal}
-        onClose={() => dispatch({ type: 'SET_SHOW_CREATE_MODAL', show: false })}
-        onSave={handleCreate}
-        submitting={ui.submitting}
-      />
+      <Suspense fallback={<div className="p-8 flex items-center justify-center"><div className="h-8 w-8 rounded-full border-2 border-salon-300 border-t-transparent animate-spin" /></div>}>
+        <ClientFormModal
+          open={ui.showCreateModal}
+          onClose={() => dispatch({ type: 'SET_SHOW_CREATE_MODAL', show: false })}
+          onSave={handleCreate}
+          submitting={ui.submitting}
+        />
+      </Suspense>
 
-      <ClientDetailModal
-        open={ui.showDetailModal}
-        client={ui.viewingClient}
-        appointments={ui.clientAppointments}
-        onClose={closeDetail}
-        onEdit={openEdit}
-        onDelete={handleDelete}
-        onViewDetail={() => { if (ui.viewingClient) { closeDetail(); push(`/clientes/${ui.viewingClient.id}`); } }}
-        deleting={ui.deleting}
-      />
+      <Suspense fallback={<div className="p-8 flex items-center justify-center"><div className="h-8 w-8 rounded-full border-2 border-salon-300 border-t-transparent animate-spin" /></div>}>
+        <ClientDetailModal
+          open={ui.showDetailModal}
+          client={ui.viewingClient}
+          appointments={ui.clientAppointments}
+          onClose={closeDetail}
+          onEdit={openEdit}
+          onDelete={handleDelete}
+          onViewDetail={() => { if (ui.viewingClient) { closeDetail(); push(`/clientes/${ui.viewingClient.id}`); } }}
+          deleting={ui.deleting}
+        />
+      </Suspense>
 
       {ui.editingClient && (
-        <ClientFormModal
-          open={!!ui.editingClient}
-          onClose={() => dispatch({ type: 'SET_EDITING_CLIENT', client: null })}
-          onSave={handleEditSave}
-          initialData={editInitialData}
-          title="Editar clienta"
-          submitting={ui.saving}
-        />
+        <Suspense fallback={<div className="p-8 flex items-center justify-center"><div className="h-8 w-8 rounded-full border-2 border-salon-300 border-t-transparent animate-spin" /></div>}>
+          <ClientFormModal
+            open={!!ui.editingClient}
+            onClose={() => dispatch({ type: 'SET_EDITING_CLIENT', client: null })}
+            onSave={handleEditSave}
+            initialData={editInitialData}
+            title="Editar clienta"
+            submitting={ui.saving}
+          />
+        </Suspense>
       )}
     </>
   );

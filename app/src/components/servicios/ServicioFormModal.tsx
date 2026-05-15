@@ -158,7 +158,7 @@ function PriceSection({ form, dispatch }: {
               onChange={(value) => dispatch({ type: 'UPDATE', payload: { price: parseFloat(value) || 0 } })}
               placeholder="0.00"
               aria-label="Precio fijo en soles"
-              leftPrefix={<span className="text-sm font-medium select-none">S/</span>}
+              leftPrefix={<span className="text-base font-medium select-none">S/</span>}
             />
           </div>
         ) : (
@@ -171,7 +171,7 @@ function PriceSection({ form, dispatch }: {
                 onChange={(value) => dispatch({ type: 'UPDATE', payload: { price_from: value ? parseFloat(value) : null } })}
                 placeholder="Desde"
                 aria-label="Precio desde"
-                leftPrefix={<span className="text-sm font-medium select-none">S/</span>}
+                leftPrefix={<span className="text-base font-medium select-none">S/</span>}
               />
             </div>
             <span className="hidden md:inline text-zinc-400 text-lg font-light flex-shrink-0">-</span>
@@ -183,7 +183,7 @@ function PriceSection({ form, dispatch }: {
                 onChange={(value) => dispatch({ type: 'UPDATE', payload: { price_to: value ? parseFloat(value) : null } })}
                 placeholder="Hasta"
                 aria-label="Precio hasta"
-                leftPrefix={<span className="text-sm font-medium select-none">S/</span>}
+                leftPrefix={<span className="text-base font-medium select-none">S/</span>}
               />
             </div>
           </div>

@@ -28,6 +28,7 @@ export function ClientListContent({
   onShowMore,
   visibleCount,
   totalVisible,
+  onOpenNew,
 }: ClientListContentProps) {
   const grouped = useMemo(() => groupByStatus(clients), [clients]);
   const hasMore = totalVisible > visibleCount;
@@ -55,12 +56,12 @@ export function ClientListContent({
   if (clients.length === 0) {
     const hasFilters = search || statusFilter !== 'all';
     return (
-      <Card>
+      <Card className="animate-fadeIn">
         <CardContent className="py-12 text-center text-zinc-400">
           <Users className="size-12 mx-auto mb-3 opacity-30" />
           <p className="text-sm">{hasFilters ? 'No hay clientas que coincidan con los filtros' : 'No hay clientas registradas'}</p>
           {!hasFilters && (
-            <Button size="sm" className="mt-4" onClick={() => document.getElementById('btn-nueva-clienta')?.click()}>
+            <Button size="sm" className="mt-4" onClick={onOpenNew}>
               <Plus className="size-4 mr-1" /> Registrar primera clienta
             </Button>
           )}

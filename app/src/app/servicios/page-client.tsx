@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useReducer, useMemo, useCallback } from 'react';
+import { useEffect, useRef, useReducer, useMemo, useCallback, lazy, Suspense } from 'react';
 import {
   getServices,
   createService,
@@ -18,8 +18,11 @@ import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { useConfirm } from '@/context/confirm-context';
 import { ServiceListContent } from '@/components/servicios/ServiceListContent';
-import { ServicioFormModal } from '@/components/servicios/ServicioFormModal';
 import type { ServiceForm, FormAction, ServiciosDataState, ServiciosUIState } from '@/components/servicios/types';
+
+const ServicioFormModal = lazy(() =>
+  import('@/components/servicios/ServicioFormModal').then(m => ({ default: m.ServicioFormModal }))
+);
 
 const SERVICIOS_DATA_INIT: ServiciosDataState = {
   services: [], categories: [], allStaff: [], loading: true, error: null,
@@ -408,27 +411,29 @@ export default function ServiciosPage({ initialData }: {
         openEdit={openEdit}
       />
 
-      <ServicioFormModal
-        open={ui.showModal}
-        editingService={ui.editingService}
-        form={form}
-        dispatch={dispatch}
-        activeModalTab={ui.activeModalTab}
-        onActiveModalTabChange={handleModalTabChange}
-        selectedStaffIds={ui.selectedStaffIds}
-        deletingServiceId={ui.deletingServiceId}
-        submitting={ui.submitting}
-        allStaff={data.allStaff}
-        categories={data.categories}
-        categoryOptions={categoryOptions}
-        onClose={handleModalClose}
-        onCategoryChange={handleCategoryChange}
-        onStaffToggle={toggleStaffSelection}
-        onSubmit={handleSubmit}
-        onDelete={handleDelete}
-        isFormValid={isFormValid}
-        haveFormChanges={haveFormChanges}
-      />
+      <Suspense fallback={<div className="p-8 flex items-center justify-center"><div className="h-8 w-8 rounded-full border-2 border-salon-300 border-t-transparent animate-spin" /></div>}>
+        <ServicioFormModal
+          open={ui.showModal}
+          editingService={ui.editingService}
+          form={form}
+          dispatch={dispatch}
+          activeModalTab={ui.activeModalTab}
+          onActiveModalTabChange={handleModalTabChange}
+          selectedStaffIds={ui.selectedStaffIds}
+          deletingServiceId={ui.deletingServiceId}
+          submitting={ui.submitting}
+          allStaff={data.allStaff}
+          categories={data.categories}
+          categoryOptions={categoryOptions}
+          onClose={handleModalClose}
+          onCategoryChange={handleCategoryChange}
+          onStaffToggle={toggleStaffSelection}
+          onSubmit={handleSubmit}
+          onDelete={handleDelete}
+          isFormValid={isFormValid}
+          haveFormChanges={haveFormChanges}
+        />
+      </Suspense>
     </>
   );
 }

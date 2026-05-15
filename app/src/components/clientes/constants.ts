@@ -1,4 +1,4 @@
-import type { ClientInsert, ClientStatus } from '@/types/database';
+import type { ClientInsert, ClientStatus, AppointmentStatus } from '@/types/database';
 
 export const STATUS_LABELS: Record<ClientStatus, string> = {
   prospecto: 'Prospecto',
@@ -43,7 +43,7 @@ export const FORM_INIT: ClientInsert = {
 
 export const PAGE_SIZE = 15;
 
-export const APPT_STATUS_STYLES: Record<string, string> = {
+export const APPT_STATUS_STYLES: Record<AppointmentStatus, string> = {
   completada: 'text-green-600 bg-green-50',
   programada: 'text-blue-600 bg-blue-50',
   cancelada: 'text-red-600 bg-red-50',

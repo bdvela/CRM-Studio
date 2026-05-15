@@ -634,10 +634,30 @@ npm run start
 | Sin animación fluida al cambiar vista calendario | ✅ Fixeado | `animate-fadeIn` en cada view activo sin re-mount |
 | Skeleton de detalle no coincidía con layout real | ✅ Fixeado | Rediseño del skeleton en `citas/[id]/page-client.tsx` — ahora replica las 5 secciones reales (header, notes, balance grid 3-cols, services card, commissions card) en vez de bloques genéricos `h-16`/`h-24` |
 | Detalle de cita sin stagger animations | ✅ Fixeado | Cada sección envuelta en `animate-fadeInUp` con stagger 1-4 (50ms delay) |
+| Modales cargaban en bundle inicial (Servicios) | ✅ Fixeado | Lazy-load de `ServicioFormModal` con `React.lazy` + `Suspense` en `servicios/page-client.tsx` |
+| Skeleton servicios no usaba categorías reales | ✅ Fixeado | Skeleton de vista "Todos" ahora usa `categories` reales con color dinámico (antes 3 grupos hardcodeados) |
+| Skeleton filtrado genérico (6 cards) | ✅ Fixeado | Reducido a 3 cards para matchear `lg:grid-cols-3` real |
+| ServiceCard sin feedback táctil | ✅ Fixeado | `active:scale-[0.97]` agregado a la card clickeable |
+| ServicioStaffTab sin memoización | ✅ Fixeado | Envuelto en `memo()` para evitar re-renders innecesarios |
+| Prefijos de precio con font-size <16px (iOS) | ✅ Fixeado | `text-sm` → `text-base` en los 3 `S/` prefixes del formulario |
+| Empty states sin animación de entrada | ✅ Fixeado | `animate-fadeIn` en empty state de servicios y advertencia amber del StaffTab |
+| CTA "Registrar primera clienta" rota en ClientListContent | ✅ Fixeado | Reemplazado `getElementById` por prop `onOpenNew` que abre el modal vía dispatch |
+| Crash si `client.name` está vacío en ClientDetailModal | ✅ Fixeado | `client.name[0]` → `client.name?.[0]?.toUpperCase() ?? '?'` |
+| Auto-refresh sin pause de visibilidad en Clientes | ✅ Fixeado | `visibilitychange` pausa/reanuda el setInterval — igual que Dashboard |
+| Sin lazy-loading en modales de Clientes | ✅ Fixeado | `ClientFormModal` + `ClientDetailModal` con `React.lazy` + `Suspense` en ambos page-client |
+| `ClientDetailModal` sin memoización | ✅ Fixeado | Envuelto en `memo()` (182 líneas) |
+| `ClientDetailProfile` sin memoización | ✅ Fixeado | Envuelto en `memo()` |
+| `ClientDetailStats` sin memoización | ✅ Fixeado | Envuelto en `memo()` |
+| `ClientAppointmentHistory` sin memoización | ✅ Fixeado | Envuelto en `memo()` |
+| `ClientCard` sin feedback táctil | ✅ Fixeado | `active:scale-[0.97]` agregado |
+| Error silenciado en detail page | ✅ Fixeado | `// silent` → `toast.error('Error al recargar datos')` |
+| `APPT_STATUS_STYLES` sin tipado fuerte | ✅ Fixeado | `Record<string, string>` → `Record<AppointmentStatus, string>` |
+| Botón delete sin `variant="danger"` | ✅ Fixeado | `variant="outline"` con overrides manuales → `variant="danger"` + `disabled={deleting}` |
+| Detail page sin stagger animations | ✅ Fixeado | `animate-fadeInUp` con stagger 1-3 en Profile, Stats, AppointmentHistory |
 
 ---
 
 ## Última Actualización
 - **Fecha**: 14 Mayo 2026
 - **Rama**: `main`
-- **Cambios recientes**: (1) Skeleton de `citas/[id]` rediseñado para replicar exactamente la estructura real de la vista detalle: header card → notes card → balance grid 3-cols → services card → commissions card (antes 2 bloques genéricos `h-16`/`h-24` que no representaban ningún componente real). (2) Stagger animations en vista detalle: cada sección con `animate-fadeInUp` y 50ms de delay incremental (stagger-1 a stagger-4), remplazando el `animate-in fade-in` genérico del contenedor.
+- **Cambios recientes**: Optimización completa del módulo Clientes — 14 mejoras: (1) Bug fix: CTA "Registrar primera clienta" en empty state ahora usa prop `onOpenNew` en vez de `getElementById` roto; (2) Bug fix: `client.name?.[0]?.toUpperCase() ?? '?'` evita crash si name está vacío; (3) Auto-refresh ahora usa `visibilitychange` para pausar cuando la pestaña está oculta; (4-5) `ClientFormModal` y `ClientDetailModal` con lazy-load (`React.lazy` + `Suspense`); (6-9) Memoización de 4 componentes: `ClientDetailModal`, `ClientDetailProfile`, `ClientDetailStats`, `ClientAppointmentHistory` con `memo()`; (10) `ClientCard` con `active:scale-[0.97]` para feedback táctil; (11) `animate-fadeIn` en empty state; (12) Toast en error de recarga del detail page (antes `// silent`); (13) `APPT_STATUS_STYLES` tipado como `Record<AppointmentStatus, string>`; (14) Botón delete ahora usa `variant="danger"` y `disabled={deleting}`; (15) Stagger animations en detail page [id]. 0 errores de lint.

@@ -37,18 +37,17 @@ export function ServiceListContent({
       {loading ? (
         categoryFilter === 'all' ? (
           <div className="space-y-6" aria-label="Cargando servicios">
-            {[
-              { badge: 'bg-salon-200', cards: 3 },
-              { badge: 'bg-amber-200', cards: 2 },
-              { badge: 'bg-green-200', cards: 2 },
-            ].map((group, gi) => (
-              <div key={gi} className="space-y-3">
-                <div className="flex items-center gap-2 animate-pulse">
-                  <div className={`h-5 w-24 rounded-full ${group.badge}`} />
-                  <div className="h-3 w-8 rounded bg-zinc-200" />
+            {categories.slice(0, 3).map((cat, gi) => (
+              <div key={cat.id || gi} className="space-y-3">
+                <div className="flex items-center gap-2 p-[10px]">
+                  <div
+                    className="h-5 w-24 rounded-full animate-pulse"
+                    style={{ backgroundColor: cat.color ? `${cat.color}33` : '#f1f5f9' }}
+                  />
+                  <div className="h-3 w-8 rounded bg-zinc-200 animate-pulse" />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {Array.from({ length: group.cards }).map((_, ci) => (
+                  {Array.from({ length: 3 }).map((_, ci) => (
                     <div key={ci} className="h-28 rounded-2xl bg-zinc-200 animate-pulse" />
                   ))}
                 </div>
@@ -57,7 +56,7 @@ export function ServiceListContent({
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" aria-label="Cargando servicios">
-            {[1, 2, 3, 4, 5, 6].map((n) => (
+            {[1, 2, 3].map((n) => (
               <div key={`sk-${n}`} className="h-28 rounded-2xl bg-zinc-200 animate-pulse" />
             ))}
           </div>
@@ -68,7 +67,7 @@ export function ServiceListContent({
           <p className="text-sm text-red-700">{error}</p>
         </div>
       ) : filtered.length === 0 ? (
-        <Card>
+        <Card className="animate-fadeIn">
           <CardContent className="py-12 text-center text-zinc-400">
             <Palette className="size-12 mx-auto mb-3 opacity-30" aria-hidden="true" />
             <p className="text-sm">

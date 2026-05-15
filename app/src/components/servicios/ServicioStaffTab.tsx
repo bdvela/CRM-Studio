@@ -1,11 +1,12 @@
 'use client';
 
+import { memo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { getCategoryIdsFromStaffSpecialties } from '@/types/database';
 import type { ServicioStaffTabProps } from './types';
 
-export function ServicioStaffTab({
+export const ServicioStaffTab = memo(function ServicioStaffTab({
   allStaff,
   categories,
   formCategoryId,
@@ -93,7 +94,7 @@ export function ServicioStaffTab({
       )}
 
       {selectedStaffIds.length === 0 && (
-        <div className="p-3 rounded-xl bg-amber-50 border border-amber-200" role="alert">
+        <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 animate-fadeIn" role="alert">
           <p className="text-sm text-amber-700">
             Sin artistas seleccionados. El servicio usar&aacute; asignaci&oacute;n por categor&iacute;a (todos los artistas con la categor&iacute;a podr&aacute;n brindarlo).
           </p>
@@ -101,4 +102,4 @@ export function ServicioStaffTab({
       )}
     </div>
   );
-}
+});

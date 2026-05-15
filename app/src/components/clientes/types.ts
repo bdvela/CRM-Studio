@@ -30,6 +30,7 @@ export interface ClientListContentProps {
   onShowMore: () => void;
   visibleCount: number;
   totalVisible: number;
+  onOpenNew?: () => void;
 }
 
 export interface ClientFormModalProps {

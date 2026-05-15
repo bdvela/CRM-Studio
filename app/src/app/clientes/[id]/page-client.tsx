@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, lazy, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { getClientById, getAppointments, updateClient, deleteClient } from '@/lib/db/queries';
 import type { Client, ClientInsert, Appointment } from '@/types/database';
@@ -13,7 +13,10 @@ import { normalizePeruPhone } from '@/lib/utils';
 import { ClientDetailProfile } from '@/components/clientes/ClientDetailProfile';
 import { ClientDetailStats } from '@/components/clientes/ClientDetailStats';
 import { ClientAppointmentHistory } from '@/components/clientes/ClientAppointmentHistory';
-import { ClientFormModal } from '@/components/clientes/ClientFormModal';
+
+const ClientFormModal = lazy(() =>
+  import('@/components/clientes/ClientFormModal').then(m => ({ default: m.ClientFormModal }))
+);
 
 export default function ClienteDetailClient({
   initialClient,
@@ -48,7 +51,7 @@ export default function ClienteDetailClient({
         if (c) setClient(c as Client);
         if (a) setAppointments(a as Appointment[]);
       } catch {
-        // silent
+        toast.error('Error al recargar datos');
       } finally {
         setLoading(false);
       }
@@ -123,25 +126,33 @@ export default function ClienteDetailClient({
       />
 
       <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
-        <ClientDetailProfile client={client} />
+        <div className="animate-fadeInUp stagger-1">
+          <ClientDetailProfile client={client} />
+        </div>
 
-        <ClientDetailStats
-          totalAppointments={client.client_stats?.total_appointments || 0}
-          totalSpent={client.client_stats?.total_spent || 0}
-          lastVisit={client.client_stats?.last_visit || null}
-        />
+        <div className="animate-fadeInUp stagger-2">
+          <ClientDetailStats
+            totalAppointments={client.client_stats?.total_appointments || 0}
+            totalSpent={client.client_stats?.total_spent || 0}
+            lastVisit={client.client_stats?.last_visit || null}
+          />
+        </div>
 
-        <ClientAppointmentHistory appointments={appointments} />
+        <div className="animate-fadeInUp stagger-3">
+          <ClientAppointmentHistory appointments={appointments} />
+        </div>
       </div>
 
-      <ClientFormModal
-        open={editing}
-        onClose={() => setEditing(false)}
-        onSave={handleEditSave}
-        initialData={formInitialData}
-        title="Editar clienta"
-        submitting={saving}
-      />
+      <Suspense fallback={<div className="p-8 flex items-center justify-center"><div className="h-8 w-8 rounded-full border-2 border-salon-300 border-t-transparent animate-spin" /></div>}>
+        <ClientFormModal
+          open={editing}
+          onClose={() => setEditing(false)}
+          onSave={handleEditSave}
+          initialData={formInitialData}
+          title="Editar clienta"
+          submitting={saving}
+        />
+      </Suspense>
     </>
   );
 }

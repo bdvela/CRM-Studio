@@ -1,10 +1,11 @@
 'use client';
 
+import { memo } from 'react';
 import type { ClientDetailStatsProps } from './types';
 import { formatDate, formatCurrency } from '@/lib/utils';
 import { CalendarDays, DollarSign, Clock } from 'lucide-react';
 
-export function ClientDetailStats({ totalAppointments, totalSpent, lastVisit }: ClientDetailStatsProps) {
+export const ClientDetailStats = memo(function ClientDetailStats({ totalAppointments, totalSpent, lastVisit }: ClientDetailStatsProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm">
@@ -44,4 +45,4 @@ export function ClientDetailStats({ totalAppointments, totalSpent, lastVisit }: 
       </div>
     </div>
   );
-}
+});

@@ -13,7 +13,7 @@ export const ServiceCard = memo(function ServiceCard({ service, onClick }: Servi
   return (
     <Card
       onClick={() => onClick(service)}
-      className={`hover:shadow-md transition-shadow ${!service.active ? 'opacity-60' : ''}`}
+      className={`hover:shadow-md transition-shadow active:scale-[0.97] ${!service.active ? 'opacity-60' : ''}`}
       aria-label={`${service.name}, ${service.duration_min} minutos, ${formatServicePrice({
         price_type: service.price_type,
         price: service.price,

@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import type { ClientAppointmentHistoryProps } from './types';
 import { formatDate, formatTime, formatCurrency } from '@/lib/utils';
 import { APPOINTMENT_STATUS_LABELS } from '@/types/database';
@@ -7,7 +8,7 @@ import { APPT_STATUS_STYLES } from './constants';
 import { Badge } from '@/components/ui/badge';
 import { CalendarDays } from 'lucide-react';
 
-export function ClientAppointmentHistory({ appointments, maxItems }: ClientAppointmentHistoryProps) {
+export const ClientAppointmentHistory = memo(function ClientAppointmentHistory({ appointments, maxItems }: ClientAppointmentHistoryProps) {
   const items = maxItems ? appointments.slice(0, maxItems) : appointments;
 
   if (items.length === 0) {
@@ -71,4 +72,4 @@ export function ClientAppointmentHistory({ appointments, maxItems }: ClientAppoi
       </div>
     </div>
   );
-}
+});

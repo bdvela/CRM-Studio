@@ -1,11 +1,12 @@
 'use client';
 
+import { memo } from 'react';
 import type { ClientDetailProfileProps } from './types';
 import { STATUS_LABELS, STATUS_BADGE_VARIANT } from './constants';
 import { Badge } from '@/components/ui/badge';
 import { Phone, Mail, Instagram } from 'lucide-react';
 
-export function ClientDetailProfile({ client }: ClientDetailProfileProps) {
+export const ClientDetailProfile = memo(function ClientDetailProfile({ client }: ClientDetailProfileProps) {
   return (
     <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm">
       <div className="px-5 py-6">
@@ -47,4 +48,4 @@ export function ClientDetailProfile({ client }: ClientDetailProfileProps) {
       </div>
     </div>
   );
-}
+});

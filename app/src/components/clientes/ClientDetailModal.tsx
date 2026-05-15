@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import type { ClientDetailModalProps } from './types';
 import { STATUS_LABELS, STATUS_BADGE_VARIANT } from './constants';
 import { Modal } from '@/components/ui/modal';
@@ -15,7 +16,7 @@ function instagramUrl(handle: string): string {
   return `https://instagram.com/${cleaned}`;
 }
 
-export function ClientDetailModal({
+export const ClientDetailModal = memo(function ClientDetailModal({
   open,
   client,
   appointments,
@@ -39,7 +40,7 @@ export function ClientDetailModal({
               aria-label={`Inicial de ${client.name}`}
               role="img"
             >
-              {client.name[0].toUpperCase()}
+              {client.name?.[0]?.toUpperCase() ?? '?'}
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="text-lg sm:text-xl font-bold text-zinc-900 truncate">{client.name}</h3>
@@ -162,7 +163,7 @@ export function ClientDetailModal({
 
           {/* Actions */}
           <div className="flex gap-2 sm:gap-3 pt-2 border-t border-zinc-100">
-            <Button type="button" variant="outline" className="flex-1 border-red-200 text-red-600 hover:bg-red-50" onClick={onDelete} loading={deleting}>
+            <Button type="button" variant="danger" className="flex-1" onClick={onDelete} loading={deleting} disabled={deleting}>
               <Trash2 className="size-4 mr-1.5 sm:mr-2" />
               <span className="hidden sm:inline">{deleting ? 'Eliminando...' : 'Eliminar'}</span>
               <span className="sm:hidden">{deleting ? '...' : 'Eliminar'}</span>
@@ -179,4 +180,4 @@ export function ClientDetailModal({
         </div>
     </Modal>
   );
-}
+});
