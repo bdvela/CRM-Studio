@@ -50,7 +50,7 @@ export interface CommissionOverrideWithService {
 
 export interface StaffCardProps {
   member: StaffWithDetails;
-  onEdit: (member: StaffWithDetails) => void;
+  onView: (member: StaffWithDetails) => void;
 }
 
 export interface StaffFiltersProps {
@@ -62,7 +62,7 @@ export interface StaffListContentProps {
   loading: boolean;
   members: StaffWithDetails[];
   search: string;
-  onEdit: (member: StaffWithDetails) => void;
+  onView: (member: StaffWithDetails) => void;
   onNew: () => void;
 }
 

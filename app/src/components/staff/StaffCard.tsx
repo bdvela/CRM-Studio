@@ -7,21 +7,21 @@ import { formatCurrency } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Phone, DollarSign } from 'lucide-react';
 
-export const StaffCard = memo(function StaffCard({ member, onEdit }: StaffCardProps) {
+export const StaffCard = memo(function StaffCard({ member, onView }: StaffCardProps) {
   const isOwner = isOwnerMember(member);
   const roleColor = member.role?.color || '#6B7280';
 
   return (
     <div
-      onClick={() => onEdit(member)}
+      onClick={() => onView(member)}
       className={`rounded-2xl border border-zinc-200 bg-white shadow-sm cursor-pointer hover:shadow-md hover:border-salon-300 transition-shadow transition-colors active:scale-[0.97] ${!member.active ? 'opacity-60' : ''}`}
       role="button"
       tabIndex={0}
-      aria-label={`Editar ${member.name}`}
+      aria-label={`Ver detalles de ${member.name}`}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          onEdit(member);
+          onView(member);
         }
       }}
     >

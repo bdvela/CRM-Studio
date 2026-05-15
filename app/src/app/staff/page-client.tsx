@@ -31,6 +31,10 @@ const StaffFormModal = lazy(() =>
   import('@/components/staff/StaffFormModal').then(m => ({ default: m.StaffFormModal }))
 );
 
+const StaffDetailModal = lazy(() =>
+  import('@/components/staff/StaffDetailModal').then(m => ({ default: m.StaffDetailModal }))
+);
+
 interface DataState {
   members: StaffWithDetails[];
   roles: Role[];
@@ -51,7 +55,9 @@ interface UIState {
   submitting: boolean;
   deletingId: string | null;
   showModal: boolean;
+  showDetailModal: boolean;
   editingMember: StaffWithDetails | null;
+  viewingMember: StaffWithDetails | null;
   search: string;
   activeTab: StaffModalTab;
   specialtySelections: string[];
@@ -59,8 +65,8 @@ interface UIState {
 }
 
 const UI_INIT: UIState = {
-  submitting: false, deletingId: null, showModal: false,
-  editingMember: null, search: '', activeTab: 'basicos',
+  submitting: false, deletingId: null, showModal: false, showDetailModal: false,
+  editingMember: null, viewingMember: null, search: '', activeTab: 'basicos',
   specialtySelections: [], overrides: {},
 };
 
@@ -105,6 +111,14 @@ export default function StaffPage({ initialData }: {
 
   const handleSearchChange = useCallback((v: string) => dispatchUI({ search: v }), []);
 
+  const openDetail = useCallback((member: StaffWithDetails) => {
+    dispatchUI({ viewingMember: member, showDetailModal: true });
+  }, []);
+
+  const closeDetail = useCallback(() => {
+    dispatchUI({ showDetailModal: false, viewingMember: null });
+  }, []);
+
   useEffect(() => {
     if (skipInitialLoad.current) {
       skipInitialLoad.current = false;
@@ -131,10 +145,11 @@ export default function StaffPage({ initialData }: {
     };
   }, [load]);
 
-  // Prefetch modal chunk after page load
+  // Prefetch modal chunks after page load
   useEffect(() => {
     const id = setTimeout(() => {
       import('@/components/staff/StaffFormModal');
+      import('@/components/staff/StaffDetailModal');
     }, 500);
     return () => clearTimeout(id);
   }, []);
@@ -301,10 +316,19 @@ export default function StaffPage({ initialData }: {
           loading={data.loading}
           members={filtered}
           search={ui.search}
-          onEdit={openEdit}
+          onView={openDetail}
           onNew={openNew}
         />
       </div>
+
+      <Suspense fallback={null}>
+        <StaffDetailModal
+          open={ui.showDetailModal}
+          member={ui.viewingMember}
+          onClose={closeDetail}
+          onEdit={openEdit}
+        />
+      </Suspense>
 
       <Suspense fallback={null}>
         <StaffFormModal
