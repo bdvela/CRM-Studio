@@ -7,7 +7,7 @@ import { Modal } from '@/components/ui/modal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatCurrency, formatDate, formatTime } from '@/lib/utils';
-import { CalendarDays, DollarSign, Clock, Phone, Mail, Instagram, Trash2, Edit, ExternalLink } from 'lucide-react';
+import { CalendarDays, DollarSign, Clock, Phone, Mail, Instagram, Trash2, Pencil, ExternalLink } from 'lucide-react';
 import { APPOINTMENT_STATUS_LABELS } from '@/types/database';
 import { APPT_STATUS_STYLES } from './constants';
 
@@ -171,9 +171,9 @@ export const ClientDetailModal = memo(function ClientDetailModal({
             <button
               type="button"
               onClick={onEdit}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium text-zinc-400 hover:text-zinc-600 border border-dashed border-zinc-200 hover:border-zinc-300 transition-colors"
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium text-salon-700 border border-salon-200 hover:bg-salon-50 transition-colors"
             >
-              <Edit className="size-3.5" />
+              <Pencil className="size-3.5" />
               Editar
             </button>
           </div>
