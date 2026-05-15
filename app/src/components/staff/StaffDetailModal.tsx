@@ -158,68 +158,87 @@ export const StaffDetailModal = memo(function StaffDetailModal({
 
         <ThinDivider />
 
-        {/* ─── Info cards — refined, warm ─── */}
-        <div className="px-4 py-4 space-y-2">
+        {/* ─── Info cards — 2-column refined grid ─── */}
+        <div className="px-4 py-4 grid grid-cols-2 gap-2">
           {/* Phone + WhatsApp */}
           {member.phone && (
-            <div className="group flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/60 transition-colors">
-              <div className="size-9 rounded-xl bg-rose-100/60 flex items-center justify-center flex-shrink-0 group-hover:bg-rose-100 transition-colors">
-                <Phone className="size-4 text-rose-400" aria-hidden="true" />
+            <div className="group flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-white/60 transition-colors">
+              <div className="size-8 rounded-lg bg-rose-100/60 flex items-center justify-center flex-shrink-0 group-hover:bg-rose-100 transition-colors">
+                <Phone className="size-3.5 text-rose-400" aria-hidden="true" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs text-zinc-400 mb-0.5">Telefono</p>
-                <p className="text-sm font-medium text-zinc-700">{member.phone}</p>
+                <p className="text-[10px] text-zinc-400 mb-0.5">Telefono</p>
+                <p className="text-xs font-medium text-zinc-700 truncate">{member.phone}</p>
               </div>
+            </div>
+          )}
+
+          {/* WhatsApp button — paired with phone in same row */}
+          {member.phone && (
+            <div className="flex items-center justify-end px-3 py-2.5">
               <a
                 href={waUrl(member.phone)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 hover:bg-emerald-100 text-xs font-medium text-emerald-700 transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 hover:bg-emerald-100 text-xs font-medium text-emerald-700 transition-colors"
                 aria-label={`Enviar WhatsApp a ${member.name}`}
               >
                 <MessageCircle className="size-3.5" />
-                <span className="hidden sm:inline">WhatsApp</span>
+                WhatsApp
               </a>
             </div>
           )}
 
           {/* Birthday */}
           {bd && (
-            <div className={`group flex items-center gap-3 px-3 py-3 rounded-xl transition-colors ${bd.isSoon ? 'bg-rose-50/80 border border-rose-100' : 'hover:bg-white/60'}`}>
-              <div className={`size-9 rounded-xl flex items-center justify-center flex-shrink-0 ${bd.isSoon ? 'bg-rose-200' : 'bg-rose-100/60 group-hover:bg-rose-100'} transition-colors`}>
-                <Cake className={`size-4 ${bd.isSoon ? 'text-rose-600' : 'text-rose-400'}`} aria-hidden="true" />
+            <div className={`group flex items-center gap-2 px-3 py-2.5 rounded-xl transition-colors ${bd.isSoon ? 'bg-rose-50/80 border border-rose-100' : 'hover:bg-white/60'}`}>
+              <div className={`size-8 rounded-lg flex items-center justify-center flex-shrink-0 ${bd.isSoon ? 'bg-rose-200' : 'bg-rose-100/60 group-hover:bg-rose-100'} transition-colors`}>
+                <Cake className={`size-3.5 ${bd.isSoon ? 'text-rose-600' : 'text-rose-400'}`} aria-hidden="true" />
               </div>
-              <div>
-                <p className="text-xs text-zinc-400 mb-0.5">Cumpleaños</p>
-                <p className={`text-sm font-medium ${bd.isSoon ? 'text-rose-700' : 'text-zinc-700'}`}>
+              <div className="min-w-0">
+                <p className="text-[10px] text-zinc-400 mb-0.5">Cumpleaños</p>
+                <p className={`text-xs font-medium truncate ${bd.isSoon ? 'text-rose-700' : 'text-zinc-700'}`}>
                   {bd.label}
-                  {bd.isSoon && <span className="ml-1.5 text-[10px] bg-rose-200 text-rose-700 px-1.5 py-0.5 rounded-full">hoy?</span>}
                 </p>
               </div>
+              {bd.isSoon && <span className="text-[10px] bg-rose-200 text-rose-700 px-1.5 py-0.5 rounded-full flex-shrink-0 ml-auto">hoy?</span>}
             </div>
           )}
 
           {/* Schedule */}
           {member.schedule && (
-            <div className="group flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/60 transition-colors">
-              <div className="size-9 rounded-xl bg-violet-100/60 flex items-center justify-center flex-shrink-0 group-hover:bg-violet-100 transition-colors">
-                <Clock className="size-4 text-violet-400" aria-hidden="true" />
+            <div className="group flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-white/60 transition-colors">
+              <div className="size-8 rounded-lg bg-violet-100/60 flex items-center justify-center flex-shrink-0 group-hover:bg-violet-100 transition-colors">
+                <Clock className="size-3.5 text-violet-400" aria-hidden="true" />
               </div>
-              <div>
-                <p className="text-xs text-zinc-400 mb-0.5">Horario</p>
-                <p className="text-sm font-medium text-zinc-700">{member.schedule}</p>
+              <div className="min-w-0">
+                <p className="text-[10px] text-zinc-400 mb-0.5">Horario</p>
+                <p className="text-xs font-medium text-zinc-700 truncate">{member.schedule}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Last appointment */}
+          {stats?.last_appointment && (
+            <div className="group flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-white/60 transition-colors">
+              <div className="size-8 rounded-lg bg-sky-100/60 flex items-center justify-center flex-shrink-0 group-hover:bg-sky-100 transition-colors">
+                <CalendarDays className="size-3.5 text-sky-400" aria-hidden="true" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] text-zinc-400 mb-0.5">Ultima cita</p>
+                <p className="text-xs font-medium text-zinc-700 truncate">{formatDate(stats.last_appointment)}</p>
               </div>
             </div>
           )}
 
           {/* Specialties — visual cloud */}
           {member.staff_specialties && member.staff_specialties.length > 0 && (
-            <div className="group flex items-start gap-3 px-3 py-3 rounded-xl hover:bg-white/60 transition-colors">
-              <div className="size-9 rounded-xl bg-amber-100/60 flex items-center justify-center flex-shrink-0 mt-0.5 group-hover:bg-amber-100 transition-colors">
-                <Sparkles className="size-4 text-amber-400" aria-hidden="true" />
+            <div className="group flex items-start gap-2 px-3 py-2.5 rounded-xl hover:bg-white/60 transition-colors col-span-2">
+              <div className="size-8 rounded-lg bg-amber-100/60 flex items-center justify-center flex-shrink-0 mt-0.5 group-hover:bg-amber-100 transition-colors">
+                <Sparkles className="size-3.5 text-amber-400" aria-hidden="true" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-xs text-zinc-400 mb-2">Especialidades</p>
+                <p className="text-[10px] text-zinc-400 mb-1.5">Especialidades</p>
                 <div className="flex flex-wrap gap-1.5">
                   {member.staff_specialties.map((spec) => (
                     <span
@@ -239,16 +258,10 @@ export const StaffDetailModal = memo(function StaffDetailModal({
             </div>
           )}
 
-          {/* Last appointment */}
-          {stats?.last_appointment && (
-            <div className="group flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/60 transition-colors">
-              <div className="size-9 rounded-xl bg-sky-100/60 flex items-center justify-center flex-shrink-0 group-hover:bg-sky-100 transition-colors">
-                <CalendarDays className="size-4 text-sky-400" aria-hidden="true" />
-              </div>
-              <div>
-                <p className="text-xs text-zinc-400 mb-0.5">Ultima cita</p>
-                <p className="text-sm font-medium text-zinc-700">{formatDate(stats.last_appointment)}</p>
-              </div>
+          {/* Filler cells to maintain grid when items are missing */}
+          {!member.phone && !bd && !member.schedule && !stats?.last_appointment && (
+            <div className="col-span-2 text-center py-4">
+              <p className="text-xs text-zinc-300">Sin informacion adicional</p>
             </div>
           )}
         </div>
