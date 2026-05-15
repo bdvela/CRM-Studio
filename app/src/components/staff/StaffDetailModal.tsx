@@ -64,10 +64,7 @@ export const StaffDetailModal = memo(function StaffDetailModal({
 
         {/* ─── Header section ─── */}
         <div className="relative pt-6 pb-4 px-5">
-          {/* Decorative sparkle */}
-          <Sparkles className="absolute top-4 right-4 size-5 text-rose-300/40" aria-hidden="true" />
-
-          {/* Avatar — large, floating, with decorative ring */}
+          {/* Avatar — large, centered */}
           <div className="flex justify-center mb-4">
             <div className="relative">
               <div
@@ -80,8 +77,6 @@ export const StaffDetailModal = memo(function StaffDetailModal({
               >
                 {member.name[0]?.toUpperCase()}
               </div>
-              {/* Decorative ring */}
-              <div className="absolute -inset-1 rounded-full border-2 border-dashed border-rose-300/30 animate-spin" style={{ animationDuration: '20s' }} aria-hidden="true" />
             </div>
           </div>
 
