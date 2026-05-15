@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { getAppointmentById, updateAppointment, getServices, getStaff, getClients } from '@/lib/db/queries';
+import { getAppointmentById, updateAppointment, getServices, getStaff, getClients, promoteClientOnCompletion } from '@/lib/db/queries';
 import type { AppointmentWithDetails, AppointmentFormData } from '@/components/citas/types';
 import type { Service, StaffMember, Client } from '@/types/database';
 import { Header } from '@/components/layout/shell';
@@ -185,6 +185,9 @@ export default function CitaDetailPage({ initialAppointment }: {
     const nextStatus = appointment.status === 'programada' ? 'en_curso' : 'completada';
     try {
       await updateAppointment(appointment.id, { status: nextStatus });
+      if (nextStatus === 'completada') {
+        await promoteClientOnCompletion(appointment.client_id);
+      }
       toast.success(nextStatus === 'en_curso' ? 'Cita iniciada' : 'Cita completada');
       load();
     } catch {

@@ -179,6 +179,36 @@ export async function deleteClient(id: string) {
   return true;
 }
 
+/**
+ * Promueve una clienta a 'activa' al completar una cita.
+ * Solo aplica si su estado actual es 'prospecto' o 'inactiva'.
+ * Las transiciones son silenciosas (no notifica, no lanza errores).
+ * HU-26: prospecto → activa e inactiva → activa al completar cita.
+ */
+export async function promoteClientOnCompletion(clientId: string | null): Promise<void> {
+  if (!clientId) return;
+
+  try {
+    const { data: client, error } = await supabase
+      .from('clients')
+      .select('status')
+      .eq('id', clientId)
+      .maybeSingle();
+
+    if (error || !client) return;
+    if (client.status !== 'prospecto' && client.status !== 'inactiva') return;
+
+    await supabase
+      .from('clients')
+      .update({ status: 'activa' })
+      .eq('id', clientId);
+
+    clearQueryCache('clients');
+  } catch {
+    // silent — no interrumpe el flujo principal de completar cita
+  }
+}
+
 // ─── CATEGORIES ─────────────────────────────────────────────────────────────
 
 export async function getCategories(activeOnly = true) {

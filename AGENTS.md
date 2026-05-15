@@ -463,6 +463,7 @@ npm run start
 8. `HU-27-fix-appointment-services.sql` (✅ Aplicada)
 9. `HU-28-rls-appointment-services.sql` (✅ Aplicada)
 10. `HU-29-rls-appointment-services-v2.sql` (versión mejorada con DROP IF EXISTS)
+11. `HU-30-client-status-functions.sql` (✅ Aplicada — cron job inactividad + función `promoteClientOnCompletion`)
 
 ### Migraciones Pendientes
 | Migración | Descripción |
@@ -472,6 +473,7 @@ npm run start
 ### Migraciones Aplicadas Recientemente
 | Migración | Descripción |
 |------------|-------------|
+| `HU-30-client-status-functions.sql` | Cron job pg_cron para degradar activa/vip → inactiva (>60 días sin cita completada) |
 | `HU-26-poblar-servicios-reales.sql` | Poblar servicios con datos reales del estudio |
 | `HU-27-fix-appointment-services.sql` | Agregar columna `service_price` a `appointment_services` |
 | `HU-28-rls-appointment-services.sql` | Políticas RLS para `appointment_services` (SELECT/INSERT/UPDATE/DELETE) |
@@ -607,10 +609,9 @@ npm run start
 | HU-23 | Roles dinamicos | ✅ |
 | HU-24 | Comisiones dinamicas | ✅ |
 | HU-25 | Panel servicios mejoras | ✅ |
-| HU-26 | Transición automática de estados de clienta | ⏳ |
+| HU-26 | Transición automática de estados de clienta | ✅ |
 
 ### Próximas Sesiones (no son HU)
-- HU-26 — Transición automática de estados de clienta
 - Tests unitarios y E2E
 - Autenticación/Login (Supabase Auth)
 
@@ -662,4 +663,4 @@ npm run start
 ## Última Actualización
 - **Fecha**: 14 Mayo 2026
 - **Rama**: `main`
-- **Cambios recientes**: Optimización completa del módulo Clientes — 14 mejoras (ver Issues Conocidos). Spec de HU-26 (Transición automática de estados de clienta) creada en `docs/specs/01-clientes/HU-26-transicion-auto-estados.md`. Estandarizados colores de borde en ClientCard para coincidir con badges de estado. Botones del ClientDetailModal refinados: delete outline con borde rojo sutil, edit con estilo salon-200 (matching citas modal), ver detalle con borde dashed.
+- **Cambios recientes**: Implementación completa de HU-26 — Transición automática de estados de clienta. Migración `HU-30-client-status-functions.sql` con pg_cron para degradar activa/vip → inactiva cada hora (>60 días sin completar). Nueva función `promoteClientOnCompletion()` en `queries.ts` que promueve prospecto/inactiva → activa al completar cita. Integrada en `handleAdvanceStatus` de `citas/[id]/page-client.tsx`. 25 tests spec-driven en `client-status-transitions.test.ts` cubriendo todos los criterios de aceptación.
