@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import {
   CalendarDays, DollarSign, TrendingUp, Clock, Phone,
-  Briefcase, Pencil, Cake, MessageCircle,
+  Pencil, Cake, MessageCircle, Sparkles, ArrowUpRight,
 } from 'lucide-react';
 
 interface StaffDetailModalProps {
@@ -34,9 +34,37 @@ function birthdayLabel(birthdayDate: string | null): { label: string; isSoon: bo
   if (thisYearBd < now) thisYearBd.setFullYear(thisYearBd.getFullYear() + 1);
   const daysUntil = Math.ceil((thisYearBd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
   const formatted = formatDate(birthdayDate);
-  if (daysUntil <= 7) return { label: `${formatted} — ¡Próximo!`, isSoon: true };
+  if (daysUntil <= 7) return { label: `${formatted} — Próximo`, isSoon: true };
   return { label: formatted, isSoon: false };
 }
+
+// ─── Decorative elements ──────────────────────────────────────────────────
+
+function Dot() {
+  return <span className="text-rose-300/60 mx-2 select-none" aria-hidden="true">·</span>;
+}
+
+function ThinDivider() {
+  return <div className="w-full h-px bg-gradient-to-r from-transparent via-rose-200/50 to-transparent my-1" />;
+}
+
+// ─── Color utilities ─────────────────────────────────────────────────────
+
+const avatarGradients = [
+  'from-rose-400 via-pink-400 to-rose-300',
+  'from-violet-400 via-purple-400 to-fuchsia-300',
+  'from-amber-400 via-orange-400 to-rose-300',
+  'from-emerald-400 via-teal-400 to-cyan-300',
+  'from-blue-400 via-indigo-400 to-violet-300',
+];
+
+function avatarGradient(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return avatarGradients[Math.abs(hash) % avatarGradients.length];
+}
+
+// ─── Component ────────────────────────────────────────────────────────────
 
 export const StaffDetailModal = memo(function StaffDetailModal({
   open,
@@ -46,158 +74,193 @@ export const StaffDetailModal = memo(function StaffDetailModal({
   commissionOverridesCount = 0,
   recentPerformance,
 }: StaffDetailModalProps) {
-  const roleColor = member?.role?.color || '#6B7280';
+  const roleColor = member?.role?.color || '#a78bfa';
   const stats = member?.staff_stats;
   const bd = useMemo(() => birthdayLabel(member?.birthday_date ?? null), [member?.birthday_date]);
 
   if (!member) return null;
 
   return (
-    <Modal open={open} onClose={onClose} title={member.name}>
-      <div className="space-y-5">
+    <Modal open={open} onClose={onClose} title="">
+      <div className="relative overflow-hidden rounded-xl" style={{ background: 'linear-gradient(180deg, #fdf2f8 0%, #faf5ff 40%, #ffffff 100%)' }}>
 
-        {/* Header: border-l role color + avatar + name + badges */}
-        <div className="flex gap-4" style={{ borderLeft: `4px solid ${roleColor}`, paddingLeft: 16 }}>
-          <div
-            className="size-14 rounded-full bg-gradient-to-br from-rose-100 to-purple-100 flex items-center justify-center text-rose-600 font-bold text-xl shadow-inner ring-4 ring-white flex-shrink-0"
-            aria-label={`Inicial de ${member.name}`}
-            role="img"
-          >
-            {member.name[0]?.toUpperCase()}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <Briefcase className="size-4 text-zinc-400 flex-shrink-0" aria-hidden="true" />
-              <h3 className="text-lg font-bold text-zinc-900 truncate">{member.name}</h3>
+        {/* ─── Header section ─── */}
+        <div className="relative pt-6 pb-4 px-5">
+          {/* Decorative sparkle */}
+          <Sparkles className="absolute top-4 right-4 size-5 text-rose-300/40" aria-hidden="true" />
+
+          {/* Avatar — large, floating, with decorative ring */}
+          <div className="flex justify-center mb-4">
+            <div className="relative">
+              <div
+                className="size-20 rounded-full bg-gradient-to-br flex items-center justify-center text-white font-bold text-3xl shadow-lg shadow-rose-200/40"
+                style={{
+                  backgroundImage: `linear-gradient(135deg, ${roleColor}dd, ${roleColor}88, ${roleColor})`,
+                }}
+                role="img"
+                aria-label={`Foto de ${member.name}`}
+              >
+                {member.name[0]?.toUpperCase()}
+              </div>
+              {/* Decorative ring */}
+              <div className="absolute -inset-1 rounded-full border-2 border-dashed border-rose-300/30 animate-spin" style={{ animationDuration: '20s' }} aria-hidden="true" />
             </div>
-            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-              <Badge variant="custom" color={roleColor} className="text-xs">
+          </div>
+
+          {/* Name + role */}
+          <div className="text-center space-y-1.5">
+            <h2 className="text-xl font-bold tracking-tight text-zinc-800">
+              {member.name}
+            </h2>
+            <div className="flex items-center justify-center gap-2 flex-wrap">
+              <Badge variant="custom" color={roleColor} className="text-[11px] px-2.5 py-0.5">
                 {member.role?.name || 'Sin rol'}
               </Badge>
-              {!member.active && <Badge variant="danger" className="text-xs">Inactivo</Badge>}
+              {!member.active && (
+                <Badge variant="danger" className="text-[11px] px-2.5 py-0.5">Inactivo</Badge>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Stats grid with trend + commission exceptions */}
+        {/* ─── Stats row — elegant horizontal flow ─── */}
         {stats && (
-          <div className="grid grid-cols-3 gap-2">
-            <div className="p-3 rounded-xl bg-zinc-50 text-center">
-              <CalendarDays className="size-4 mx-auto text-salon-500 mb-1.5" aria-hidden="true" />
-              <p className="text-lg font-bold text-zinc-900">{stats.total_appointments}</p>
-              <p className="text-[10px] text-zinc-400 mt-0.5">Citas</p>
-            </div>
-            <div className="p-3 rounded-xl bg-zinc-50 text-center">
-              <DollarSign className="size-4 mx-auto text-green-500 mb-1.5" aria-hidden="true" />
-              <p className="text-sm font-bold text-zinc-900">{formatCurrency(stats.total_revenue)}</p>
-              <p className="text-[10px] text-zinc-400 mt-0.5">Facturado</p>
-              {recentPerformance && recentPerformance.totalRevenue > 0 && (
-                <p className="text-[10px] text-zinc-400 mt-0.5">
-                  30d: {formatCurrency(recentPerformance.totalRevenue)}
-                </p>
-              )}
-            </div>
-            <div className="p-3 rounded-xl bg-zinc-50 text-center">
-              <TrendingUp className="size-4 mx-auto text-accent-500 mb-1.5" aria-hidden="true" />
-              <p className="text-lg font-bold text-accent-600">{member.commission_pct}%</p>
-              <p className="text-[10px] text-zinc-400 mt-0.5">Comision</p>
-              {commissionOverridesCount > 0 && (
-                <p className="text-[10px] text-amber-600 font-medium mt-0.5">
-                  {commissionOverridesCount} excepcion{commissionOverridesCount !== 1 ? 'es' : ''}
-                </p>
-              )}
+          <div className="px-5 pb-5">
+            <div className="flex items-center justify-center gap-1 text-center">
+              <div className="flex-1">
+                <p className="text-2xl font-bold text-zinc-800 tabular-nums">{stats.total_appointments}</p>
+                <p className="text-[11px] text-zinc-400 mt-0.5 tracking-wide uppercase">Citas</p>
+              </div>
+              <Dot />
+              <div className="flex-1">
+                <p className="text-xl font-bold text-zinc-800 tabular-nums">{formatCurrency(stats.total_revenue)}</p>
+                <p className="text-[11px] text-zinc-400 mt-0.5 tracking-wide uppercase">Facturado</p>
+                {recentPerformance && recentPerformance.totalRevenue > 0 && (
+                  <p className="text-[10px] text-rose-400 mt-0.5 flex items-center justify-center gap-1">
+                    <ArrowUpRight className="size-3" aria-hidden="true" />
+                    30d: {formatCurrency(recentPerformance.totalRevenue)}
+                  </p>
+                )}
+              </div>
+              <Dot />
+              <div className="flex-1">
+                <p className="text-2xl font-bold text-rose-500 tabular-nums">{member.commission_pct}%</p>
+                <p className="text-[11px] text-zinc-400 mt-0.5 tracking-wide uppercase">Comision</p>
+                {commissionOverridesCount > 0 && (
+                  <p className="text-[10px] text-amber-500 font-medium mt-0.5">
+                    {commissionOverridesCount} excepcion{commissionOverridesCount !== 1 ? 'es' : ''}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         )}
 
-        {/* Contact + specialties + birthday + schedule */}
-        <div className="space-y-2">
+        <ThinDivider />
+
+        {/* ─── Info cards — refined, warm ─── */}
+        <div className="px-4 py-4 space-y-2">
+          {/* Phone + WhatsApp */}
           {member.phone && (
-            <div className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-zinc-50 transition-colors group">
-              <div className="size-8 rounded-lg bg-zinc-100 flex items-center justify-center">
-                <Phone className="size-3.5 text-zinc-400" aria-hidden="true" />
+            <div className="group flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/60 transition-colors">
+              <div className="size-9 rounded-xl bg-rose-100/60 flex items-center justify-center flex-shrink-0 group-hover:bg-rose-100 transition-colors">
+                <Phone className="size-4 text-rose-400" aria-hidden="true" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] text-zinc-400">Telefono</p>
-                <p className="text-sm font-medium text-zinc-700 truncate">{member.phone}</p>
+                <p className="text-xs text-zinc-400 mb-0.5">Telefono</p>
+                <p className="text-sm font-medium text-zinc-700">{member.phone}</p>
               </div>
               <a
                 href={waUrl(member.phone)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-shrink-0 size-8 rounded-lg bg-green-50 flex items-center justify-center hover:bg-green-100 transition-colors"
+                className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 hover:bg-emerald-100 text-xs font-medium text-emerald-700 transition-colors"
                 aria-label={`Enviar WhatsApp a ${member.name}`}
               >
-                <MessageCircle className="size-4 text-green-600" />
+                <MessageCircle className="size-3.5" />
+                <span className="hidden sm:inline">WhatsApp</span>
               </a>
             </div>
           )}
 
+          {/* Birthday */}
           {bd && (
-            <div className={`flex items-center gap-3 p-2.5 rounded-xl ${bd.isSoon ? 'bg-rose-50 border border-rose-100' : ''}`}>
-              <div className={`size-8 rounded-lg flex items-center justify-center ${bd.isSoon ? 'bg-rose-100' : 'bg-zinc-100'}`}>
-                <Cake className={`size-3.5 ${bd.isSoon ? 'text-rose-500' : 'text-zinc-400'}`} aria-hidden="true" />
+            <div className={`group flex items-center gap-3 px-3 py-3 rounded-xl transition-colors ${bd.isSoon ? 'bg-rose-50/80 border border-rose-100' : 'hover:bg-white/60'}`}>
+              <div className={`size-9 rounded-xl flex items-center justify-center flex-shrink-0 ${bd.isSoon ? 'bg-rose-200' : 'bg-rose-100/60 group-hover:bg-rose-100'} transition-colors`}>
+                <Cake className={`size-4 ${bd.isSoon ? 'text-rose-600' : 'text-rose-400'}`} aria-hidden="true" />
               </div>
               <div>
-                <p className="text-[10px] text-zinc-400">Cumpleaños</p>
+                <p className="text-xs text-zinc-400 mb-0.5">Cumpleaños</p>
                 <p className={`text-sm font-medium ${bd.isSoon ? 'text-rose-700' : 'text-zinc-700'}`}>
                   {bd.label}
+                  {bd.isSoon && <span className="ml-1.5 text-[10px] bg-rose-200 text-rose-700 px-1.5 py-0.5 rounded-full">hoy?</span>}
                 </p>
               </div>
             </div>
           )}
 
-          {member.staff_specialties && member.staff_specialties.length > 0 && (
-            <div className="flex items-center gap-3 p-2.5 rounded-xl">
-              <div className="size-8 rounded-lg bg-zinc-100 flex items-center justify-center flex-shrink-0">
-                <Briefcase className="size-3.5 text-zinc-400" aria-hidden="true" />
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {member.staff_specialties.map((spec) => (
-                  <Badge
-                    key={spec.id || spec.category_id}
-                    variant="custom"
-                    color={spec.category?.color || '#6B7280'}
-                    className="text-[10px]"
-                  >
-                    {spec.category?.icon || ''} {spec.category?.name}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
-
+          {/* Schedule */}
           {member.schedule && (
-            <div className="flex items-center gap-3 p-2.5 rounded-xl">
-              <div className="size-8 rounded-lg bg-zinc-100 flex items-center justify-center">
-                <Clock className="size-3.5 text-zinc-400" aria-hidden="true" />
+            <div className="group flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/60 transition-colors">
+              <div className="size-9 rounded-xl bg-violet-100/60 flex items-center justify-center flex-shrink-0 group-hover:bg-violet-100 transition-colors">
+                <Clock className="size-4 text-violet-400" aria-hidden="true" />
               </div>
               <div>
-                <p className="text-[10px] text-zinc-400">Horario</p>
+                <p className="text-xs text-zinc-400 mb-0.5">Horario</p>
                 <p className="text-sm font-medium text-zinc-700">{member.schedule}</p>
               </div>
             </div>
           )}
 
+          {/* Specialties — visual cloud */}
+          {member.staff_specialties && member.staff_specialties.length > 0 && (
+            <div className="group flex items-start gap-3 px-3 py-3 rounded-xl hover:bg-white/60 transition-colors">
+              <div className="size-9 rounded-xl bg-amber-100/60 flex items-center justify-center flex-shrink-0 mt-0.5 group-hover:bg-amber-100 transition-colors">
+                <Sparkles className="size-4 text-amber-400" aria-hidden="true" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs text-zinc-400 mb-2">Especialidades</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {member.staff_specialties.map((spec) => (
+                    <span
+                      key={spec.id || spec.category_id}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors"
+                      style={{
+                        backgroundColor: `${spec.category?.color || '#e2e8f0'}18`,
+                        color: spec.category?.color || '#64748b',
+                        border: `1px solid ${spec.category?.color || '#e2e8f0'}30`,
+                      }}
+                    >
+                      {spec.category?.icon || ''} {spec.category?.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Last appointment */}
           {stats?.last_appointment && (
-            <div className="flex items-center gap-3 p-2.5 rounded-xl">
-              <div className="size-8 rounded-lg bg-zinc-100 flex items-center justify-center">
-                <CalendarDays className="size-3.5 text-zinc-400" aria-hidden="true" />
+            <div className="group flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/60 transition-colors">
+              <div className="size-9 rounded-xl bg-sky-100/60 flex items-center justify-center flex-shrink-0 group-hover:bg-sky-100 transition-colors">
+                <CalendarDays className="size-4 text-sky-400" aria-hidden="true" />
               </div>
               <div>
-                <p className="text-[10px] text-zinc-400">Ultima cita (total)</p>
+                <p className="text-xs text-zinc-400 mb-0.5">Ultima cita</p>
                 <p className="text-sm font-medium text-zinc-700">{formatDate(stats.last_appointment)}</p>
               </div>
             </div>
           )}
         </div>
 
-        {/* Actions */}
-        <div className="flex gap-2 pt-2 border-t border-zinc-100">
+        <ThinDivider />
+
+        {/* ─── Actions ─── */}
+        <div className="px-4 py-4 flex gap-3">
           <Button
             type="button"
             variant="outline"
-            className="flex-1 border-zinc-200"
+            className="flex-1 border-zinc-200/80 text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50 hover:border-zinc-300 rounded-xl py-5 text-sm font-medium transition-all duration-200"
             onClick={onClose}
           >
             Cerrar
@@ -209,13 +272,15 @@ export const StaffDetailModal = memo(function StaffDetailModal({
                 onClose();
                 onEdit(member);
               }}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium text-salon-700 border border-salon-200 hover:bg-salon-50 transition-colors"
+              className="flex-1 flex items-center justify-center gap-2 py-5 rounded-xl text-sm font-semibold text-white transition-all duration-200 hover:shadow-lg hover:shadow-rose-200/40 active:scale-[0.97]"
+              style={{ background: `linear-gradient(135deg, ${roleColor}cc, ${roleColor})` }}
             >
-              <Pencil className="size-3.5" aria-hidden="true" />
+              <Pencil className="size-4" aria-hidden="true" />
               Editar
             </button>
           )}
         </div>
+
       </div>
     </Modal>
   );
