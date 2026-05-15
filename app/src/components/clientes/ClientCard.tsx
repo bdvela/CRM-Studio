@@ -12,7 +12,7 @@ export const ClientCard = memo(function ClientCard({ client, onClick }: ClientCa
 
   return (
     <div
-      className={`rounded-2xl border border-zinc-200 bg-white shadow-sm cursor-pointer hover:shadow-md hover:border-salon-300 transition-shadow transition-colors border-l-4 ${borderColor}`}
+      className={`rounded-2xl border border-zinc-200 bg-white shadow-sm cursor-pointer hover:shadow-md hover:border-salon-300 transition-shadow transition-colors active:scale-[0.97] border-l-4 ${borderColor}`}
       onClick={onClick}
       role="button"
       tabIndex={0}
