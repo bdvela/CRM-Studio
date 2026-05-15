@@ -163,20 +163,28 @@ export const ClientDetailModal = memo(function ClientDetailModal({
 
           {/* Actions */}
           <div className="flex gap-2 sm:gap-3 pt-2 border-t border-zinc-100">
-            <Button type="button" variant="danger" className="flex-1" onClick={onDelete} loading={deleting} disabled={deleting}>
+            <Button type="button" variant="outline" className="flex-1 border-red-200 text-red-600 hover:bg-red-50" onClick={onDelete} loading={deleting} disabled={deleting}>
               <Trash2 className="size-4 mr-1.5 sm:mr-2" />
               <span className="hidden sm:inline">{deleting ? 'Eliminando...' : 'Eliminar'}</span>
               <span className="sm:hidden">{deleting ? '...' : 'Eliminar'}</span>
             </Button>
-            <Button type="button" className="flex-1" onClick={onEdit}>
-              <Edit className="size-4 mr-1.5 sm:mr-2" />
+            <button
+              type="button"
+              onClick={onEdit}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium text-zinc-400 hover:text-zinc-600 border border-dashed border-zinc-200 hover:border-zinc-300 transition-colors"
+            >
+              <Edit className="size-3.5" />
               Editar
-            </Button>
+            </button>
           </div>
-          <Button type="button" variant="outline" className="w-full" onClick={onViewDetail}>
-            <ExternalLink className="size-4 mr-1.5" />
+          <button
+            type="button"
+            onClick={onViewDetail}
+            className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium text-zinc-400 hover:text-zinc-600 border border-dashed border-zinc-200 hover:border-zinc-300 transition-colors"
+          >
+            <ExternalLink className="size-3.5" />
             Ver detalle completo
-          </Button>
+          </button>
         </div>
     </Modal>
   );

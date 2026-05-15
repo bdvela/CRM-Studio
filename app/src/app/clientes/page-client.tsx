@@ -81,6 +81,14 @@ export default function ClientesPage({ initialClients }: { initialClients?: Clie
     load();
   }, []);
 
+  // Prefetch modal chunk so first card click is instant
+  useEffect(() => {
+    const id = setTimeout(() => {
+      import('@/components/clientes/ClientDetailModal');
+    }, 500);
+    return () => clearTimeout(id);
+  }, []);
+
   // Auto-refresh every 60s, pause when tab hidden
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = setInterval(load, 60000);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo, lazy, Suspense } from 'react';
+import { useState, useCallback, useMemo, useEffect, lazy, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { getClientById, getAppointments, updateClient, deleteClient } from '@/lib/db/queries';
 import type { Client, ClientInsert, Appointment } from '@/types/database';
@@ -33,6 +33,14 @@ export default function ClienteDetailClient({
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // Prefetch modal chunk so edit button click is instant
+  useEffect(() => {
+    const id = setTimeout(() => {
+      import('@/components/clientes/ClientFormModal');
+    }, 500);
+    return () => clearTimeout(id);
+  }, []);
 
   const handleEditSave = useCallback(async (data: ClientInsert) => {
     if (!client?.id) return;
