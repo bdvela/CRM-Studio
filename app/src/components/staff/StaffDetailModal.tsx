@@ -140,65 +140,71 @@ export const StaffDetailModal = memo(function StaffDetailModal({
         <div className="px-4 py-4 grid grid-cols-2 gap-2">
           {/* Left column: Phone + Birthday */}
           <div className="space-y-2">
-            {member.phone && (
-              <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-zinc-50/60">
-                <Phone className="size-3.5 text-zinc-400 flex-shrink-0" aria-hidden="true" />
-                <div className="min-w-0">
-                  <p className="text-[10px] text-zinc-400">Telefono</p>
-                  <p className="text-xs font-medium text-zinc-700 truncate">{member.phone}</p>
-                </div>
+            <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-zinc-50/60">
+              <Phone className="size-3.5 text-zinc-400 flex-shrink-0" aria-hidden="true" />
+              <div className="min-w-0">
+                <p className="text-[10px] text-zinc-400">Telefono</p>
+                <p className={`text-xs font-medium truncate ${member.phone ? 'text-zinc-700' : 'text-zinc-300'}`}>
+                  {member.phone || '—'}
+                </p>
               </div>
-            )}
-            {bd && (
-              <div className={`flex items-center gap-2 px-3 py-2.5 rounded-xl ${bd.isSoon ? 'bg-rose-50 border border-rose-100' : 'bg-zinc-50/60'}`}>
-                <Cake className={`size-3.5 flex-shrink-0 ${bd.isSoon ? 'text-rose-500' : 'text-zinc-400'}`} aria-hidden="true" />
-                <div className="min-w-0">
-                  <p className="text-[10px] text-zinc-400">Cumpleaños</p>
-                  <p className={`text-xs font-medium truncate ${bd.isSoon ? 'text-rose-700' : 'text-zinc-700'}`}>
-                    {bd.label}
-                  </p>
-                </div>
+            </div>
+            <div className={`flex items-center gap-2 px-3 py-2.5 rounded-xl ${bd?.isSoon ? 'bg-rose-50 border border-rose-100' : 'bg-zinc-50/60'}`}>
+              <Cake className={`size-3.5 flex-shrink-0 ${bd?.isSoon ? 'text-rose-500' : 'text-zinc-400'}`} aria-hidden="true" />
+              <div className="min-w-0">
+                <p className="text-[10px] text-zinc-400">Cumpleaños</p>
+                <p className={`text-xs font-medium truncate ${bd ? 'text-zinc-700' : 'text-zinc-300'} ${bd?.isSoon ? '!text-rose-700' : ''}`}>
+                  {bd?.label || '—'}
+                </p>
               </div>
-            )}
+            </div>
           </div>
 
           {/* Right column: Schedule + Last appointment */}
           <div className="space-y-2">
-            {member.schedule && (
-              <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-zinc-50/60">
-                <Clock className="size-3.5 text-zinc-400 flex-shrink-0" aria-hidden="true" />
-                <div className="min-w-0">
-                  <p className="text-[10px] text-zinc-400">Horario</p>
-                  <p className="text-xs font-medium text-zinc-700 truncate">{member.schedule}</p>
-                </div>
+            <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-zinc-50/60">
+              <Clock className="size-3.5 text-zinc-400 flex-shrink-0" aria-hidden="true" />
+              <div className="min-w-0">
+                <p className="text-[10px] text-zinc-400">Horario</p>
+                <p className={`text-xs font-medium truncate ${member.schedule ? 'text-zinc-700' : 'text-zinc-300'}`}>
+                  {member.schedule || '—'}
+                </p>
               </div>
-            )}
-            {stats?.last_appointment && (
-              <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-zinc-50/60">
-                <CalendarDays className="size-3.5 text-zinc-400 flex-shrink-0" aria-hidden="true" />
-                <div className="min-w-0">
-                  <p className="text-[10px] text-zinc-400">Ultima cita</p>
-                  <p className="text-xs font-medium text-zinc-700 truncate">{formatDate(stats.last_appointment)}</p>
-                </div>
+            </div>
+            <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-zinc-50/60">
+              <CalendarDays className="size-3.5 text-zinc-400 flex-shrink-0" aria-hidden="true" />
+              <div className="min-w-0">
+                <p className="text-[10px] text-zinc-400">Ultima cita</p>
+                <p className={`text-xs font-medium truncate ${stats?.last_appointment ? 'text-zinc-700' : 'text-zinc-300'}`}>
+                  {stats?.last_appointment ? formatDate(stats.last_appointment) : '—'}
+                </p>
               </div>
-            )}
+            </div>
           </div>
 
-          {/* Specialties — full width row */}
-          {member.staff_specialties && member.staff_specialties.length > 0 && (
-            <div className="col-span-2 flex flex-wrap gap-1.5 pt-1">
-              {member.staff_specialties.map((spec) => (
-                <Badge
-                  key={spec.id || spec.category_id}
-                  variant="custom"
-                  color={spec.category?.color || '#6B7280'}
-                  className="text-[10px]"
-                >
-                  {spec.category?.icon || ''} {spec.category?.name}
-                </Badge>
-              ))}
+          {/* Specialties — full width field */}
+          <div className="col-span-2 flex items-start gap-2 px-3 py-2.5 rounded-xl bg-zinc-50/60">
+            <Sparkles className="size-3.5 text-zinc-400 flex-shrink-0 mt-0.5" aria-hidden="true" />
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] text-zinc-400 mb-1">Especialidades</p>
+              {member.staff_specialties && member.staff_specialties.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {member.staff_specialties.map((spec) => (
+                    <Badge
+                      key={spec.id || spec.category_id}
+                      variant="custom"
+                      color={spec.category?.color || '#6B7280'}
+                      className="text-[10px]"
+                    >
+                      {spec.category?.icon || ''} {spec.category?.name}
+                    </Badge>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-zinc-300">—</p>
+              )}
             </div>
-          )}
+          </div>
         </div>
 
         <ThinDivider />
