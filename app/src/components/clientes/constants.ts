@@ -15,10 +15,10 @@ export const STATUS_BADGE_VARIANT: Record<ClientStatus, 'warning' | 'success' | 
 };
 
 export const STATUS_BORDER_COLOR: Record<ClientStatus, string> = {
-  prospecto: 'border-l-blue-400',
-  activa: 'border-l-emerald-400',
-  inactiva: 'border-l-zinc-300',
-  vip: 'border-l-amber-400',
+  prospecto: 'border-l-amber-400',
+  activa: 'border-l-green-400',
+  inactiva: 'border-l-red-400',
+  vip: 'border-l-purple-400',
 };
 
 export const STATUS_OPTIONS = [
