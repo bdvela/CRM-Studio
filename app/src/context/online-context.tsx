@@ -1,7 +1,8 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
+import { onOnline } from '@/lib/offline-queue';
 
 interface OnlineContextValue {
   isOnline: boolean;
@@ -18,6 +19,7 @@ export function OnlineProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
+      onOnline();
       toast.success('Conexión restablecida', {
         description: 'Los datos se están sincronizando',
         duration: 3000,

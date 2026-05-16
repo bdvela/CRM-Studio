@@ -10,6 +10,9 @@ import {
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/auth-context';
+import { useOnlineStatus } from '@/context/online-context';
+import { getQueueLength, isSyncing } from '@/lib/offline-queue';
+import { Cloud, CloudOff, RefreshCw } from 'lucide-react';
 
 const mainNav = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -60,8 +63,21 @@ function SidebarNav({ collapsed, onNavClick }: { collapsed: boolean; onNavClick?
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user, loading, signOut } = useAuth();
+  const { isOnline } = useOnlineStatus();
   const [tabletMenuOpen, setTabletMenuOpen] = useState(false);
   const [userCollapsed, setUserCollapsed] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    function update() { getQueueLength().then(setPendingCount); }
+    update();
+    const interval = setInterval(update, 5000);
+    window.addEventListener('online', update);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('online', update);
+    };
+  }, []);
 
   const isLoginPage = pathname === '/login';
 
@@ -119,6 +135,18 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             {sidebarCollapsed ? <ChevronRight className="size-4" /> : <ChevronLeft className="size-4" />}
             {!sidebarCollapsed && <span className="text-xs">Colapsar</span>}
           </button>
+          {pendingCount > 0 && (
+            <div className="flex items-center justify-center gap-2 px-3 py-2 text-xs text-amber-600">
+              {isSyncing() ? (
+                <RefreshCw className="size-3 animate-spin" />
+              ) : (
+                <CloudOff className="size-3" />
+              )}
+              {!sidebarCollapsed && (
+                <span>{isSyncing() ? 'Sincronizando...' : `${pendingCount} cambio(s) pendiente(s)`}</span>
+              )}
+            </div>
+          )}
           <button
             onClick={signOut}
             className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-zinc-400 hover:bg-red-50 hover:text-red-600 transition-colors"
