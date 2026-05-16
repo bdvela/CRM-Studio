@@ -55,6 +55,13 @@ async function cachedQuery<T>(key: string, ttlMs: number, fetcher: () => Promise
     .catch((error) => {
       pendingQueries.delete(key);
       lastErrors.set(key, error?.message || error?.toString() || 'Error desconocido');
+
+      // If fetch fails but we have expired cache data, return it as fallback
+      if (hit) {
+        console.warn(`[cachedQuery] Offline fallback for "${key}"`);
+        return hit.value as T;
+      }
+
       throw error;
     });
 
