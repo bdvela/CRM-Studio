@@ -3,3 +3,7 @@ coverage/
 playwright-report/
 test-results/
 test-results.xml
+
+# Serwist
+public/sw*
+public/swe-worker*

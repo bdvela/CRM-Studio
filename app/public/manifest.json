@@ -1,13 +1,27 @@
 {
-  "name": "CRM Salón de Belleza",
-  "short_name": "Ara Zevallos Studio",
+  "name": "Ara Zevallos Studio",
+  "short_name": "Ara Studio",
   "description": "Gestión integral para studio de belleza",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
+  "lang": "es",
+  "categories": ["business", "lifestyle"],
   "background_color": "#faf5ff",
   "theme_color": "#db2777",
   "icons": [
-    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
   ]
 }

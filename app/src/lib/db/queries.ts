@@ -824,7 +824,7 @@ function getStaffTodayOccupancy(appointments: any[], staff: any[]) {
       });
     }
     return acc;
-  }, [] as Array<{ id: string; name: string; appointmentCount: number; totalDurationMin: number; capacityPercent: number; color: string }>).sort((a, b) => b.capacityPercent - a.capacityPercent);
+  }, [] as Array<{ id: string; name: string; appointmentCount: number; totalDurationMin: number; capacityPercent: number; color: string }>).sort((a: { capacityPercent: number }, b: { capacityPercent: number }) => b.capacityPercent - a.capacityPercent);
 }
 
 async function getRecentActivity() {

@@ -58,6 +58,25 @@ export default function StaffDetailClient({
   const [loadingPerf, setLoadingPerf] = useState(false);
   const [commissionOverridesCount, setCommissionOverridesCount] = useState(0);
 
+  const loadPerformance = useCallback(async () => {
+    setLoadingPerf(true);
+    try {
+      const range = getDateRange(period);
+      const [perf, svc, appts] = await Promise.all([
+        getStaffPerformance(staffId, range.from, range.to),
+        getStaffTopServices(staffId, range.from, range.to),
+        getStaffAppointments(staffId, range.from, range.to),
+      ]);
+      setPerformance(perf as unknown as StaffPerformance);
+      setTopServices(svc as StaffTopService[]);
+      setAppointments(appts as Appointment[]);
+    } catch {
+      // silent
+    } finally {
+      setLoadingPerf(false);
+    }
+  }, [staffId, period]);
+
   const loadPerformanceRef = useRef(loadPerformance);
   loadPerformanceRef.current = loadPerformance;
 
@@ -90,25 +109,6 @@ export default function StaffDetailClient({
     });
     loadPerformanceRef.current();
   }, [staffId, initialMember]);
-
-  const loadPerformance = useCallback(async () => {
-    setLoadingPerf(true);
-    try {
-      const range = getDateRange(period);
-      const [perf, svc, appts] = await Promise.all([
-        getStaffPerformance(staffId, range.from, range.to),
-        getStaffTopServices(staffId, range.from, range.to),
-        getStaffAppointments(staffId, range.from, range.to),
-      ]);
-      setPerformance(perf as unknown as StaffPerformance);
-      setTopServices(svc as StaffTopService[]);
-      setAppointments(appts as Appointment[]);
-    } catch {
-      // silent
-    } finally {
-      setLoadingPerf(false);
-    }
-  }, [staffId, period]);
 
   const handlePeriodChange = useCallback((p: Period) => setPeriod(p), []);
 
