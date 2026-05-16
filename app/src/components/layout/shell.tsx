@@ -188,6 +188,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 export function MobileNav() {
   const pathname = usePathname();
 
+  if (pathname === '/login') return null;
+
   return (
     <nav className="md:hidden fixed bottom-4 left-4 right-4 z-40 safe-area-bottom pb-[env(safe-area-inset-bottom)]">
       <div className="flex items-center justify-around p-2 bg-white/70 backdrop-blur-xl rounded-2xl border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.12)]">
