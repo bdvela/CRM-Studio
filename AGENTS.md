@@ -56,6 +56,22 @@
 ### Backend/BD
 - **Base de Datos**: PostgreSQL (Supabase)
 - **Cliente**: @supabase/supabase-js 2.47.0
+- **Auth**: Supabase Auth (email/password, client-side, sin SSR helpers)
+
+### Auth System
+- **Context**: `AuthProvider` en `context/auth-context.tsx` — `{ user, loading, signIn, signOut }`
+- **Persistencia**: `localStorage` vía Supabase (`sb-{url}-auth-token`)
+- **Auto-redirect**: `/login` ↔ `/` según sesión
+- **Guard**: `shell.tsx` spinner mientras carga, null si no hay sesión
+- **RLS**: HU-33 — todas las tablas restringidas a `auth.role() = 'authenticated'`
+
+### PWA
+- **Service Worker**: `@serwist/turbopack` — precaching, runtime caching, navigationPreload
+- **Manifest**: `public/manifest.json` — `standalone`, `portrait`, íconos 192/512 con maskable
+- **iOS**: `apple-mobile-web-app-capable`, `apple-touch-icon` 180×180, splash screen pink
+- **Offline Queue**: `lib/offline-queue.ts` — mutaciones persistidas en IndexedDB, replay automático al reconectar, indicador en sidebar
+- **Cache Persistente**: `lib/db/persistent-cache.ts` — resultados de queries en IndexedDB via `idb-keyval`, hidratación en frío, degradación graceful en Safari privado
+- **Online Detection**: `context/online-context.tsx` — banner Sonner al perder/recuperar conexión
 
 ### Dev Server
 - **Default Port**: 3000
@@ -76,6 +92,9 @@ CRM Studio/
 │   │   │   ├── page.tsx                 # Dashboard (Server)
 │   │   │   ├── page-client.tsx          # Dashboard (Client)
 │   │   │   ├── loading.tsx              # Skeleton loading
+│   │   │   ├── error.tsx                # Error boundary
+│   │   │   ├── not-found.tsx            # 404
+│   │   │   ├── sw.ts                    # Service Worker (Serwist)
 │   │   │   ├── citas/
 │   │   │   │   ├── page.tsx             # Citas (Server)
 │   │   │   │   ├── page-client.tsx      # Citas (Client)
@@ -169,10 +188,13 @@ CRM Studio/
 │   │   ├── lib/
 │   │   │   ├── constants.ts             # DEPOSIT_AMOUNT = 20
 │   │   │   ├── db/queries.ts            # Supabase queries + cache
+│   │   │   ├── db/persistent-cache.ts   # IndexedDB cache persistence
+│   │   │   ├── offline-queue.ts         # Offline mutation queue
 │   │   │   ├── supabase/client.ts       # Supabase client
 │   │   │   └── utils.ts                # formatCurrency, formatDate, comisiones, etc.
 │   │   ├── types/database.ts            # TypeScript types
-│   │   └── context/confirm-context.tsx
+│   │   ├── context/confirm-context.tsx
+│   │   └── context/online-context.tsx   # Online detection + toasts
 │   └── public/                          # PWA manifest
 ├── supabase/
 │   ├── schema.sql                       # Esquema completo BD
@@ -457,28 +479,30 @@ npm run start
 2. `002_categories_dinamicas_parte2.sql`
 3. `002_add_staff_birthday.sql`
 4. `003_insert_default_founder.sql`
-5. `HU-23-roles-dinamicos.sql`
-6. `HU-24-comisiones-dinamicas.sql`
-7. `HU-25-servicios-mejoras.sql`
-8. `HU-27-fix-appointment-services.sql` (✅ Aplicada)
-9. `HU-28-rls-appointment-services.sql` (✅ Aplicada)
-10. `HU-29-rls-appointment-services-v2.sql` (versión mejorada con DROP IF EXISTS)
-11. `HU-30-client-status-functions.sql` (✅ Aplicada — cron job inactividad + función `promoteClientOnCompletion`)
-12. `HU-31-fix-founder-commission.sql` (⏳ Pendiente — founder commission 100% → Studio)
+5. `HU-23-roles-dinamicos.sql` (✅ Aplicada)
+6. `HU-24-comisiones-dinamicas.sql` (✅ Aplicada)
+7. `HU-25-servicios-mejoras.sql` (✅ Aplicada)
+8. `HU-26-poblar-servicios-reales.sql` (✅ Aplicada)
+9. `HU-27-fix-appointment-services.sql` (✅ Aplicada)
+10. `HU-28-rls-appointment-services.sql` (✅ Aplicada)
+11. `HU-29-rls-appointment-services-v2.sql` (✅ Aplicada — versión mejorada con DROP IF EXISTS)
+12. `HU-30-client-status-functions.sql` (✅ Aplicada — cron job inactividad + función `promoteClientOnCompletion`)
+13. `HU-31-fix-founder-commission.sql` (✅ Aplicada — founder commission 0%, 100% al Studio)
+14. `HU-32-swap-lashista-founder-colors.sql` (✅ Aplicada — swap colores Lashista↔Dueña)
+15. `HU-33-rls-auth.sql` (✅ Aplicada — RLS en todas las tablas para authenticated users)
 
 ### Migraciones Pendientes
 | Migración | Descripción |
 |------------|-------------|
-| `HU-31-fix-founder-commission.sql` | Corrige `commission_details`: founder recibe 0% comisión, 100% va al Studio |
+| *(ninguna)* | |
 
 ### Migraciones Aplicadas Recientemente
 | Migración | Descripción |
 |------------|-------------|
+| `HU-33-rls-auth.sql` | RLS en todas las tablas, políticas solo para authenticated users |
+| `HU-32-swap-lashista-founder-colors.sql` | Intercambiar colores Lashista↔Dueña |
+| `HU-31-fix-founder-commission.sql` | Corrige `commission_details`: founder recibe 0% comisión, 100% va al Studio |
 | `HU-30-client-status-functions.sql` | Cron job pg_cron para degradar activa/vip → inactiva (>60 días sin cita completada) |
-| `HU-26-poblar-servicios-reales.sql` | Poblar servicios con datos reales del estudio |
-| `HU-27-fix-appointment-services.sql` | Agregar columna `service_price` a `appointment_services` |
-| `HU-28-rls-appointment-services.sql` | Políticas RLS para `appointment_services` (SELECT/INSERT/UPDATE/DELETE) |
-| `HU-29-rls-appointment-services-v2.sql` | Versión mejorada (DROP IF EXISTS para evitar conflictos) |
 
 ### Scripts Útiles
 | Script | Ubicación | Descripción |
@@ -616,7 +640,6 @@ npm run start
 
 ### Próximas Sesiones (no son HU)
 - Tests unitarios y E2E
-- Autenticación/Login (Supabase Auth)
 
 ---
 
@@ -642,4 +665,4 @@ npm run start
 ## Última Actualización
 - **Fecha**: 16 Mayo 2026
 - **Rama**: `main`
-- **Cambios recientes**: React Doctor 78→93/100 (166→61 issues). Fix de 100+ issues: Tailwind design, toSorted, array keys, state cascade, rerender, hydration, a11y, knip dead code. 7 archivos eliminados, 603 líneas menos. Fix useEffect missing import en shell.tsx. Lint: 0 errors, 0 warnings.
+- **Cambios recientes**: PWA implementado en 4 fases. Fase 1: Service Worker (@serwist/turbopack), iconos generados (192/512/180), manifest completo, theme-color. Fase 2: OnlineStatusProvider con toasts de conexión, error.tsx, not-found.tsx, fallback offline en cachedQuery. Fase 3: Caché persistente en IndexedDB (idb-keyval) con hidratación en frío. Fase 4: Cola de mutaciones offline con replay automático al reconectar e indicador en sidebar. Lint: 0 errors, 0 warnings.
