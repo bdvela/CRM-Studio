@@ -1,8 +1,8 @@
 # Estado del Proyecto: CRM Studio de Belleza
 
-> Fecha: 13 Mayo 2026
+> Fecha: 16 Mayo 2026
 > Rama: `main`
-> Estado: Proyecto consolidado. Todas las HU implementadas. Sidebar simplificado a 6 items.
+> Estado: Proyecto consolidado. Todas las HU implementadas. Auth + PWA completados.
 
 ---
 
@@ -20,7 +20,7 @@
 ## Resumen General
 
 ### Estado del Proyecto
-**~90% completado — Todas las HUs implementadas. Faltan Tests + Auth.**
+**~98% completado — Auth + PWA implementados. Faltan Tests.**
 
 ### Stack
 - **Framework**: Next.js 16.2.6 (App Router)
@@ -28,6 +28,8 @@
 - **UI**: React 19.0.0
 - **CSS**: Tailwind CSS 4.3.0
 - **BD**: PostgreSQL (Supabase)
+- **Auth**: Supabase Auth (email/password, localStorage)
+- **PWA**: Serwist service worker + IndexedDB offline + manifest
 
 ### Sidebar (6 items planos)
 ```
@@ -42,6 +44,7 @@
 ### Rutas del Sistema
 | Ruta | Módulo | Componentes clave |
 |------|--------|-------------------|
+| `/login` | Auth | Login page con email/password |
 | `/` | Dashboard | Banner, stats, citas de hoy, cumpleaños, pendientes, reporte mensual expandible |
 | `/citas` | Citas | Vista lista + calendario, crear/editar cita, detail ticket, solapamientos |
 | `/clientes` | Clientas | Lista con filtros + búsqueda, cards agrupadas por estado, paginación |
@@ -116,11 +119,33 @@
 | Sesión | Descripción | Prioridad |
 |--------|-------------|-----------|
 | Tests + CI/CD | Vitest, Testing Library, Playwright, GitHub Actions | Alta |
-| Autenticación/Login | Supabase Auth, login page, middleware, rutas protegidas | Alta |
+| Perfil de usuario | Configuración de cuenta, foto | Baja |
 
 ---
 
 ## Changelog Reciente
+
+### [16 Mayo 2026 — Auth + PWA + React Doctor]
+
+#### Autenticación (HU-33)
+- **Auth System**: Supabase Auth con email/password, sesión persistida en localStorage
+- **Login page**: Diseño con gradiente, iconos, toggle show/hide password, iOS-safe 16px inputs
+- **AuthProvider**: Session listener con auto-redirect (`/login` ↔ `/`), signIn/signOut
+- **Shell guard**: Spinner mientras carga, null si no hay sesión, botón "Cerrar sesión" en sidebar
+- **RLS**: Migración HU-33 — RLS en todas las tablas, solo authenticated users
+- **MobileNav**: Oculto en `/login` para evitar navbar duplicado
+
+#### PWA (4 Fases)
+- **Fase 1 — Instalable**: Service Worker (@serwist/turbopack), iconos 192/512/180 generados, manifest con scope/lang/orientation, theme-color #db2777, splash screen iOS
+- **Fase 2 — Resiliencia**: OnlineProvider con toasts Sonner (conexión/perdida), error.tsx con retry, not-found.tsx 404, cachedQuery fallback offline a datos expirados
+- **Fase 3 — Caché Persistente**: IndexedDB via idb-keyval, hidratación en frío al cargar, persistencia post-fetch, degradación graceful Safari privado
+- **Fase 4 — Mutaciones Offline**: Cola FIFO en IndexedDB (insert/update/delete), replay automático al reconectar, max 3 intentos, indicador en sidebar con contador
+
+#### React Doctor + Bug Fixes
+- **React Doctor**: 78 → 93/100 (166→61 issues). 100+ issues resueltos en 8 fases: Tailwind design, JS moderno, state cascade, rerender, hydration, a11y, dead code
+- **7 archivos eliminados**, 603 líneas menos de código muerto
+- **Bug fixes**: toggle centrado, router.push, yape_plin default, UTC date bug, skeleton flicker
+- **16 lint warnings** resueltos → 0 errors, 0 warnings
 
 ### [13 Mayo 2026 — Refactor Servicios]
 
@@ -168,11 +193,6 @@
 1. Tests unitarios (Vitest + Testing Library)
 2. Tests E2E (Playwright)
 3. CI/CD pipeline (GitHub Actions)
-
-### Siguiente Sesión
-1. Autenticación/Login (Supabase Auth)
-2. Middleware de protección de rutas
-3. Perfil de usuario
 
 ---
 
@@ -226,6 +246,13 @@ components/ui/
 | `docs/specs/` | Especificaciones HU |
 | `scripts/` | Scripts de BD (clean, seed, test) |
 | `lib/constants.ts` | Constantes del proyecto (DEPOSIT_AMOUNT) |
+| `context/auth-context.tsx` | Auth Provider (session listener, signIn/signOut) |
+| `context/online-context.tsx` | Online detection (toasts conexión) |
+| `lib/offline-queue.ts` | Cola de mutaciones offline (IndexedDB) |
+| `lib/db/persistent-cache.ts` | Caché persistente (IndexedDB via idb-keyval) |
+| `public/sw.js` | Service Worker (generado por Serwist) |
+| `public/manifest.json` | PWA manifest |
+| `public/icon-*.png` | Iconos PWA |
 
 ### Repo
 - **GitHub**: https://github.com/bdvela/CRM-Studio.git
