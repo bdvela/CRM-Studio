@@ -11,8 +11,9 @@
 | Fechas | date-fns 4.1, react-day-picker 9.5 |
 | BD | PostgreSQL (Supabase) |
 | Cliente BD | @supabase/supabase-js 2.47 |
+| Auth | Supabase Auth (email/password, localStorage) |
 | Toasts | Sonner 1.7 |
-| PWA | Manifest + Apple Web App meta |
+| PWA | @serwist/turbopack (service worker), IndexedDB (idb-keyval) |
 
 ---
 
@@ -20,14 +21,16 @@
 
 | Ruta | Página | Propósito |
 |------|--------|-----------|
-| `/` | Dashboard | KPIs, citas de hoy, pendientes, acciones rápidas |
-| `/citas` | Citas | Agenda: vista lista + calendario (mes/semana) |
+| `/login` | Login | Inicio de sesión email/password |
+| `/` | Dashboard | KPIs, citas de hoy, pendientes, reporte mensual |
+| `/citas` | Citas | Agenda: vista lista + calendario (mes/semana/día) |
+| `/citas/[id]` | Detalle Cita | Perfil, schedule, stepper, servicios, comisiones, balance |
 | `/clientes` | Clientes | Lista con filtros por estado y búsqueda |
 | `/clientes/[id]` | Detalle Cliente | Historial, estadísticas, citas |
-| `/pagos` | Pagos | Ingresos y egresos |
-| `/reportes/comisiones` | Comisiones | Cálculo y reporte por artista |
+| `/pagos` | Pagos | Hub 4 tabs: Registrar, Pendientes, Resumen, Comisiones |
 | `/servicios` | Servicios | Catálogo, categorías, staff por servicio |
 | `/staff` | Staff | Artistas, roles, especialidades |
+| `/staff/[id]` | Rendimiento | Stats por período, top servicios, historial |
 
 ---
 
@@ -36,37 +39,42 @@
 ```
 app/src/
 ├── app/                          # App Router pages (Server/Client pattern)
-│   ├── layout.tsx                # Root layout (Sidebar + MobileNav)
+│   ├── layout.tsx                # Root layout (Providers, SerwistProvider)
 │   ├── page.tsx                  # Dashboard (Server Component)
 │   ├── page-client.tsx           # Dashboard (Client Component)
-│   ├── loading.tsx                # Skeleton loading
-│   ├── citas/
-│   │   ├── page.tsx              # Server: fetch data
-│   │   ├── page-client.tsx       # Client: interactivity
-│   │   ├── layout.tsx
-│   │   └── loading.tsx
-│   ├── clientes/
+│   ├── loading.tsx               # Skeleton loading
+│   ├── error.tsx                 # Error boundary
+│   ├── not-found.tsx             # 404
+│   ├── sw.ts                     # Service Worker (Serwist)
+│   ├── login/                    # Auth (bypasses AppLayout)
+│   │   ├── page.tsx / page-client.tsx / layout.tsx
+│   ├── citas/                    # Citas module
 │   │   ├── page.tsx / page-client.tsx / layout.tsx / loading.tsx
 │   │   └── [id]/page.tsx / page-client.tsx
-│   ├── pagos/
+│   ├── clientes/                 # Clientes module
 │   │   ├── page.tsx / page-client.tsx / layout.tsx / loading.tsx
-│   ├── servicios/
+│   │   └── [id]/page.tsx / page-client.tsx
+│   ├── pagos/                    # Pagos hub (4 tabs)
 │   │   ├── page.tsx / page-client.tsx / layout.tsx / loading.tsx
-│   ├── staff/
+│   ├── servicios/                # Servicios module
 │   │   ├── page.tsx / page-client.tsx / layout.tsx / loading.tsx
-│   └── reportes/comisiones/
-│       ├── page.tsx / page-client.tsx / layout.tsx / loading.tsx
+│   ├── staff/                    # Staff module
+│   │   ├── page.tsx / page-client.tsx / layout.tsx / loading.tsx
+│   │   └── [id]/page.tsx / page-client.tsx
+│   └── serwist/[path]/route.ts   # Serwist SW route handler
 │
 ├── components/
 │   ├── layout/
-│   │   └── shell.tsx             # Sidebar, MobileNav, Header
-│   ├── ui/                       # Primitives (button, input, modal, card, etc.)
+│   │   └── shell.tsx             # Sidebar, MobileNav, Header, sync indicator
+│   ├── ui/                       # Primitives (18 files)
 │   │   ├── badge.tsx
 │   │   ├── button.tsx
 │   │   ├── card.tsx
 │   │   ├── checkbox.tsx
 │   │   ├── DatePicker.tsx
 │   │   ├── DateTimePicker.tsx
+│   │   ├── empty-state.tsx
+│   │   ├── error-banner.tsx
 │   │   ├── FlagPeru.tsx
 │   │   ├── input.tsx
 │   │   ├── modal.tsx
@@ -74,45 +82,40 @@ app/src/
 │   │   ├── skeleton.tsx
 │   │   ├── stat-card.tsx
 │   │   ├── tabs.tsx
-│   │   ├── textarea.tsx
-│   │   ├── empty-state.tsx
-│   │   └── error-banner.tsx
-│   ├── citas/
-│   │   ├── AppointmentCard.tsx           # Card con borde color por status
-│   │   ├── AppointmentDetail.tsx         # Re-export de AppointmentTicket
-│   │   ├── AppointmentFormModal.tsx      # Modal crear/editar cita
-│   │   ├── AppointmentTicket.tsx         # Ticket detalle + stepper progreso
-│   │   ├── CalendarView.tsx              # Orquestador calendario (~80 lns)
-│   │   ├── MonthView.tsx                 # Subvista mes (~80 lns)
-│   │   ├── WeekView.tsx                  # Subvista semana (~140 lns)
-│   │   ├── DayView.tsx                   # Subvista día (~120 lns)
-│   │   ├── calendar-utils.ts             # Colores, horas, helpers
-│   │   ├── CitasToolbar.tsx              # Toolbar filtros
-│   │   ├── ClientCombobox.tsx            # Selector clientas con búsqueda
-│   │   ├── DetailPopover.tsx             # Popover detalle calendario
-│   │   ├── ServiceConfigModal.tsx        # Config artista/precio
-│   │   ├── ServiceSelectorModal.tsx      # Selector servicios con filtros
-│   │   ├── helpers.ts                    # generateAppointmentTitle, toLocalISO
-│   │   ├── hooks.ts                      # Custom hooks lógica citas
-│   │   ├── reducers.ts                   # Reducers datos y UI
-│   │   └── types.ts                      # Tipos e interfaces
-│   ├── confirm/confirm.tsx       # Confirm dialog (context-based)
-│   └── providers.tsx             # ConfirmProvider wrapper
+│   │   └── textarea.tsx
+│   ├── citas/                    # 18 files (refactorizados)
+│   ├── clientes/                 # 10 files (refactorizados)
+│   ├── servicios/                # 6 files (refactorizados)
+│   ├── staff/                    # 11 files (refactorizados)
+│   ├── pagos/                    # 7 files (refactorizados)
+│   ├── dashboard/                # 13 files (refactorizados)
+│   ├── confirm/                  # ConfirmDialog
+│   └── providers.tsx             # AuthProvider + OnlineProvider + ConfirmProvider
+│
+├── context/
+│   ├── auth-context.tsx          # Auth (session, signIn, signOut, auto-redirect)
+│   ├── confirm-context.tsx       # Confirm dialog
+│   └── online-context.tsx        # Online status detection + queue trigger
 │
 ├── lib/
-│   ├── constants.ts              # DEPOSIT_AMOUNT = 20, etc.
+│   ├── constants.ts              # DEPOSIT_AMOUNT = 20
 │   ├── db/
-│   │   ├── queries.ts            # All Supabase queries + mock fallback + cache
-│   │   └── mock-data.ts          # Mock data for development
+│   │   ├── queries.ts            # All Supabase queries + cache (TTL + stale-while-revalidate)
+│   │   └── persistent-cache.ts   # IndexedDB persistence layer (idb-keyval)
 │   ├── supabase/
-│   │   └── client.ts             # Supabase client singleton
+│   │   └── client.ts             # Supabase client singleton (auth config)
+│   ├── offline-queue.ts          # Offline mutation queue (IndexedDB + replay)
 │   └── utils.ts                  # formatCurrency, formatDate, commissions, etc.
-
+│
 ├── types/
 │   └── database.ts               # All TypeScript types
 
-└── context/
-    └── confirm-context.tsx       # Confirm dialog context
+└── public/
+    ├── manifest.json              # PWA manifest (scope, lang, orientation)
+    ├── icon-192.png               # PWA icon
+    ├── icon-512.png               # PWA icon (maskable)
+    ├── apple-touch-icon.png       # iOS home screen icon
+    └── sw.js                      # Generated service worker
 ```
 
 ---
@@ -122,12 +125,12 @@ app/src/
 ### ENUMs
 
 ```sql
-client_status:     prospecto | activa | inactiva | vip
+client_status:      prospecto | activa | inactiva | vip
 appointment_status: programada | en_curso | completada | cancelada | no_show
-payment_type:      ingreso | egreso
+payment_type:       ingreso | egreso
 payment_category:   servicio | insumo | alquiler | marketing | comisiones | otro
-payment_method:    efectivo | tarjeta | transferencia | yape_plin
-payment_kind:      reserva | pago_completo | pago_final
+payment_method:     efectivo | tarjeta | transferencia | yape_plin
+payment_kind:       reserva | pago_completo | pago_final
 ```
 
 ### Tablas
@@ -167,9 +170,9 @@ payment_kind:      reserva | pago_completo | pago_final
    ├── Seleccionar servicios (1+)
    ├── Asignar artista por servicio (opcional, auto-sugiere)
    ├── Configurar precio por servicio
-   ├── Toggle adelanto S/10 (default ON)
+   ├── Toggle adelanto S/20 (default ON)
    ├── Validar solapamientos con otros artistas
-   └── → Crea cita + appointment_services (+ pago S/10 si toggle ON)
+   └── → Crea cita + appointment_services (+ pago S/20 si toggle ON)
 
 2. Avanzar estado
    programada → en_curso → completada
@@ -192,17 +195,42 @@ payment_kind:      reserva | pago_completo | pago_final
 ### Cálculo de Comisiones
 
 ```
-1. Sin artista asignado → 100% para founder
-2. Artista con rol Dueña/Founder → 100% para artista
-3. Con override (staff_commission_overrides) → founder recibe monto fijo
-4. Sin override → artista recibe su commission_pct %
+1. Sin artista asignado → 100% para Studio (founder_share)
+2. Artista con rol Dueña/Founder → 0% comisión, 100% al Studio (ella es el negocio)
+3. Con override (staff_commission_overrides) → artista recibe precio - fixed_amount
+4. Sin override → artista recibe su commission_pct %, resto al Studio
 ```
 
 ### Pagos Automáticos
 
-- Al crear cita con adelanto: crea pago de tipo `reserva` por S/10
+- Al crear cita con adelanto: crea pago de tipo `reserva` por S/20
 - Al completar cita: crea pago de tipo `pago_final` por `pending_balance`
 - Método de pago: configurable por el usuario
+
+---
+
+## Sistema de Auth
+
+```
+React Component
+│
+├── AuthProvider (context/auth-context.tsx)
+│   ├── useEffect: escucha onAuthStateChange de Supabase
+│   ├── getSession() inicial → setUser
+│   ├── signIn(email, password) → supabase.auth.signInWithPassword
+│   ├── signOut() → supabase.auth.signOut() + redirect /login
+│   └── Auto-redirect: no user → /login, has user → /
+│
+├── Shell (components/layout/shell.tsx)
+│   ├── loading → spinner fullscreen
+│   ├── pathname === /login → render children sin layout
+│   ├── !user → return null (redirect lo maneja AuthProvider)
+│   └── user → render sidebar + logout button
+│
+└── RLS (supabase/migrations/HU-33-rls-auth.sql)
+    ├── ENABLE ROW LEVEL SECURITY en 11 tablas
+    └── Políticas: auth.role() = 'authenticated' en SELECT/INSERT/UPDATE/DELETE
+```
 
 ---
 
@@ -212,40 +240,74 @@ payment_kind:      reserva | pago_completo | pago_final
 |------|-------------|
 | Lista | Citas agrupadas por fecha desde hoy |
 | Mes | Chips de hora con color de cita, clickeables |
-| Semana | Info progresiva por altura (hora → cliente → artista) |
+| Semana | 7 columnas, scroll horizontal, slots de 15 min |
+| Día | Timeline detallado con hover "Crear aquí" |
 | Hoy | Botón para saltar al día actual |
 
 - Colores asignados por cita (no por artista)
 - Citas pasadas/canceladas/no_show: gris + opacidad reducida
-- Scroll horizontal en mobile (semana)
-- Slots de 15 minutos
+- Animación fadeIn al cambiar de vista (prefers-reduced-motion: reduce)
 
 ---
 
-## PWA / Mobile
+## PWA / Offline
 
-- `manifest.json` con íconos y splash screen
-- `appleWebApp` meta tags (capable, statusBarStyle)
-- Viewport: `user-scalable: false` (evita zoom en iOS)
-- Font-size ≥ 16px en inputs (iOS auto-zoom prevention)
-- MobileNav fijo abajo con 5 iconos principales
-- Sidebar colapsable en desktop
+### Service Worker (@serwist/turbopack)
+- Precaching de todos los assets del build (JS, CSS, HTML)
+- skipWaiting + clientsClaim (SW toma control inmediato)
+- navigationPreload para respuestas rápidas
+- runtimeCaching: strategy por defecto de Serwist
+
+### Caché Persistente (IndexedDB via idb-keyval)
+- `persistent-cache.ts` wrap de idb-keyval
+- Hydratación en frío: al cargar la app, restaura caché desde IndexedDB
+- Cada fetch exitoso persiste el resultado
+- Degradación graceful si IndexedDB no está disponible (Safari privado)
+
+### Cola de Mutaciones Offline
+- `offline-queue.ts`: cola FIFO en IndexedDB
+- Soporta insert/update/delete por tabla
+- Replay automático al reconectar (max 3 intentos)
+- Indicador en sidebar con contador + spinner de sincronización
+
+### Online Detection
+- `online-context.tsx`: escucha eventos online/offline
+- Toast Sonner al perder/recuperar conexión
+- Gatilla processQueue() al volver online
+
+### Meta Tags
+- manifest.json con scope, lang, orientation portrait
+- appleWebApp: capable, statusBarStyle, title
+- theme-color: #db2777
+- apple-touch-icon 180×180
+- viewport: user-scalable=false, maximum-scale=1
 
 ---
 
 ## Data Layer
 
-### Mock System
-
-- `USE_MOCK` flag basado en env vars
-- Mock data completa en `mock-data.ts`
-- Fallback automático si no hay Supabase configurado
-
 ### Patrón de Queries
 
-- Cada función tiene mock + real implementation
-- Mock usa `delay(300ms)` para simular latencia
-- Real usa `supabase.from(...)` con joins via `select(*, relation:table(*))`
+- Cada query usa `cachedQuery(key, ttlMs, fetcher)` con:
+  - **TTL**: 10-60s según query
+  - **Stale-while-revalidate**: devuelve dato stale dentro de 3× TTL mientras refresca en background
+  - **Deduplicación**: queries duplicadas en vuelo comparten la misma Promise
+  - **Offline fallback**: si fetch falla y hay dato expirado en caché, lo devuelve
+- Mutaciones (create/update/delete) llaman `clearQueryCache()` para invalidar
+
+### Cache Flow
+
+```
+Request → cachedQuery(key)
+  ├── Hit fresh (< TTL) → return inmediato
+  ├── Hit stale (< 3× TTL) → return + refreshInBackground
+  ├── Hit expired → try fetch
+  │     ├── Success → update cache + persist IndexedDB → return
+  │     └── Fail → return expired data (offline fallback)
+  └── Miss → try fetch
+        ├── Success → cache + persist → return
+        └── Fail → throw error
+```
 
 ---
 
@@ -257,7 +319,10 @@ payment_kind:      reserva | pago_completo | pago_final
 - Moneda: `S/` como texto (no ícono), posicionamiento absoluto en inputs
 - Botones con `whitespace-nowrap` global
 - Skeleton loading en todas las páginas
-- Colores de estado: azul (programada), ámbar (en_curso), verde (completada), rojo (cancelada), naranja (no_show)
+- Colores de estado: salon (programada), ámbar (en_curso), verde (completada), rojo (cancelada), zinc (no_show)
+- safe-area-inset-bottom para iOS notches
+- font-size: 16px en inputs (previene zoom automático iOS)
+- prefers-reduced-motion: reduce (animación condicional)
 
 ---
 
@@ -269,13 +334,17 @@ Las migraciones están en `supabase/migrations/` y se aplican en orden:
 2. `002_categories_dinamicas_parte2.sql`
 3. `002_add_staff_birthday.sql`
 4. `003_insert_default_founder.sql`
-5. `HU-23-roles-dinamicos.sql`
-6. `HU-24-comisiones-dinamicas.sql`
-7. `HU-25-servicios-mejoras.sql`
-8. `HU-26-poblar-servicios-reales.sql`
-9. `HU-27-fix-appointment-services.sql`
-10. `HU-28-rls-appointment-services.sql`
-11. `HU-29-rls-appointment-services-v2.sql`
+5. `HU-23-roles-dinamicos.sql` ✅
+6. `HU-24-comisiones-dinamicas.sql` ✅
+7. `HU-25-servicios-mejoras.sql` ✅
+8. `HU-26-poblar-servicios-reales.sql` ✅
+9. `HU-27-fix-appointment-services.sql` ✅
+10. `HU-28-rls-appointment-services.sql` ✅
+11. `HU-29-rls-appointment-services-v2.sql` ✅
+12. `HU-30-client-status-functions.sql` ✅
+13. `HU-31-fix-founder-commission.sql` ✅
+14. `HU-32-swap-lashista-founder-colors.sql` ✅
+15. `HU-33-rls-auth.sql` ✅
 
 ---
 
@@ -285,29 +354,41 @@ Las migraciones están en `supabase/migrations/` y se aplican en orden:
 /CRM Studio/
 ├── app/                                  # Next.js app
 │   ├── src/
-│   │   ├── app/                          # Pages (Server/Client pattern)
-│   │   ├── components/                   # React components
-│   │   │   ├── layout/                   # shell.tsx (Sidebar + MobileNav)
-│   │   │   ├── ui/                       # Primitives (14 files)
-│   │   │   ├── citas/                    # 12 files (refactorizados)
+│   │   ├── app/                          # Pages + SW + Serwist route
+│   │   ├── components/
+│   │   │   ├── layout/shell.tsx          # Sidebar + MobileNav + Header
+│   │   │   ├── ui/                       # 16 primitives
+│   │   │   ├── citas/                    # 18 files
+│   │   │   ├── clientes/                 # 10 files
+│   │   │   ├── servicios/                # 6 files
+│   │   │   ├── staff/                    # 11 files
+│   │   │   ├── pagos/                    # 7 files
+│   │   │   ├── dashboard/                # 13 files
 │   │   │   ├── confirm/                  # ConfirmDialog
-│   │   │   └── providers.tsx              # ConfirmProvider
-│   │   ├── lib/db/queries.ts             # Supabase queries + mock + cache
-│   │   ├── lib/db/mock-data.ts           # Mock data
-│   │   ├── lib/utils.ts                  # Utilities
-│   │   ├── lib/supabase/client.ts        # Supabase client
+│   │   │   └── providers.tsx             # Auth + Online + Confirm
+│   │   ├── context/
+│   │   │   ├── auth-context.tsx          # Auth system
+│   │   │   ├── confirm-context.tsx       # Confirm dialog
+│   │   │   └── online-context.tsx        # Online detection
+│   │   ├── lib/
+│   │   │   ├── constants.ts              # DEPOSIT_AMOUNT = 20
+│   │   │   ├── db/queries.ts             # Supabase queries + cache
+│   │   │   ├── db/persistent-cache.ts    # IndexedDB cache
+│   │   │   ├── offline-queue.ts          # Offline mutation queue
+│   │   │   ├── supabase/client.ts        # Supabase client
+│   │   │   └── utils.ts                  # Utilities
 │   │   ├── types/database.ts             # TypeScript types
-│   │   └── context/confirm-context.tsx    # Confirm dialog context
-│   └── public/manifest.json              # PWA manifest
-├── supabase/
-│   ├── schema.sql                         # Full schema
-│   └── migrations/                        # 11 SQL migrations
-├── scripts/                               # DB scripts (clean, seed, test, check)
-├── docs/
-│   ├── system-design.md                   # This file
-│   ├── status.md                           # Project status
-│   ├── specs/                             # HUs organizadas por módulo
-│   └── reference/                         # Documentos de referencia
-├── AGENTS.md                              # Contexto del proyecto (AI)
-└── status.md                              # Project status
+│   │   └── public/
+│   │       ├── manifest.json             # PWA manifest
+│   │       ├── icon-*.png                # PWA icons
+│   │       └── apple-touch-icon.png      # iOS icon
+│   ├── supabase/
+│   │   ├── schema.sql                    # Full schema
+│   │   └── migrations/                   # 15 SQL migrations
+│   ├── scripts/                          # DB scripts + icon generation
+│   ├── docs/
+│   │   ├── system-design.md              # This file
+│   │   ├── status.md                     # Project status
+│   │   └── specs/                        # HUs organizadas por módulo
+│   └── AGENTS.md                         # Contexto del proyecto (AI)
 ```
