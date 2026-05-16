@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase/client';
+import { persistEntry, loadPersistedEntries, clearPersistentCache } from './persistent-cache';
 
 type CacheEntry = { value: any; expiresAt: number; staleAt: number };
 const queryCache = new Map<string, CacheEntry>();
@@ -6,16 +7,37 @@ const pendingQueries = new Map<string, Promise<any>>();
 const lastErrors = new Map<string, string | null>();
 let refreshQueue = new Map<string, Promise<any>>();
 
+let hydrated = false;
+let hydrating: Promise<void> | null = null;
+
+async function ensureHydrated(): Promise<void> {
+  if (hydrated) return;
+  if (hydrating) return hydrating;
+  hydrating = loadPersistedEntries().then((entries) => {
+    for (const [key, entry] of entries) {
+      if (!queryCache.has(key)) {
+        queryCache.set(key, entry);
+      }
+    }
+    hydrated = true;
+    hydrating = null;
+  });
+  return hydrating;
+}
+
+function persist(key: string, value: unknown, expiresAt: number, staleAt: number): void {
+  persistEntry(key, { value, expiresAt, staleAt });
+}
+
 function cacheKey(name: string, params?: unknown) {
   return params === undefined ? name : `${name}:${JSON.stringify(params)}`;
 }
-
-
 
 function clearQueryCache(prefix?: string) {
   if (!prefix) {
     queryCache.clear();
     pendingQueries.clear();
+    clearPersistentCache();
     return;
   }
 
@@ -25,12 +47,16 @@ function clearQueryCache(prefix?: string) {
   for (const key of pendingQueries.keys()) {
     if (key.startsWith(prefix)) pendingQueries.delete(key);
   }
+  clearPersistentCache();
 }
 
 let staleCallbacks = new Map<string, Set<() => void>>();
 
 async function cachedQuery<T>(key: string, ttlMs: number, fetcher: () => Promise<T>): Promise<T> {
   const now = Date.now();
+  
+  await ensureHydrated();
+  
   const hit = queryCache.get(key);
   
   // Fresh hit: return immediately
@@ -47,7 +73,10 @@ async function cachedQuery<T>(key: string, ttlMs: number, fetcher: () => Promise
 
   const promise = fetcher()
     .then((value) => {
-      queryCache.set(key, { value, expiresAt: Date.now() + ttlMs, staleAt: Date.now() + ttlMs * 3 });
+      const expiresAt = Date.now() + ttlMs;
+      const staleAt = Date.now() + ttlMs * 3;
+      queryCache.set(key, { value, expiresAt, staleAt });
+      persist(key, value, expiresAt, staleAt);
       pendingQueries.delete(key);
       lastErrors.delete(key);
       return value;
@@ -73,7 +102,10 @@ function refreshInBackground(key: string, ttlMs: number, fetcher: () => Promise<
   if (refreshQueue.has(key)) return;
   const promise = fetcher()
     .then((value) => {
-      queryCache.set(key, { value, expiresAt: Date.now() + ttlMs, staleAt: Date.now() + ttlMs * 3 });
+      const expiresAt = Date.now() + ttlMs;
+      const staleAt = Date.now() + ttlMs * 3;
+      queryCache.set(key, { value, expiresAt, staleAt });
+      persist(key, value, expiresAt, staleAt);
       refreshQueue.delete(key);
       lastErrors.delete(key);
       const cbs = staleCallbacks.get(key);

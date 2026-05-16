@@ -23,6 +23,7 @@
     "@serwist/next": "^9.5.11",
     "@supabase/supabase-js": "^2.47.0",
     "date-fns": "^4.1.0",
+    "idb-keyval": "^6.2.2",
     "lucide-react": "^0.469.0",
     "next": "^16.2.6",
     "react": "^19.0.0",
