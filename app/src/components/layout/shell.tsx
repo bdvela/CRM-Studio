@@ -9,6 +9,7 @@ import {
   Menu, X,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/context/auth-context';
 
 const mainNav = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -58,17 +59,36 @@ function SidebarNav({ collapsed, onNavClick }: { collapsed: boolean; onNavClick?
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { user, loading, signOut } = useAuth();
   const [tabletMenuOpen, setTabletMenuOpen] = useState(false);
   const [userCollapsed, setUserCollapsed] = useState(false);
 
-  const isCalendarPage = pathname === '/citas' || pathname.startsWith('/citas/');
-  const sidebarCollapsed = isCalendarPage || userCollapsed;
+  const isLoginPage = pathname === '/login';
 
   useEffect(() => {
     const noop = () => {};
     document.addEventListener('touchstart', noop, { passive: true });
     return () => document.removeEventListener('touchstart', noop);
   }, []);
+
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-zinc-50">
+        <div className="size-8 border-2 border-salon-200 border-t-salon-600 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (isLoginPage) {
+    return <>{children}</>;
+  }
+
+  if (!user) {
+    return null;
+  }
+
+  const isCalendarPage = pathname === '/citas' || pathname.startsWith('/citas/');
+  const sidebarCollapsed = isCalendarPage || userCollapsed;
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -91,13 +111,23 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
         <SidebarNav collapsed={sidebarCollapsed} />
 
-        <div className="p-3 border-t border-zinc-100">
+        <div className="p-3 border-t border-zinc-100 space-y-1">
           <button
             onClick={() => setUserCollapsed(c => !c)}
             className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-zinc-400 hover:bg-zinc-50 hover:text-zinc-600 transition-colors"
           >
             {sidebarCollapsed ? <ChevronRight className="size-4" /> : <ChevronLeft className="size-4" />}
             {!sidebarCollapsed && <span className="text-xs">Colapsar</span>}
+          </button>
+          <button
+            onClick={signOut}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-zinc-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+            aria-label="Cerrar sesión"
+          >
+            <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            {!sidebarCollapsed && <span className="text-xs">Cerrar sesión</span>}
           </button>
         </div>
       </aside>
