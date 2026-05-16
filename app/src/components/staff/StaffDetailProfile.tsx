@@ -24,7 +24,7 @@ export const StaffDetailProfile = memo(function StaffDetailProfile({ member }: S
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-xl font-bold text-zinc-900">{member.name}</h1>
+              <h1 className="text-xl font-semibold text-zinc-900">{member.name}</h1>
               <Badge variant="custom" color={roleColor} className="pointer-events-none">
                 {member.role?.name || 'Sin rol'}
               </Badge>

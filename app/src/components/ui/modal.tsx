@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useEffectEvent, useState } from 'react';
+import { useEffect, useRef, useEffectEvent, useState, startTransition } from 'react';
 import { cn } from '@/lib/utils';
 
 interface ModalProps {
@@ -14,30 +14,31 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const onCloseEvent = useEffectEvent(onClose);
-  const [mounted, setMounted] = useState(false);
-  const [exiting, setExiting] = useState(false);
+  const [modalState, setModalState] = useState<'closed' | 'open' | 'exiting'>(open ? 'open' : 'closed');
   const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (open) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional exit animation
-      setMounted(true);
-      setExiting(false);
-    } else if (mounted) {
-      setExiting(true);
-      exitTimerRef.current = setTimeout(() => {
-        setMounted(false);
-        setExiting(false);
-      }, 150);
-    }
-    return () => {
-      if (exitTimerRef.current) clearTimeout(exitTimerRef.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mounted not in deps to avoid loop
+    startTransition(() => {
+      if (open) {
+        setModalState('open');
+      } else {
+        setModalState(prev => prev === 'open' ? 'exiting' : prev);
+      }
+    });
   }, [open]);
 
   useEffect(() => {
-    if (!mounted || exiting) return;
+    if (modalState !== 'exiting') return;
+    exitTimerRef.current = setTimeout(() => {
+      setModalState('closed');
+    }, 150);
+    return () => {
+      if (exitTimerRef.current) clearTimeout(exitTimerRef.current);
+    };
+  }, [modalState]);
+
+  useEffect(() => {
+    if (modalState !== 'open') return;
 
     previousFocusRef.current = document.activeElement as HTMLElement;
 
@@ -83,16 +84,16 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
       document.removeEventListener('keydown', handleTab);
       previousFocusRef.current?.focus();
     };
-  }, [mounted, exiting]);
+  }, [modalState]);
 
-  if (!mounted) return null;
+  if (modalState === 'closed') return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div
         className={cn(
           'fixed inset-0',
-          exiting ? 'animate-[fadeOut_150ms_ease-out_forwards]' : 'animate-fadeIn'
+          modalState === 'exiting' ? 'animate-[fadeOut_150ms_ease-out_forwards]' : 'animate-fadeIn'
         )}
         onClick={onClose}
         role="presentation"
@@ -102,7 +103,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
         ref={dialogRef}
         className={cn(
           'relative w-full sm:max-w-lg md:max-w-xl lg:max-w-2xl bg-white rounded-t-3xl sm:rounded-2xl shadow-xl max-h-[80vh] sm:max-h-[85vh] overflow-y-auto',
-          exiting
+          modalState === 'exiting'
             ? 'animate-[zoomOut95_150ms_cubic-bezier(0.23,1,0.32,1)_forwards]'
             : 'animate-in zoom-in-95'
         )}

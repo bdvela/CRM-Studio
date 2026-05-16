@@ -1,9 +1,9 @@
 import { isBefore, startOfDay } from 'date-fns';
 import type { AppointmentWithDetails } from './types';
 
-export type ApptColor = { bg: string; border: string; text: string; solid: string };
+type ApptColor = { bg: string; border: string; text: string; solid: string };
 
-export const APPT_COLORS: Record<string, ApptColor> = {
+const APPT_COLORS: Record<string, ApptColor> = {
   rose:    { bg: 'bg-rose-100',    border: 'border-rose-300',    text: 'text-rose-700',    solid: 'bg-rose-500' },
   violet:  { bg: 'bg-violet-100',  border: 'border-violet-300',  text: 'text-violet-700',  solid: 'bg-violet-500' },
   blue:    { bg: 'bg-blue-100',    border: 'border-blue-300',    text: 'text-blue-700',    solid: 'bg-blue-500' },
@@ -17,8 +17,8 @@ export const APPT_COLORS: Record<string, ApptColor> = {
   indigo:  { bg: 'bg-indigo-100',  border: 'border-indigo-300',  text: 'text-indigo-700',  solid: 'bg-indigo-500' },
 };
 
-export const DEFAULT_COLOR: ApptColor = { bg: 'bg-salon-100', border: 'border-salon-300', text: 'text-salon-700', solid: 'bg-salon-500' };
-export const DEAD_COLOR: ApptColor = { bg: 'bg-zinc-100', border: 'border-zinc-200', text: 'text-zinc-400', solid: 'bg-zinc-400' };
+const DEFAULT_COLOR: ApptColor = { bg: 'bg-salon-100', border: 'border-salon-300', text: 'text-salon-700', solid: 'bg-salon-500' };
+const DEAD_COLOR: ApptColor = { bg: 'bg-zinc-100', border: 'border-zinc-200', text: 'text-zinc-400', solid: 'bg-zinc-400' };
 export const HOURS = Array.from({ length: 14 }, (_, i) => i + 7);
 
 export function isPastCalendarDay(day: Date, now: Date) {

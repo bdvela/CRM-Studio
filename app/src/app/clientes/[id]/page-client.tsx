@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo, useEffect, lazy, Suspense } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef, lazy, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { getClientById, getAppointments, updateClient, deleteClient } from '@/lib/db/queries';
 import type { Client, ClientInsert, Appointment } from '@/types/database';
@@ -29,7 +29,7 @@ export default function ClienteDetailClient({
   const { confirm } = useConfirm();
   const [client, setClient] = useState<Client | null>(initialClient || null);
   const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments || []);
-  const [loading, setLoading] = useState(!initialClient);
+  const loadingRef = useRef(!initialClient);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -50,7 +50,7 @@ export default function ClienteDetailClient({
       await updateClient(client.id, { ...data, phone: normalized });
       toast.success('Datos actualizados');
       setEditing(false);
-      setLoading(true);
+      loadingRef.current = true;
       try {
         const [c, a] = await Promise.all([
           getClientById(client.id),
@@ -61,7 +61,7 @@ export default function ClienteDetailClient({
       } catch {
         toast.error('Error al recargar datos');
       } finally {
-        setLoading(false);
+        loadingRef.current = false;
       }
     } catch {
       toast.error('Error al actualizar');
@@ -155,7 +155,7 @@ export default function ClienteDetailClient({
         </div>
       </div>
 
-      <Suspense fallback={<div className="p-8 flex items-center justify-center"><div className="h-8 w-8 rounded-full border-2 border-salon-300 border-t-transparent animate-spin" /></div>}>
+      <Suspense fallback={<div className="p-8 flex items-center justify-center"><div className="size-8 rounded-full border-2 border-salon-300 border-t-transparent animate-spin" /></div>}>
         <ClientFormModal
           open={editing}
           onClose={() => setEditing(false)}

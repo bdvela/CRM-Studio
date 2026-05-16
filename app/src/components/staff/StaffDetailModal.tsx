@@ -89,7 +89,7 @@ export const StaffDetailModal = memo(function StaffDetailModal({
 
           {/* Name + role */}
           <div className="text-center space-y-1.5">
-            <h2 className="text-xl font-bold tracking-tight text-zinc-800">
+            <h2 className="text-xl font-semibold tracking-tight text-zinc-800">
               {member.name}
             </h2>
             <div className="flex items-center justify-center gap-2 flex-wrap">
@@ -117,7 +117,7 @@ export const StaffDetailModal = memo(function StaffDetailModal({
                 <p className="text-[11px] text-zinc-400 mt-0.5 tracking-wide uppercase">Facturado</p>
                 {viewingLoading ? (
                   <p className="text-[10px] text-zinc-300 mt-0.5 flex items-center justify-center gap-1">
-                    <span className="h-3 w-3 rounded-full border-2 border-salon-200 border-t-transparent animate-spin" />
+                    <span className="size-3 rounded-full border-2 border-salon-200 border-t-transparent animate-spin" />
                   </p>
                 ) : recentPerformance && recentPerformance.totalRevenue > 0 && (
                   <p className="text-[10px] text-rose-400 mt-0.5 flex items-center justify-center gap-1">
@@ -132,7 +132,7 @@ export const StaffDetailModal = memo(function StaffDetailModal({
                 <p className="text-[11px] text-zinc-400 mt-0.5 tracking-wide uppercase">Comision</p>
                 {viewingLoading ? (
                   <p className="text-[10px] text-zinc-300 mt-0.5 flex items-center justify-center gap-1">
-                    <span className="h-3 w-3 rounded-full border-2 border-salon-200 border-t-transparent animate-spin" />
+                    <span className="size-3 rounded-full border-2 border-salon-200 border-t-transparent animate-spin" />
                   </p>
                 ) : commissionOverridesCount > 0 && (
                   <p className="text-[10px] text-amber-500 font-medium mt-0.5">
@@ -147,7 +147,7 @@ export const StaffDetailModal = memo(function StaffDetailModal({
         <ThinDivider />
 
         {/* ─── Info cards — 2-column grid ─── */}
-        <div className="px-3 py-3 grid grid-cols-2 gap-2">
+        <div className="p-3 grid grid-cols-2 gap-2">
           {/* Left column: Phone + Birthday */}
           <div className="space-y-2">
             <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-zinc-50/60">
@@ -193,7 +193,7 @@ export const StaffDetailModal = memo(function StaffDetailModal({
           </div>
 
           {/* Specialties — full width field */}
-          <div className="col-span-2 flex items-start gap-2 px-3 py-3 rounded-xl bg-zinc-50/60">
+          <div className="col-span-2 flex items-start gap-2 p-3 rounded-xl bg-zinc-50/60">
             <Sparkles className="size-3.5 text-zinc-400 flex-shrink-0 mt-0.5" aria-hidden="true" />
             <div className="min-w-0 flex-1">
               <p className="text-[10px] text-zinc-400 mb-2">Especialidades</p>
@@ -214,7 +214,7 @@ export const StaffDetailModal = memo(function StaffDetailModal({
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-zinc-300">—</p>
+                <p className="text-xs text-zinc-300">-</p>
               )}
             </div>
           </div>
@@ -223,7 +223,7 @@ export const StaffDetailModal = memo(function StaffDetailModal({
         <ThinDivider />
 
         {/* ─── Actions ─── */}
-        <div className="px-3 py-3 flex gap-3">
+        <div className="p-3 flex gap-3">
           {!isOwnerMember(member) && (
             <button
               type="button"

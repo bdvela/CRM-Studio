@@ -33,7 +33,7 @@ const ServiceSelectorModalContent = lazy(() =>
 function ModalFallback() {
   return (
     <div className="p-8 flex items-center justify-center">
-      <div className="h-8 w-8 rounded-full border-2 border-salon-300 border-t-transparent animate-spin" />
+      <div className="size-8 rounded-full border-2 border-salon-300 border-t-transparent animate-spin" />
     </div>
   );
 }
@@ -148,6 +148,11 @@ export default function CitasPage({ initialData }: { initialData?: InitialData }
   const { viewMode, listFilter, listFilterArtist, listFilterStatus, showModal, showDetail, showServiceConfig, showServiceSelector, overlapWarning, pendingDate, advancePaid } = ui;
   const { push } = useRouter();
   const [selectedAppt, setSelectedAppt] = useState<AppointmentWithDetails | null>(null);
+
+  const handleSelectAppt = useCallback((appt: AppointmentWithDetails) => {
+    setSelectedAppt(appt);
+    dispatchUi({ type: 'SET_SHOW_DETAIL', showDetail: true });
+  }, []);
 
   const [formMeta, setFormMeta] = useState({
     editingAppt: null as AppointmentWithDetails | null,
@@ -327,10 +332,7 @@ export default function CitasPage({ initialData }: { initialData?: InitialData }
             listFilterStatus={listFilterStatus}
             statusColors={statusColors}
             onNew={openNew}
-            onSelectAppt={(appt) => {
-              setSelectedAppt(appt);
-              dispatchUi({ type: 'SET_SHOW_DETAIL', showDetail: true });
-            }}
+            onSelectAppt={handleSelectAppt}
           />
         )}
       </div>

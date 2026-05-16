@@ -285,7 +285,7 @@ export default function ClientesPage({ initialClients }: { initialClients?: Clie
         </div>
       </div>
 
-      <Suspense fallback={<div className="p-8 flex items-center justify-center"><div className="h-8 w-8 rounded-full border-2 border-salon-300 border-t-transparent animate-spin" /></div>}>
+      <Suspense fallback={<div className="p-8 flex items-center justify-center"><div className="size-8 rounded-full border-2 border-salon-300 border-t-transparent animate-spin" /></div>}>
         <ClientFormModal
           open={ui.showCreateModal}
           onClose={() => dispatch({ type: 'SET_SHOW_CREATE_MODAL', show: false })}
@@ -294,7 +294,7 @@ export default function ClientesPage({ initialClients }: { initialClients?: Clie
         />
       </Suspense>
 
-      <Suspense fallback={<div className="p-8 flex items-center justify-center"><div className="h-8 w-8 rounded-full border-2 border-salon-300 border-t-transparent animate-spin" /></div>}>
+      <Suspense fallback={<div className="p-8 flex items-center justify-center"><div className="size-8 rounded-full border-2 border-salon-300 border-t-transparent animate-spin" /></div>}>
         <ClientDetailModal
           open={ui.showDetailModal}
           client={ui.viewingClient}
@@ -309,7 +309,7 @@ export default function ClientesPage({ initialClients }: { initialClients?: Clie
       </Suspense>
 
       {ui.editingClient && (
-        <Suspense fallback={<div className="p-8 flex items-center justify-center"><div className="h-8 w-8 rounded-full border-2 border-salon-300 border-t-transparent animate-spin" /></div>}>
+        <Suspense fallback={<div className="p-8 flex items-center justify-center"><div className="size-8 rounded-full border-2 border-salon-300 border-t-transparent animate-spin" /></div>}>
           <ClientFormModal
             open={!!ui.editingClient}
             onClose={() => dispatch({ type: 'SET_EDITING_CLIENT', client: null })}

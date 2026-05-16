@@ -33,7 +33,7 @@ export function DashboardStatCard({ icon, value, label, iconBgClass, iconClass, 
               {Math.abs(trend.value)}%
             </span>
           ) : (
-            <span className="text-xs text-zinc-300">—</span>
+            <span className="text-xs text-zinc-300">-</span>
           )}
         </div>
       </div>

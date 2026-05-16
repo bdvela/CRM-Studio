@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef, useEffectEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   getStaffById,
@@ -45,6 +45,11 @@ export default function StaffDetailClient({
 }) {
   const { push } = useRouter();
   const [member, setMember] = useState<StaffWithDetails | null>(initialMember);
+  const prevInitialMemberRef = useRef(initialMember);
+  if (initialMember !== prevInitialMemberRef.current) {
+    prevInitialMemberRef.current = initialMember;
+    setMember(initialMember);
+  }
   const [loading, setLoading] = useState(!initialMember);
   const [performance, setPerformance] = useState<StaffPerformance | null>(null);
   const [topServices, setTopServices] = useState<StaffTopService[]>([]);
@@ -52,6 +57,9 @@ export default function StaffDetailClient({
   const [period, setPeriod] = useState<Period>('30d');
   const [loadingPerf, setLoadingPerf] = useState(false);
   const [commissionOverridesCount, setCommissionOverridesCount] = useState(0);
+
+  const loadPerformanceRef = useRef(loadPerformance);
+  loadPerformanceRef.current = loadPerformance;
 
   const loadStaff = useCallback(async () => {
     setLoading(true);
@@ -62,6 +70,7 @@ export default function StaffDetailClient({
       ]);
       setMember(m as StaffWithDetails | null);
       setCommissionOverridesCount(overrides.length);
+      if (m) loadPerformanceRef.current();
     } catch {
       // silent
     } finally {
@@ -71,7 +80,6 @@ export default function StaffDetailClient({
 
   useEffect(() => {
     if (initialMember) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional initial fetch
     loadStaff();
   }, [loadStaff, initialMember]);
 
@@ -80,6 +88,7 @@ export default function StaffDetailClient({
     getCommissionOverrides(staffId).then((data) => {
       setCommissionOverridesCount(data.length);
     });
+    loadPerformanceRef.current();
   }, [staffId, initialMember]);
 
   const loadPerformance = useCallback(async () => {
@@ -103,27 +112,17 @@ export default function StaffDetailClient({
 
   const handlePeriodChange = useCallback((p: Period) => setPeriod(p), []);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch performance on member change
-  useEffect(() => { if (member) loadPerformance(); }, [member, loadPerformance]);
-
   // Pause performance fetching when tab is hidden
-  useEffect(() => {
-    let interval: ReturnType<typeof setInterval> | null = null;
-
-    function handleVisibility() {
-      if (document.hidden && interval) {
-        clearInterval(interval);
-        interval = null;
-      } else if (!document.hidden && !interval && member) {
-        loadPerformance();
-      }
+  const onVisibilityChange = useEffectEvent(() => {
+    if (!document.hidden && member) {
+      loadPerformance();
     }
-    document.addEventListener('visibilitychange', handleVisibility);
-    return () => {
-      if (interval) clearInterval(interval);
-      document.removeEventListener('visibilitychange', handleVisibility);
-    };
-  }, [member, loadPerformance]);
+  });
+
+  useEffect(() => {
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+  }, []);
 
   if (loading) {
     return (
@@ -138,7 +137,7 @@ export default function StaffDetailClient({
             </div>
           </div>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map(i => <div key={i} className="h-24 rounded-2xl bg-zinc-100 animate-pulse" />)}
+            {[1, 2, 3, 4].map(i => <div key={"skeleton-" + i} className="h-24 rounded-2xl bg-zinc-100 animate-pulse" />)}
           </div>
           <div className="h-16 rounded-2xl bg-zinc-100 animate-pulse" />
           <div className="h-64 rounded-2xl bg-zinc-100 animate-pulse" />

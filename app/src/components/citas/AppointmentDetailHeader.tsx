@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useEffect, useState, Fragment } from 'react';
+import { memo, useEffect, useState, useMemo, Fragment } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { AppointmentDetailHeaderProps } from './types-detail';
@@ -20,68 +20,71 @@ const STATUS_BADGE: Record<string, 'info' | 'warning' | 'success' | 'danger'> = 
 
 const STEPS = ['programada', 'en_curso', 'completada'] as const;
 
+function DetailActions({ appointment, onEdit, onCancel, onAdvanceStatus, onMarkAsNoShow }: {
+  appointment: AppointmentDetailHeaderProps['appointment'];
+  onEdit: AppointmentDetailHeaderProps['onEdit'];
+  onCancel: AppointmentDetailHeaderProps['onCancel'];
+  onAdvanceStatus: AppointmentDetailHeaderProps['onAdvanceStatus'];
+  onMarkAsNoShow: AppointmentDetailHeaderProps['onMarkAsNoShow'];
+}) {
+  if (appointment.status === 'programada') {
+    return (
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <Button size="sm" onClick={onAdvanceStatus}>Iniciar cita</Button>
+        <Button size="sm" variant="outline" onClick={onEdit}>Editar</Button>
+        <Button size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={onCancel}>Cancelar</Button>
+        <Button size="sm" variant="ghost" className="text-zinc-400" onClick={onMarkAsNoShow}>No Show</Button>
+      </div>
+    );
+  }
+  if (appointment.status === 'en_curso') {
+    return (
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <Button size="sm" variant="secondary" onClick={onAdvanceStatus}>Completar cita</Button>
+        <Button size="sm" variant="outline" onClick={onEdit}>Editar</Button>
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-center justify-end">
+      <Button size="sm" variant="outline" onClick={onEdit}>Editar</Button>
+    </div>
+  );
+}
+
 export const AppointmentDetailHeader = memo(function AppointmentDetailHeader({
   appointment, onEdit, onCancel, onAdvanceStatus, onMarkAsNoShow, onGoToClient,
 }: AppointmentDetailHeaderProps) {
   const dateStr = format(new Date(appointment.start_time), "EEEE d 'de' MMMM", { locale: es }).toLowerCase();
   const timeRange = `${formatTime(appointment.start_time)} - ${formatTime(appointment.end_time || appointment.start_time)}`;
-  const [timeStatus, setTimeStatus] = useState<React.ReactNode>(null);
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     if (appointment.status !== 'programada') return;
-    const update = () => {
-      const diffMs = new Date(appointment.start_time).getTime() - Date.now();
-      if (diffMs < 0) setTimeStatus(<span className="text-xs text-red-500 font-medium">Atrasada</span>);
-      else {
-        const diffH = Math.round(diffMs / 3600000);
-        if (diffH < 1) setTimeStatus(<span className="text-xs text-amber-500 font-medium">En menos de 1 hora</span>);
-        else if (diffH < 24) setTimeStatus(<span className="text-xs text-amber-500 font-medium">En {diffH}h</span>);
-        else {
-          const diffD = Math.round(diffH / 24);
-          setTimeStatus(diffD === 1
-            ? <span className="text-xs text-zinc-400">Mañana</span>
-            : <span className="text-xs text-zinc-400">En {diffD} días</span>);
-        }
-      }
-    };
-    update();
-    const interval = setInterval(update, 60000);
+    const interval = setInterval(() => setNow(Date.now()), 60000);
     return () => clearInterval(interval);
-  }, [appointment.start_time, appointment.status]);
+  }, [appointment.status]);
+
+  const timeStatus = useMemo(() => {
+    if (appointment.status !== 'programada') return null;
+    const diffMs = new Date(appointment.start_time).getTime() - now;
+    if (diffMs < 0) return <span className="text-xs text-red-500 font-medium">Atrasada</span>;
+    const diffH = Math.round(diffMs / 3600000);
+    if (diffH < 1) return <span className="text-xs text-amber-500 font-medium">En menos de 1 hora</span>;
+    if (diffH < 24) return <span className="text-xs text-amber-500 font-medium">En {diffH}h</span>;
+    const diffD = Math.round(diffH / 24);
+    return diffD === 1
+      ? <span className="text-xs text-zinc-400">Mañana</span>
+      : <span className="text-xs text-zinc-400">En {diffD} días</span>;
+  }, [appointment.start_time, appointment.status, now]);
 
   const currentIdx = STEPS.indexOf(appointment.status as typeof STEPS[number]);
   const isAllCompleted = appointment.status === 'completada';
   const showStepper = appointment.status !== 'cancelada' && appointment.status !== 'no_show';
 
-  function renderActions() {
-    if (appointment.status === 'programada') {
-      return (
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <Button size="sm" onClick={onAdvanceStatus}>Iniciar cita</Button>
-          <Button size="sm" variant="outline" onClick={onEdit}>Editar</Button>
-          <Button size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={onCancel}>Cancelar</Button>
-          <Button size="sm" variant="ghost" className="text-zinc-400" onClick={onMarkAsNoShow}>No Show</Button>
-        </div>
-      );
-    }
-    if (appointment.status === 'en_curso') {
-      return (
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <Button size="sm" variant="secondary" onClick={onAdvanceStatus}>Completar cita</Button>
-          <Button size="sm" variant="outline" onClick={onEdit}>Editar</Button>
-        </div>
-      );
-    }
-    return (
-      <div className="flex items-center justify-end">
-        <Button size="sm" variant="outline" onClick={onEdit}>Editar</Button>
-      </div>
-    );
-  }
-
   return (
     <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
-      <div className="px-5 py-5 space-y-4">
+      <div className="p-5 space-y-4">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-4 min-w-0">
             <button
@@ -122,7 +125,13 @@ export const AppointmentDetailHeader = memo(function AppointmentDetailHeader({
             </div>
           </div>
           <div className="flex-shrink-0">
-            {renderActions()}
+            <DetailActions
+              appointment={appointment}
+              onEdit={onEdit}
+              onCancel={onCancel}
+              onAdvanceStatus={onAdvanceStatus}
+              onMarkAsNoShow={onMarkAsNoShow}
+            />
           </div>
         </div>
 

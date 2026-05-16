@@ -65,7 +65,7 @@ const ComisionesTab = memo(function ComisionesTab() {
   if (loading) {
     return (
       <div className="space-y-3" role="status" aria-label="Cargando comisiones">
-        {[1, 2, 3].map(i => <div key={i} className="h-24 rounded-2xl bg-zinc-100 animate-pulse" />)}
+        {[1, 2, 3].map(i => <div key={"skeleton-" + i} className="h-24 rounded-2xl bg-zinc-100 animate-pulse" />)}
       </div>
     );
   }

@@ -29,7 +29,7 @@ function LoadingSkeleton() {
       <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6 animate-pulse" role="status" aria-label="Cargando cita">
         {/* 1. Header card: client info + schedule + stepper */}
         <div className="rounded-2xl border border-zinc-100 bg-white shadow-sm">
-          <div className="px-5 py-5 space-y-4">
+          <div className="p-5 space-y-4">
             <div className="flex items-center gap-4">
               <div className="size-14 rounded-full bg-zinc-200" />
               <div className="space-y-2 flex-1">

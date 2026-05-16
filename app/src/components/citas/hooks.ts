@@ -75,8 +75,8 @@ export function useCitasHandlers(ctx: {
     if (form.status !== initialFormRef.current.status) return true;
     if (form.notes !== initialFormRef.current.notes) return true;
     if (form.color !== initialFormRef.current.color) return true;
-    const sortedSelected = [...selectedServices].sort();
-    const sortedInitial = [...initialSelectedServicesRef.current].sort();
+    const sortedSelected = selectedServices.toSorted();
+    const sortedInitial = initialSelectedServicesRef.current.toSorted();
     if (sortedSelected.length === sortedInitial.length && sortedSelected.every((id, i) => id === sortedInitial[i])) {
       for (const svcId of sortedSelected) {
         if (serviceArtists[svcId] !== initialServiceArtistsRef.current[svcId]) return true;

@@ -12,23 +12,6 @@ export interface AppointmentDetailHeaderProps {
   onGoToClient: (clientId: string) => void;
 }
 
-export interface AppointmentDetailStepperProps {
-  status: AppointmentStatus;
-}
-
-export interface AppointmentDetailScheduleProps {
-  appointment: AppointmentWithDetails;
-}
-
-export interface AppointmentDetailServicesProps {
-  appointment: AppointmentWithDetails;
-  onGoToStaff?: (staffId: string) => void;
-}
-
-export interface AppointmentDetailCommissionsProps {
-  appointment: AppointmentWithDetails;
-}
-
 export interface AppointmentDetailBalanceProps {
   appointment: AppointmentWithDetails;
 }

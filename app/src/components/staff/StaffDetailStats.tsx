@@ -10,7 +10,7 @@ export const StaffDetailStats = memo(function StaffDetailStats({ performance, lo
     return (
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4" aria-label="Cargando estadísticas">
         {[1, 2, 3, 4].map(i => (
-          <div key={i} className="rounded-2xl border border-zinc-200 bg-white shadow-sm animate-pulse">
+          <div key={"skeleton-" + i} className="rounded-2xl border border-zinc-200 bg-white shadow-sm animate-pulse">
             <div className="px-5 py-4 flex items-center gap-3">
               <div className="size-10 rounded-xl bg-zinc-100" />
               <div className="space-y-2 flex-1">
@@ -28,14 +28,14 @@ export const StaffDetailStats = memo(function StaffDetailStats({ performance, lo
     return (
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[1, 2, 3, 4].map(i => (
-          <div key={i} className="rounded-2xl border border-zinc-200 bg-white shadow-sm">
+          <div key={"skeleton-" + i} className="rounded-2xl border border-zinc-200 bg-white shadow-sm">
             <div className="px-5 py-4 flex items-center gap-3">
               <div className="size-10 rounded-xl bg-zinc-100 flex items-center justify-center">
                 <CalendarDays className="size-5 text-zinc-400" aria-hidden="true" />
               </div>
               <div>
                 <p className="text-xs text-zinc-400">Sin datos</p>
-                <p className="text-lg font-bold text-zinc-300">—</p>
+                <p className="text-lg font-semibold text-zinc-300">-</p>
               </div>
             </div>
           </div>

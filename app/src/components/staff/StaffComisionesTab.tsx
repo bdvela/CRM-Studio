@@ -16,7 +16,7 @@ export function StaffComisionesTab({
   overrides,
   setOverrides,
 }: StaffComisionesTabProps) {
-  const router = useRouter();
+  const { push } = useRouter();
   const [overrideSearch, setOverrideSearch] = useState('');
   const [overrideDropdownOpen, setOverrideDropdownOpen] = useState(false);
   const overrideDropdownRef = useRef<HTMLDivElement>(null);
@@ -27,10 +27,17 @@ export function StaffComisionesTab({
     }
   }, []);
 
+  const handleClickOutsideRef = useRef(handleClickOutside);
+
   useEffect(() => {
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [handleClickOutside]);
+    handleClickOutsideRef.current = handleClickOutside;
+  });
+
+  useEffect(() => {
+    const listener = (e: MouseEvent) => handleClickOutsideRef.current(e);
+    document.addEventListener('mousedown', listener);
+    return () => document.removeEventListener('mousedown', listener);
+  }, []);
 
   const filteredServices = useMemo(() =>
     services.filter(
@@ -244,7 +251,7 @@ export function StaffComisionesTab({
             </p>
             <button
               type="button"
-              onClick={() => router.push('/reportes/comisiones')}
+              onClick={() => push('/reportes/comisiones')}
               className="text-xs text-salon-600 hover:text-salon-700 font-medium flex items-center gap-1"
             >
               Ver reporte completo

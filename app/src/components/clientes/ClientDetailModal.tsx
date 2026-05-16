@@ -61,7 +61,7 @@ export const ClientDetailModal = memo(function ClientDetailModal({
           </div>
 
           <div className="text-center space-y-1.5">
-            <h2 className="text-lg sm:text-xl font-bold tracking-tight text-zinc-800">
+            <h2 className="text-lg sm:text-xl font-semibold tracking-tight text-zinc-800">
               {client.name}
             </h2>
             <Badge variant="custom" color={statusColor} className="text-[11px] px-2.5 py-0.5">
@@ -100,7 +100,7 @@ export const ClientDetailModal = memo(function ClientDetailModal({
         {client.notes && (
           <>
             <div className="px-3 py-2.5">
-              <div className="flex items-start gap-2.5 px-3 py-3 rounded-xl bg-zinc-50/60">
+              <div className="flex items-start gap-2.5 p-3 rounded-xl bg-zinc-50/60">
                 <ScrollText className="size-3.5 text-zinc-400 flex-shrink-0 mt-0.5" aria-hidden="true" />
                 <div className="min-w-0 flex-1">
                   <p className="text-[10px] text-zinc-400 mb-1">Notas</p>
@@ -113,15 +113,15 @@ export const ClientDetailModal = memo(function ClientDetailModal({
         )}
 
         {/* Latest Appointment */}
-        <div className="px-3 py-3">
+        <div className="p-3">
           <div className="flex items-center gap-2 mb-2.5">
             <CalendarDays className="size-3.5 text-zinc-400" aria-hidden="true" />
             <h4 className="text-xs font-semibold text-zinc-900">Última cita</h4>
           </div>
           {appointmentsLoading ? (
             <div className="flex items-center justify-center py-6 px-3 rounded-xl bg-zinc-50">
-              <div className="h-4 w-4 rounded-full border-2 border-salon-300 border-t-transparent animate-spin" />
-              <span className="ml-2 text-xs text-zinc-400">Cargando...</span>
+              <div className="size-4 rounded-full border-2 border-salon-300 border-t-transparent animate-spin" />
+              <span className="ml-2 text-xs text-zinc-400">Cargando…</span>
             </div>
           ) : !latestAppt ? (
             <div className="text-center py-6 px-3 rounded-xl bg-zinc-50">
@@ -157,7 +157,7 @@ export const ClientDetailModal = memo(function ClientDetailModal({
         <ThinDivider />
 
         {/* Actions */}
-        <div className="px-3 py-3 flex gap-3">
+        <div className="p-3 flex gap-3">
           <button
             type="button"
             onClick={onDelete}

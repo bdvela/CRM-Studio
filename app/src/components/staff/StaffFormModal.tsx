@@ -184,7 +184,7 @@ export function StaffFormModal({
                   ¿Qué categorías de servicios maneja esta persona?
                 </p>
                 <div className="space-y-1.5 max-h-64 overflow-y-auto">
-                  {categories.filter(c => c.active).map((c) => (
+                  {categories.reduce((acc, c) => { if (c.active) acc.push(c); return acc; }, [] as typeof categories).map((c) => (
                     <div key={c.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-zinc-50 transition-colors">
                       <Checkbox
                         checked={specialtySelections.includes(c.id)}

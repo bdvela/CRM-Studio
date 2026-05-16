@@ -35,17 +35,17 @@ export function RecentActivity({ activities }: Props) {
               key={activity.id}
               className={`flex items-center gap-3 p-2.5 rounded-xl transition-colors ${activity.href ? 'hover:bg-zinc-50 cursor-pointer' : ''}`}
               onClick={() => activity.href ? push(activity.href) : undefined}
-              role={activity.href ? 'button' : undefined}
-              tabIndex={activity.href ? 0 : undefined}
-              onKeyDown={(e) => { if (activity.href && (e.key === 'Enter' || e.key === ' ')) push(activity.href); }}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') push(activity.href || ''); }}
             >
               <div className={`size-8 rounded-lg flex items-center justify-center flex-shrink-0 ${config.color}`}>
                 <Icon className="size-4" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-zinc-700 truncate">{activity.description}</p>
-                <p className="text-xs text-zinc-400">
-                  hace {formatDistanceToNow(new Date(activity.timestamp), { locale: es })}
+                <p className="text-xs text-zinc-400" suppressHydrationWarning>
+                  {`hace ${formatDistanceToNow(new Date(activity.timestamp), { locale: es })}`}
                 </p>
               </div>
               {activity.href && (

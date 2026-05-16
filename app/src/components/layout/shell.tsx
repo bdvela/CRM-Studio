@@ -8,7 +8,7 @@ import {
   CalendarDays, DollarSign, ChevronLeft, ChevronRight,
   Menu, X,
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 const mainNav = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -59,13 +59,10 @@ function SidebarNav({ collapsed, onNavClick }: { collapsed: boolean; onNavClick?
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [tabletMenuOpen, setTabletMenuOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [userCollapsed, setUserCollapsed] = useState(false);
 
   const isCalendarPage = pathname === '/citas' || pathname.startsWith('/citas/');
-
-  useEffect(() => {
-    if (isCalendarPage) setSidebarCollapsed(true); // eslint-disable-line react-hooks/set-state-in-effect -- intentional
-  }, [isCalendarPage]);
+  const sidebarCollapsed = isCalendarPage || userCollapsed;
 
   useEffect(() => {
     const noop = () => {};
@@ -96,7 +93,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
         <div className="p-3 border-t border-zinc-100">
           <button
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            onClick={() => setUserCollapsed(c => !c)}
             className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-zinc-400 hover:bg-zinc-50 hover:text-zinc-600 transition-colors"
           >
             {sidebarCollapsed ? <ChevronRight className="size-4" /> : <ChevronLeft className="size-4" />}
@@ -163,7 +160,7 @@ export function MobileNav() {
 
   return (
     <nav className="md:hidden fixed bottom-4 left-4 right-4 z-40 safe-area-bottom pb-[env(safe-area-inset-bottom)]">
-      <div className="flex items-center justify-around px-2 py-2 bg-white/70 backdrop-blur-xl rounded-2xl border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.12)]">
+      <div className="flex items-center justify-around p-2 bg-white/70 backdrop-blur-xl rounded-2xl border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.12)]">
         {mobileNavItems.map((item) => {
           const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
           return (

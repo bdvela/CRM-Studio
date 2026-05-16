@@ -186,7 +186,7 @@ export default function PagosPage({ initialData }: {
             {ui.loading ? (
               <div className="space-y-3" role="status" aria-label="Cargando pagos">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-16 rounded-2xl bg-zinc-100 animate-pulse" />
+                  <div key={"skeleton-" + i} className="h-16 rounded-2xl bg-zinc-100 animate-pulse" />
                 ))}
               </div>
             ) : filtered.length === 0 ? (

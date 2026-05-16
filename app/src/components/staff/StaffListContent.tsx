@@ -17,7 +17,7 @@ export function StaffListContent({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" aria-label="Cargando miembros del staff">
         {[1, 2, 3, 4, 5, 6].map((n) => (
           <div key={`skel-${n}`} className="rounded-2xl border border-zinc-200 bg-white shadow-sm">
-            <div className="py-5 px-5 space-y-4 animate-pulse">
+            <div className="p-5 space-y-4 animate-pulse">
               <div className="flex items-start gap-4">
                 <div className="size-12 rounded-full bg-zinc-100 flex-shrink-0" />
                 <div className="flex-1 space-y-2">

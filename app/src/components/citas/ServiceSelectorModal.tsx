@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useReducer, memo } from 'react';
+import { useEffect, useMemo, useReducer, memo, useCallback } from 'react';
 import type { ServiceSelectorModalContentProps } from './types';
 import { getAvailableArtistsForService } from './helpers';
 import { formatCurrency, cn } from '@/lib/utils';
@@ -182,6 +182,14 @@ export const ServiceSelectorModalContent = memo(function ServiceSelectorModalCon
     return true;
   }), [activeServices, selectorState.search, selectorState.categoryFilter]);
 
+  const handleSearchChange = useCallback((search: string) => {
+    dispatchSelector({ type: 'SET_SEARCH', search });
+  }, []);
+
+  const handleCategoryFilterChange = useCallback((categoryFilter: string) => {
+    dispatchSelector({ type: 'SET_CATEGORY_FILTER', categoryFilter });
+  }, []);
+
   function handleToggleService(serviceId: string) {
     const svc = serviceById.get(serviceId);
 
@@ -232,8 +240,8 @@ export const ServiceSelectorModalContent = memo(function ServiceSelectorModalCon
         categoryFilter={selectorState.categoryFilter}
         categoriesForFilter={categoriesForFilter}
         selectedCount={selectorState.selectedIds.length}
-        onSearchChange={(search) => dispatchSelector({ type: 'SET_SEARCH', search })}
-        onCategoryFilterChange={(categoryFilter) => dispatchSelector({ type: 'SET_CATEGORY_FILTER', categoryFilter })}
+        onSearchChange={handleSearchChange}
+        onCategoryFilterChange={handleCategoryFilterChange}
       />
 
       <div className="space-y-1.5 max-h-64 sm:max-h-80 overflow-y-auto">

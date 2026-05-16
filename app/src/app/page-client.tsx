@@ -40,9 +40,9 @@ export default function DashboardPage({ initialMetrics, initialMonthlyReport }: 
   const [monthlyReport, setMonthlyReport] = useState<MonthlyReportType | null>(initialMonthlyReport || null);
   const [loadingReport, setLoadingReport] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [timeAgo, setTimeAgo] = useState('0s');
-  const [showMonthlyReport, setShowMonthlyReport] = useState(true);
+  const lastUpdatedRef = useRef<Date>(new Date());
+  const showMonthlyReportRef = useRef(true);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timeAgoRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const reportFetchedRef = useRef(!!initialMonthlyReport);
@@ -52,7 +52,7 @@ export default function DashboardPage({ initialMetrics, initialMonthlyReport }: 
       setError(null);
       const data = await getDashboardMetrics();
       setMetrics(data as DashboardMetrics);
-      setLastUpdated(new Date());
+      lastUpdatedRef.current = new Date();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error al cargar datos');
       console.error(e);
@@ -76,8 +76,8 @@ export default function DashboardPage({ initialMetrics, initialMonthlyReport }: 
   }, []);
 
   function toggleMonthlyReport() {
-    if (!showMonthlyReport && !reportFetchedRef.current) loadMonthlyReport();
-    setShowMonthlyReport(!showMonthlyReport);
+    if (!showMonthlyReportRef.current && !reportFetchedRef.current) loadMonthlyReport();
+    showMonthlyReportRef.current = !showMonthlyReportRef.current;
   }
 
   // Initial load if no SSR data
@@ -112,14 +112,14 @@ export default function DashboardPage({ initialMetrics, initialMonthlyReport }: 
   // Update timeAgo every 10s
   useEffect(() => {
     timeAgoRef.current = setInterval(() => {
-      setTimeAgo(`${Math.round((Date.now() - lastUpdated.getTime()) / 1000)}s`);
+      setTimeAgo(`${Math.round((Date.now() - lastUpdatedRef.current.getTime()) / 1000)}s`);
     }, 10_000);
     return () => { if (timeAgoRef.current) clearInterval(timeAgoRef.current); };
-  }, [lastUpdated]);
+  }, []);
 
   // Listen for cache refreshes
   useEffect(() => {
-    const cb = () => { setLastUpdated(new Date()); setTimeAgo('0s'); };
+    const cb = () => { lastUpdatedRef.current = new Date(); setTimeAgo('0s'); };
     onCacheRefresh('dashboard', cb);
     return () => removeCacheRefresh('dashboard', cb);
   }, []);

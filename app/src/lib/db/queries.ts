@@ -10,13 +10,7 @@ function cacheKey(name: string, params?: unknown) {
   return params === undefined ? name : `${name}:${JSON.stringify(params)}`;
 }
 
-export function getLastError(name: string): string | null {
-  return lastErrors.get(name) || null;
-}
 
-export function clearError(name: string) {
-  lastErrors.delete(name);
-}
 
 function clearQueryCache(prefix?: string) {
   if (!prefix) {
@@ -320,7 +314,7 @@ export async function updateStaffServices(serviceId: string, staffIds: string[])
   }
 }
 
-export async function getStaffForService(serviceId: string, categoryId?: string, activeOnly = true) {
+async function getStaffForService(serviceId: string, categoryId?: string, activeOnly = true) {
   try {
     let hasExplicitAssignments = false;
     let assignedStaffIds: string[] = [];
@@ -816,18 +810,21 @@ function getStaffTodayOccupancy(appointments: any[], staff: any[]) {
     countMap.set(appt.artist_id, existing);
   }
 
-  return staff.map(member => {
+  return staff.reduce((acc, member) => {
     const data = countMap.get(member.id) || { count: 0, totalMin: 0 };
     const pct = Math.min(100, Math.round((data.totalMin / STAFF_CAPACITY_MIN) * 100));
-    return {
-      id: member.id,
-      name: member.name,
-      appointmentCount: data.count,
-      totalDurationMin: data.totalMin,
-      capacityPercent: pct,
-      color: '',
-    };
-  }).filter(s => s.appointmentCount > 0).sort((a, b) => b.capacityPercent - a.capacityPercent);
+    if (data.count > 0) {
+      acc.push({
+        id: member.id,
+        name: member.name,
+        appointmentCount: data.count,
+        totalDurationMin: data.totalMin,
+        capacityPercent: pct,
+        color: '',
+      });
+    }
+    return acc;
+  }, [] as Array<{ id: string; name: string; appointmentCount: number; totalDurationMin: number; capacityPercent: number; color: string }>).sort((a, b) => b.capacityPercent - a.capacityPercent);
 }
 
 async function getRecentActivity() {
@@ -1060,69 +1057,6 @@ export async function getCommissionReport(dateFrom: string, dateTo: string) {
   });
 }
 
-// ─── HU-20: PENDING PAYMENTS ───────────────────────────────────────────────
-
-export async function getPendingPayments() {
-  return cachedQuery(cacheKey('pendingPayments'), 10_000, async () => {
-    try {
-      const { data: appts, error } = await supabase
-        .from('appointments')
-        .select(`
-          *,
-          client:clients(name, phone),
-          artist:staff(name)
-        `)
-        .eq('status', 'completada')
-        .order('start_time', { ascending: false });
-
-      if (error) throw error;
-      if (!appts || appts.length === 0) return [];
-
-      const apptIds = appts.map(a => a.id);
-
-      const [balanceResult, svcResult] = await Promise.all([
-        supabase.from('appointment_balance').select('*').in('id', apptIds),
-        supabase.from('appointment_services').select(`
-          appointment_id,
-          service:services(name, price),
-          artist:staff(name)
-        `).in('appointment_id', apptIds),
-      ]);
-
-      const balanceMap = new Map<string, any>();
-      if (balanceResult.data) {
-        for (const b of balanceResult.data) {
-          balanceMap.set(b.id, b);
-        }
-      }
-
-      const svcMap = new Map<string, any[]>();
-      if (svcResult.data) {
-        for (const s of svcResult.data) {
-          const sid = (s as any).appointment_id;
-          const existing = svcMap.get(sid) || [];
-          existing.push(s);
-          svcMap.set(sid, existing);
-        }
-      }
-
-      const pending = appts.filter((a: any) => {
-        const bal = balanceMap.get(a.id);
-        return bal && Number(bal.pending_balance) > 0;
-      });
-
-      return pending.map((a: any) => ({
-        ...a,
-        appointment_balance: balanceMap.get(a.id) || null,
-        appointment_services: svcMap.get(a.id) || [],
-      }));
-    } catch (e) {
-      console.error('getPendingPayments error:', e);
-      return [];
-    }
-  });
-}
-
 // ─── HU-15: STAFF PERFORMANCE ──────────────────────────────────────────────
 
 export async function getStaffPerformance(staffId: string, dateFrom: string, dateTo: string) {
@@ -1291,45 +1225,7 @@ export async function getStaffAppointments(staffId: string, dateFrom: string, da
   });
 }
 
-// ─── HU-19: FINANCIAL SUMMARY ──────────────────────────────────────────────
-
-export async function getFinancialSummary(dateFrom: string, dateTo: string) {
-  const key = cacheKey('financialSummary', { dateFrom, dateTo });
-  return cachedQuery(key, 15_000, async () => {
-    try {
-      const endOfTo = new Date(dateTo);
-      endOfTo.setHours(23, 59, 59, 999);
-
-      const { data, error } = await supabase
-        .from('payments')
-        .select('*')
-        .gte('date', dateFrom)
-        .lte('date', endOfTo.toISOString().split('T')[0]);
-
-      if (error) throw error;
-      if (!data) return { totalIncome: 0, totalExpenses: 0, netProfit: 0, count: 0 };
-
-      const totalIncome = data
-        .filter(p => p.type === 'ingreso')
-        .reduce((sum, p) => sum + Number(p.amount), 0);
-      const totalExpenses = data
-        .filter(p => p.type === 'egreso')
-        .reduce((sum, p) => sum + Number(p.amount), 0);
-
-      return {
-        totalIncome,
-        totalExpenses,
-        netProfit: totalIncome - totalExpenses,
-        count: data.length,
-      };
-    } catch (e) {
-      console.error('getFinancialSummary error:', e);
-      return { totalIncome: 0, totalExpenses: 0, netProfit: 0, count: 0 };
-    }
-  });
-}
-
-export async function getIncomeByMethod(dateFrom: string, dateTo: string) {
+async function getIncomeByMethod(dateFrom: string, dateTo: string) {
   const key = cacheKey('incomeByMethod', { dateFrom, dateTo });
   return cachedQuery(key, 30_000, async () => {
     try {
@@ -1362,7 +1258,7 @@ export async function getIncomeByMethod(dateFrom: string, dateTo: string) {
   });
 }
 
-export async function getExpensesByCategory(dateFrom: string, dateTo: string) {
+async function getExpensesByCategory(dateFrom: string, dateTo: string) {
   const key = cacheKey('expensesByCategory', { dateFrom, dateTo });
   return cachedQuery(key, 30_000, async () => {
     try {
@@ -1458,7 +1354,7 @@ export async function getMonthlyReport(year: number, month: number) {
   });
 }
 
-export async function getTopServices(dateFrom: string, dateTo: string, limit = 5) {
+async function getTopServices(dateFrom: string, dateTo: string, limit = 5) {
   const key = cacheKey('topServices', { dateFrom, dateTo, limit });
   return cachedQuery(key, 30_000, async () => {
     try {
@@ -1505,7 +1401,7 @@ export async function getTopServices(dateFrom: string, dateTo: string, limit = 5
   });
 }
 
-export async function getTopArtistsByRevenue(dateFrom: string, dateTo: string, limit = 5) {
+async function getTopArtistsByRevenue(dateFrom: string, dateTo: string, limit = 5) {
   const key = cacheKey('topArtistsByRevenue', { dateFrom, dateTo, limit });
   return cachedQuery(key, 30_000, async () => {
     try {
@@ -1554,7 +1450,7 @@ export async function getTopArtistsByRevenue(dateFrom: string, dateTo: string, l
   });
 }
 
-export async function getNewClients(dateFrom: string, dateTo: string) {
+async function getNewClients(dateFrom: string, dateTo: string) {
   const key = cacheKey('newClients', { dateFrom, dateTo });
   return cachedQuery(key, 30_000, async () => {
     try {
@@ -1577,7 +1473,7 @@ export async function getNewClients(dateFrom: string, dateTo: string) {
   });
 }
 
-export async function getInactiveClients(daysThreshold = 60) {
+async function getInactiveClients(daysThreshold = 60) {
   const key = cacheKey('inactiveClients', daysThreshold);
   return cachedQuery(key, 30_000, async () => {
     try {
@@ -1600,25 +1496,21 @@ export async function getInactiveClients(daysThreshold = 60) {
 
       const statsMap = new Map(stats?.map((s: any) => [s.id, s]) || []);
 
-      return data
-        .filter((c: any) => {
-          const clientStat = statsMap.get(c.id);
-          const lastVisit = clientStat?.last_visit;
-          if (!lastVisit) return true;
-          return new Date(lastVisit) < thresholdDate;
-        })
-        .map((c: any) => {
-          const clientStat = statsMap.get(c.id);
-          return {
+      return data.reduce((acc, c: any) => {
+        const clientStat = statsMap.get(c.id);
+        const lastVisit = clientStat?.last_visit;
+        if (!lastVisit || new Date(lastVisit) < thresholdDate) {
+          acc.push({
             id: c.id,
             name: c.name,
             phone: c.phone,
             instagram: c.instagram,
             email: c.email,
             last_visit: clientStat?.last_visit || null,
-          };
-        })
-        .slice(0, 20);
+          });
+        }
+        return acc;
+      }, [] as Array<{ id: any; name: any; phone: any; instagram: any; email: any; last_visit: any }>).slice(0, 20);
      } catch (e) {
        console.error('getInactiveClients error:', e);
        return [];

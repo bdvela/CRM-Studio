@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Calendar as CalendarIcon, Clock, X, Check, Pencil, XCircle, AlertTriangle, ChevronDown, ExternalLink } from 'lucide-react';
@@ -36,10 +36,7 @@ export function AppointmentTicket({
   const headerColor = statusHeaderColors[appt.status] || 'bg-salon-500';
   const dateStr = format(new Date(appt.start_time), "EEEE d 'de' MMMM", { locale: es });
   const uniqueArtists = [...new Set(appt.appointment_services?.flatMap((as) => as.artist?.name ? [as.artist.name] : []))];
-  const timeRange = useMemo(
-    () => `${formatTime(appt.start_time)} - ${formatTime(appt.end_time || appt.start_time)}`,
-    [appt.start_time, appt.end_time]
-  );
+  const timeRange = `${formatTime(appt.start_time)} - ${formatTime(appt.end_time || appt.start_time)}`;
 
   const handleClose = useCallback((afterClose?: () => void) => {
     setExiting(true);
@@ -70,6 +67,7 @@ export function AppointmentTicket({
             ? 'animate-[zoomOut95_150ms_cubic-bezier(0.23,1,0.32,1)_forwards]'
             : 'animate-in fade-in zoom-in-95 duration-200'
         )}
+        role="presentation"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}
       >
@@ -194,7 +192,10 @@ export function AppointmentTicket({
                   <>
                     <div
                       className="fixed inset-0 z-10"
+                      role="button"
+                      tabIndex={0}
                       onClick={() => setShowMoreMenu(false)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setShowMoreMenu(false); }}
                     />
                     <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-zinc-200 rounded-xl shadow-lg p-1 z-20">
                       {onCancel && (

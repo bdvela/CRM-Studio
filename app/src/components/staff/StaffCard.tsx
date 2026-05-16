@@ -25,7 +25,7 @@ export const StaffCard = memo(function StaffCard({ member, onView }: StaffCardPr
         }
       }}
     >
-      <div className="flex flex-col flex-1 py-5 px-5">
+      <div className="flex flex-col flex-1 p-5">
         <div className="flex items-start gap-4">
           <div
             className="size-12 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0 shadow-md shadow-rose-200/30"

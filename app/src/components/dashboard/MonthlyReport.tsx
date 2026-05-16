@@ -66,7 +66,7 @@ export function MonthlyReport({ report, loading }: Props) {
           {loading ? (
             <div className="space-y-3 pt-4">
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {[1, 2, 3, 4].map(i => <div key={i} className="h-16 rounded-xl bg-zinc-100 animate-pulse" />)}
+                {[1, 2, 3, 4].map(i => <div key={"stat-" + i} className="h-16 rounded-xl bg-zinc-100 animate-pulse" />)}
               </div>
             </div>
           ) : report ? (

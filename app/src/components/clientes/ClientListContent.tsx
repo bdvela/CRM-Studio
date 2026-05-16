@@ -36,8 +36,8 @@ export function ClientListContent({
   if (loading) {
     return (
       <div className="space-y-3" aria-label="Cargando clientas">
-        {[1, 2, 3, 4, 5].map((i) => (
-          <div key={`skel-${i}`} className="flex items-center gap-3 sm:gap-4 py-3 sm:py-4 px-3 sm:px-4 rounded-2xl bg-zinc-100 animate-pulse">
+        {['skel-1', 'skel-2', 'skel-3', 'skel-4', 'skel-5'].map((key) => (
+          <div key={key} className="flex items-center gap-3 sm:gap-4 py-3 sm:py-4 px-3 sm:px-4 rounded-2xl bg-zinc-100 animate-pulse">
             <div className="size-10 sm:size-12 rounded-full bg-zinc-200 flex-shrink-0" />
             <div className="flex-1 space-y-2">
               <div className="h-4 w-32 bg-zinc-200 rounded" />

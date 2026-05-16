@@ -292,8 +292,8 @@ export default function ServiciosPage({ initialData }: {
     if (form.active !== init.active) return true;
 
     if (ui.selectedStaffIds.length !== initialStaffIdsRef.current.length) return true;
-    const sortedSelected = [...ui.selectedStaffIds].sort();
-    const sortedInitial = [...initialStaffIdsRef.current].sort();
+    const sortedSelected = ui.selectedStaffIds.toSorted();
+    const sortedInitial = initialStaffIdsRef.current.toSorted();
     if (sortedSelected.length === sortedInitial.length && !sortedSelected.every((id, i) => id === sortedInitial[i])) return true;
 
     return false;
@@ -411,7 +411,7 @@ export default function ServiciosPage({ initialData }: {
         openEdit={openEdit}
       />
 
-      <Suspense fallback={<div className="p-8 flex items-center justify-center"><div className="h-8 w-8 rounded-full border-2 border-salon-300 border-t-transparent animate-spin" /></div>}>
+      <Suspense fallback={<div className="p-8 flex items-center justify-center"><div className="size-8 rounded-full border-2 border-salon-300 border-t-transparent animate-spin" /></div>}>
         <ServicioFormModal
           open={ui.showModal}
           editingService={ui.editingService}

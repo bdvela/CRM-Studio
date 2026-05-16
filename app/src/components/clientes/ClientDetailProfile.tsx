@@ -20,7 +20,7 @@ export const ClientDetailProfile = memo(function ClientDetailProfile({ client }:
           </div>
           <div className="flex-1 min-w-0">
             <div>
-              <h1 className="text-xl font-bold text-zinc-900">{client.name}</h1>
+              <h1 className="text-xl font-semibold text-zinc-900">{client.name}</h1>
               <Badge variant={STATUS_BADGE_VARIANT[client.status]} className="mt-1.5">{STATUS_LABELS[client.status]}</Badge>
             </div>
             <div className="flex flex-wrap gap-4 mt-3 text-sm text-zinc-500">

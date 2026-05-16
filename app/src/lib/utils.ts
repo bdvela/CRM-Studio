@@ -51,7 +51,7 @@ export function startOfToday() {
   return d.toISOString();
 }
 
-export function endOfToday() {
+function endOfToday() {
   const d = new Date();
   d.setHours(23, 59, 59, 999);
   return d.toISOString();

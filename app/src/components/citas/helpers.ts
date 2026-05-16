@@ -2,7 +2,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { Service, StaffMember, StaffService, StaffSpecialty } from '@/types/database';
 
-export function formatDetailDate(startTime: string): string {
+function formatDetailDate(startTime: string): string {
   return format(new Date(startTime), "EEEE d 'de' MMMM", { locale: es });
 }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useReducer, useMemo, useEffect, useCallback } from 'react';
+import { useReducer, useMemo, useState, useCallback, useEffect } from 'react';
 import type { ClientFormModalProps } from './types';
 import type { ClientInsert } from '@/types/database';
 import { FORM_INIT } from './constants';
@@ -38,12 +38,11 @@ export function ClientFormModal({
   const [form, dispatch] = useReducer(formReducer, isEdit && initialData ? { ...initialData } : { ...FORM_INIT });
 
   useEffect(() => {
-    if (open) {
-      if (initialData) {
-        dispatch({ ...initialData });
-      } else {
-        dispatch({ ...FORM_INIT });
-      }
+    if (!open) return;
+    if (initialData) {
+      dispatch({ ...initialData });
+    } else {
+      dispatch({ ...FORM_INIT });
     }
   }, [open, initialData]);
 
