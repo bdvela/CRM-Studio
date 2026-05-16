@@ -632,6 +632,8 @@ npm run start
 | Fecha default muestra mañana (UTC bug) | Nuevo helper `getLocalDateString()` en utils.ts, reemplazado en 4 archivos |
 | Skeleton flicker en auto-refresh | `load(false)` faltaba en `setInterval` tras `visibilitychange` |
 | 16 lint warnings | refs→state en citas/[id], eslint-disable inline, `initialData` en deps de ClientFormModal |
+| useEffect undefined en shell.tsx | `useEffect` eliminado del import al remover un effect, pero quedaba otro — agregado de vuelta |
+| React Doctor 78→93/100 | 100+ issues resueltos en 8 fases: Tailwind, JS moderno, efectos, rerender, hydration, a11y, dead code |
 
 
 
@@ -640,4 +642,4 @@ npm run start
 ## Última Actualización
 - **Fecha**: 16 Mayo 2026
 - **Rama**: `main`
-- **Cambios recientes**: Corrección de 5 issues (toggle StaffFormModal, router.push en StaffComisionesTab, default yape_plin, fecha local en pagos, auto-refresh flicker) + 16 lint warnings resueltos (refs→state, eslint-disable inline, missing deps). Lint: 0 errors, 0 warnings.
+- **Cambios recientes**: React Doctor 78→93/100 (166→61 issues). Fix de 100+ issues: Tailwind design, toSorted, array keys, state cascade, rerender, hydration, a11y, knip dead code. 7 archivos eliminados, 603 líneas menos. Fix useEffect missing import en shell.tsx. Lint: 0 errors, 0 warnings.
