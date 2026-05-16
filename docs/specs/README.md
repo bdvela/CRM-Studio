@@ -1,6 +1,6 @@
 # Especificaciones — Historias de Usuario
 
-> **27 HUs** organizadas por módulo funcional.
+> **28 HUs** organizadas por módulo funcional.
 
 ## Módulos
 
@@ -12,7 +12,8 @@
 | HU-03 | Estado de clienta | Media | ✅ |
 | HU-04 | Historial de clienta | Alta | ✅ |
 | HU-05 | Reactivar clientas | Baja | ✅ |
-| HU-26 | Transición automática de estados | Media | ⏳ |
+| HU-26 | Transición automática de estados | Media | ✅ |
+| HU-27 | Toggle VIP sin selector de estado | Media | ✅ |
 
 ### 02 — Servicios
 | HU | Descripción | Prioridad | Estado |
@@ -39,7 +40,7 @@
 | HU | Descripción | Prioridad | Estado |
 |----|-------------|-----------|--------|
 | HU-14 | Registrar nail artist | Alta | ✅ |
-| HU-15 | Rendimiento por artista | Media | ⏳ |
+| HU-15 | Rendimiento por artista | Media | ✅ |
 | HU-23 | Roles dinámicos | Media | ✅ |
 
 ### 05 — Pagos
@@ -48,14 +49,15 @@
 | HU-16 | Calcular comisiones | Media | ✅ |
 | HU-17 | Registrar pago de cita | Alta | ✅ |
 | HU-18 | Registrar egresos | Media | ✅ |
-| HU-19 | Resumen financiero | Alta | ⏳ |
-| HU-20 | Pagos pendientes | Alta | ⏳ |
+| HU-19 | Resumen financiero | Alta | ✅ |
+| HU-20 | Pagos pendientes | Alta | ✅ |
+| HU-28 | Comisiones — filtro por rango de fechas | Alta | ✅ |
 
 ### 06 — Dashboard
 | HU | Descripción | Prioridad | Estado |
 |----|-------------|-----------|--------|
 | HU-21 | Dashboard principal | Alta | ✅ |
-| HU-22 | Reporte mensual | Baja | ⏳ |
+| HU-22 | Reporte mensual | Baja | ✅ |
 
 ---
 

@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Calendar as CalendarIcon, Clock, X, Check, Pencil, XCircle, AlertTriangle, ChevronDown } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, X, Check, Pencil, XCircle, AlertTriangle, ChevronDown, ExternalLink } from 'lucide-react';
 import { cn, formatCurrency, formatTime } from '@/lib/utils';
 import { DEPOSIT_AMOUNT } from '@/lib/constants';
 import { APPOINTMENT_STATUS_LABELS } from '@/types/database';
@@ -65,7 +65,7 @@ export function AppointmentTicket({
     >
       <div
         className={cn(
-          'bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 overflow-hidden',
+          'bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 overflow-visible',
           exiting
             ? 'animate-[zoomOut95_150ms_cubic-bezier(0.23,1,0.32,1)_forwards]'
             : 'animate-in fade-in zoom-in-95 duration-200'
@@ -161,7 +161,7 @@ export function AppointmentTicket({
           })()}
         </div>
 
-        <div className="px-5 pb-5 space-y-3 border-t border-zinc-100 pt-4">
+        <div className="px-4 pb-4 space-y-2.5 border-t border-zinc-100 pt-3">
           {appt.status === 'programada' && onAdvanceStatus && (
             <button
               onClick={() => onAdvanceStatus(appt)}
@@ -181,20 +181,14 @@ export function AppointmentTicket({
             </button>
           )}
           {appt.status === 'programada' && (
-            <div className="grid grid-cols-2 gap-1.5">
-              <button
-                onClick={() => handleClose(() => onEdit(appt))}
-                className="flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium text-salon-700 border border-salon-200 hover:bg-salon-50 transition-colors"
-              >
-                <Pencil className="size-3.5" aria-hidden="true" />
-                Editar
-              </button>
-              <div className="relative">
+            <div className="flex gap-3">
+              <div className="relative flex-1">
                 <button
                   onClick={() => setShowMoreMenu(!showMoreMenu)}
-                  className="w-full flex items-center justify-center gap-1 py-2 rounded-lg text-xs font-medium text-zinc-500 border border-zinc-200 hover:bg-zinc-50 transition-colors"
+                  className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-medium text-zinc-500 border border-zinc-200 hover:bg-zinc-50 transition-colors"
                 >
-                  Más <ChevronDown className={`size-3 transition-transform ${showMoreMenu ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`size-3.5 transition-transform ${showMoreMenu ? 'rotate-180' : ''}`} />
+                  Más
                 </button>
                 {showMoreMenu && (
                   <>
@@ -202,11 +196,11 @@ export function AppointmentTicket({
                       className="fixed inset-0 z-10"
                       onClick={() => setShowMoreMenu(false)}
                     />
-                    <div className="absolute bottom-full left-0 right-0 mb-1 bg-white border border-zinc-200 rounded-lg shadow-lg p-1 z-20">
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-zinc-200 rounded-xl shadow-lg p-1 z-20">
                       {onCancel && (
                         <button
                           onClick={() => { setShowMoreMenu(false); onCancel(appt); }}
-                          className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-xs font-medium text-red-600 hover:bg-red-50 transition-colors text-left"
+                          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-red-600 hover:bg-red-50 transition-colors text-left"
                         >
                           <XCircle className="size-3.5" aria-hidden="true" />
                           Cancelar cita
@@ -215,7 +209,7 @@ export function AppointmentTicket({
                       {onMarkAsNoShow && (
                         <button
                           onClick={() => { setShowMoreMenu(false); onMarkAsNoShow(appt); }}
-                          className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-xs font-medium text-zinc-500 hover:bg-zinc-50 transition-colors text-left"
+                          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-zinc-500 hover:bg-zinc-50 transition-colors text-left"
                         >
                           <AlertTriangle className="size-3.5" aria-hidden="true" />
                           No Show
@@ -225,14 +219,21 @@ export function AppointmentTicket({
                   </>
                 )}
               </div>
+              <button
+                onClick={() => handleClose(() => onEdit(appt))}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-medium text-salon-700 border border-salon-200 hover:bg-salon-50 transition-colors"
+              >
+                <Pencil className="size-3.5" aria-hidden="true" />
+                Editar
+              </button>
             </div>
           )}
           {onViewDetail && (
             <button
               onClick={() => handleClose(() => onViewDetail(appt))}
-              className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium text-zinc-400 hover:text-zinc-600 border border-dashed border-zinc-200 hover:border-zinc-300 transition-colors"
+              className="w-full flex items-center justify-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-600 transition-colors"
             >
-              <CalendarIcon className="size-3.5" aria-hidden="true" />
+              <ExternalLink className="size-3.5" aria-hidden="true" />
               Ver detalle completo
             </button>
           )}

@@ -26,7 +26,7 @@ export const ClientCard = memo(function ClientCard({ client, onClick }: ClientCa
     >
       <div className="flex items-center gap-3 sm:gap-4 py-3 sm:py-4 px-3 sm:px-4">
         <div
-          className="size-10 sm:size-12 rounded-full bg-gradient-to-br from-rose-100 to-purple-100 flex items-center justify-center text-rose-600 font-bold flex-shrink-0"
+          className="size-10 sm:size-12 rounded-full bg-gradient-to-br from-salon-500/90 via-salon-400/50 to-salon-500 flex items-center justify-center text-white font-bold flex-shrink-0 shadow-sm shadow-salon-500/20"
           aria-label={`Inicial de ${client.name}`}
           role="img"
         >

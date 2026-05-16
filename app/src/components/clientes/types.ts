@@ -46,6 +46,7 @@ export interface ClientDetailModalProps {
   open: boolean;
   client: ClientWithStats | null;
   appointments: Appointment[];
+  appointmentsLoading?: boolean;
   onClose: () => void;
   onEdit: () => void;
   onDelete: () => Promise<void>;
@@ -66,6 +67,7 @@ export interface ClientDetailStatsProps {
 export interface ClientAppointmentHistoryProps {
   appointments: Appointment[];
   maxItems?: number;
+  onViewAppointment?: (appointment: Appointment) => void;
 }
 
 export type ClientesUIState = {
@@ -82,6 +84,7 @@ export type ClientesUIState = {
   statusFilter: StatusFilter;
   saving: boolean;
   deleting: boolean;
+  appointmentsLoading: boolean;
   visibleCount: number;
 };
 
@@ -98,6 +101,7 @@ export type ClientesUIAction =
   | { type: 'SET_STATUS_FILTER'; status: StatusFilter }
   | { type: 'SET_SAVING'; saving: boolean }
   | { type: 'SET_DELETING'; deleting: boolean }
+  | { type: 'SET_APPOINTMENTS_LOADING'; loading: boolean }
   | { type: 'CLOSE_DETAIL' }
   | { type: 'SET_VISIBLE_COUNT'; count: number }
   | { type: 'RESET' };

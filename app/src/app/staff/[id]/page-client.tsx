@@ -71,6 +71,7 @@ export default function StaffDetailClient({
 
   useEffect(() => {
     if (initialMember) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional initial fetch
     loadStaff();
   }, [loadStaff, initialMember]);
 
@@ -102,6 +103,7 @@ export default function StaffDetailClient({
 
   const handlePeriodChange = useCallback((p: Period) => setPeriod(p), []);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch performance on member change
   useEffect(() => { if (member) loadPerformance(); }, [member, loadPerformance]);
 
   // Pause performance fetching when tab is hidden

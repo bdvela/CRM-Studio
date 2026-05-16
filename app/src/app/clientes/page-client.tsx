@@ -36,6 +36,7 @@ const UI_INIT: ClientesUIState = {
   statusFilter: 'all',
   saving: false,
   deleting: false,
+  appointmentsLoading: false,
   visibleCount: PAGE_SIZE,
 };
 
@@ -53,6 +54,7 @@ function uiReducer(state: ClientesUIState, action: ClientesUIAction): ClientesUI
     case 'SET_STATUS_FILTER': return { ...state, statusFilter: action.status, visibleCount: PAGE_SIZE };
     case 'SET_SAVING': return { ...state, saving: action.saving };
     case 'SET_DELETING': return { ...state, deleting: action.deleting };
+    case 'SET_APPOINTMENTS_LOADING': return { ...state, appointmentsLoading: action.loading };
     case 'CLOSE_DETAIL': return { ...state, showDetailModal: false, viewingClient: null, editingClient: null, clientAppointments: [] };
     case 'SET_VISIBLE_COUNT': return { ...state, visibleCount: action.count };
     case 'RESET': return { ...UI_INIT, loading: true };
@@ -108,20 +110,29 @@ export default function ClientesPage({ initialClients }: { initialClients?: Clie
     };
   }, []);
 
-  const openDetail = useCallback(async (client: ClientWithStats) => {
-    try {
-      const [fullClient, appointments] = await Promise.all([
-        getClientById(client.id),
-        getAppointments({ clientId: client.id }),
-      ]);
-      dispatch({
-        type: 'SET_VIEWING_CLIENT',
-        client: fullClient as ClientWithStats,
-        appointments: appointments as Appointment[],
+  const openDetail = useCallback((client: ClientWithStats) => {
+    dispatch({ type: 'SET_APPOINTMENTS_LOADING', loading: true });
+    dispatch({
+      type: 'SET_VIEWING_CLIENT',
+      client,
+      appointments: [],
+    });
+
+    Promise.all([
+      getClientById(client.id),
+      getAppointments({ clientId: client.id }),
+    ])
+      .then(([fullClient, appts]) => {
+        dispatch({
+          type: 'SET_VIEWING_CLIENT',
+          client: fullClient as ClientWithStats,
+          appointments: appts as Appointment[],
+        });
+        dispatch({ type: 'SET_APPOINTMENTS_LOADING', loading: false });
+      })
+      .catch(() => {
+        dispatch({ type: 'SET_APPOINTMENTS_LOADING', loading: false });
       });
-    } catch {
-      toast.error('Error al cargar datos');
-    }
   }, []);
 
   const closeDetail = useCallback(() => {
@@ -130,6 +141,7 @@ export default function ClientesPage({ initialClients }: { initialClients?: Clie
 
   const openEdit = useCallback(() => {
     dispatch({ type: 'SET_EDITING_CLIENT', client: ui.viewingClient });
+    dispatch({ type: 'SET_SHOW_DETAIL_MODAL', show: false });
   }, [ui.viewingClient]);
 
   const handleEditSave = useCallback(async (data: ClientInsert) => {
@@ -287,6 +299,7 @@ export default function ClientesPage({ initialClients }: { initialClients?: Clie
           open={ui.showDetailModal}
           client={ui.viewingClient}
           appointments={ui.clientAppointments}
+          appointmentsLoading={ui.appointmentsLoading}
           onClose={closeDetail}
           onEdit={openEdit}
           onDelete={handleDelete}

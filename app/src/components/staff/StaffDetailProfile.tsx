@@ -2,16 +2,10 @@
 
 import { memo } from 'react';
 import type { StaffDetailProfileProps } from './types';
-import { isOwnerMember } from './types';
 import { formatCurrency } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { useRouter } from 'next/navigation';
-import { ExternalLink } from 'lucide-react';
 
 export const StaffDetailProfile = memo(function StaffDetailProfile({ member }: StaffDetailProfileProps) {
-  const { push } = useRouter();
-  const isOwner = isOwnerMember(member);
   const roleColor = member.role?.color || '#6B7280';
 
   return (
@@ -19,7 +13,10 @@ export const StaffDetailProfile = memo(function StaffDetailProfile({ member }: S
       <div className="px-5 py-6">
         <div className="flex items-start gap-5">
           <div
-            className={`size-16 rounded-full bg-gradient-to-br from-rose-100 to-purple-100 flex items-center justify-center text-2xl font-bold text-rose-600 flex-shrink-0 ${isOwner ? 'ring-2 ring-amber-300' : ''}`}
+            className="size-16 rounded-full bg-gradient-to-br flex items-center justify-center text-white font-bold text-2xl flex-shrink-0 shadow-md shadow-rose-200/30"
+            style={{
+              backgroundImage: `linear-gradient(135deg, ${roleColor}dd, ${roleColor}88, ${roleColor})`,
+            }}
             aria-label={`Inicial de ${member.name}`}
             role="img"
           >
@@ -32,9 +29,6 @@ export const StaffDetailProfile = memo(function StaffDetailProfile({ member }: S
                 {member.role?.name || 'Sin rol'}
               </Badge>
               {!member.active && <Badge variant="danger">Inactivo</Badge>}
-              {isOwner && (
-                <Badge variant="custom" color="#F59E0B">Founder</Badge>
-              )}
             </div>
             {member.phone && (
               <p className="text-sm text-zinc-500 mt-2">{member.phone}</p>
@@ -58,11 +52,6 @@ export const StaffDetailProfile = memo(function StaffDetailProfile({ member }: S
               <span>{formatCurrency(member.staff_stats?.total_revenue || 0)} facturado</span>
               <span className="font-medium text-accent-600">{member.commission_pct}% comisión</span>
             </div>
-          </div>
-          <div className="flex-shrink-0 flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => push('/reportes/comisiones')}>
-              <ExternalLink className="size-4 mr-1" aria-hidden="true" /> Comisiones
-            </Button>
           </div>
         </div>
       </div>

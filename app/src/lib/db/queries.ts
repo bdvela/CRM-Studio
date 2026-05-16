@@ -669,13 +669,13 @@ export async function getPayments(filters?: any) {
         const apptIds = [...new Set(data.flatMap(p => p.appointment_id ? [p.appointment_id] : []))];
         const [clients, appts] = await Promise.all([
           clientIds.length > 0 ? supabase.from('clients').select('id, name').in('id', clientIds) : { data: [] },
-          apptIds.length > 0 ? supabase.from('appointments').select('id, title').in('id', apptIds) : { data: [] },
+          apptIds.length > 0 ? supabase.from('appointments').select('id, title, start_time').in('id', apptIds) : { data: [] },
         ]);
         const clientMap = new Map(clients.data?.map((c: any) => [c.id, c.name]) || []);
-        const apptMap = new Map(appts.data?.map((a: any) => [a.id, a.title]) || []);
+        const apptMap = new Map(appts.data?.map((a: any) => [a.id, { title: a.title, start_time: a.start_time }]) || []);
         data.forEach(p => {
           p.client = p.client_id ? { name: clientMap.get(p.client_id) } : null;
-          p.appointment = p.appointment_id ? { title: apptMap.get(p.appointment_id) } : null;
+          p.appointment = p.appointment_id ? apptMap.get(p.appointment_id) : null;
         });
       }
       return data;
@@ -942,64 +942,117 @@ export async function getCommissionReport(dateFrom: string, dateTo: string) {
     try {
       const endOfTo = new Date(dateTo);
       endOfTo.setHours(23, 59, 59, 999);
-      
+
+      const map = new Map<string, {
+        artist_id: string | null;
+        artist_name: string | null;
+        artist_role_name: string | null;
+        artist_role_color: string | null;
+        total_services: number;
+        total_service_revenue: number;
+        total_artist_commission: number;
+        total_founder_share: number;
+      }>();
+
+      // Get completed appointments and their commission details
       const { data: apptIdsData, error: apptErr } = await supabase
         .from('appointments')
         .select('id')
         .gte('start_time', dateFrom)
         .lte('start_time', endOfTo.toISOString())
         .eq('status', 'completada');
-      
-      if (apptErr) throw apptErr;
-      if (!apptIdsData || apptIdsData.length === 0) return [];
-      
-      const apptIds = apptIdsData.map(a => a.id);
-      
-      const { data: details, error: detErr } = await supabase
-        .from('commission_details')
-        .select('*')
-        .in('appointment_id', apptIds);
-      
-      if (detErr) throw detErr;
-      if (!details) return [];
 
-      const staffIds = [...new Set(details.flatMap(d => d.artist_id ? [d.artist_id] : []))];
-      const { data: staffRoles } = await supabase
-        .from('staff')
-        .select('id, role:roles(name)')
-        .in('id', staffIds);
-      
-      const roleMap = new Map(staffRoles?.map(s => [s.id, (s.role as any)?.name]));
-      
-      const map = new Map<string, {
-        artist_id: string | null;
-        artist_name: string | null;
-        artist_role_name: string | null;
-        total_services: number;
-        total_service_revenue: number;
-        total_artist_commission: number;
-        total_founder_share: number;
-      }>();
-      
-      for (const d of details) {
-        const key = d.artist_id || 'NO_ARTIST';
-        const existing = map.get(key) || {
-          artist_id: d.artist_id,
-          artist_name: d.artist_name || (d.artist_id ? null : 'Sin artista'),
-          artist_role_name: d.artist_id ? roleMap.get(d.artist_id) || null : null,
-          total_services: 0,
-          total_service_revenue: 0,
-          total_artist_commission: 0,
-          total_founder_share: 0,
-        };
-        existing.total_services += 1;
-        existing.total_service_revenue += Number(d.service_price) || 0;
-        existing.total_artist_commission += Number(d.artist_commission) || 0;
-        existing.total_founder_share += Number(d.founder_share) || 0;
-        map.set(key, existing);
+      if (apptErr) throw apptErr;
+
+      if (apptIdsData && apptIdsData.length > 0) {
+        const apptIds = apptIdsData.map(a => a.id);
+
+        const { data: details, error: detErr } = await supabase
+          .from('commission_details')
+          .select('*')
+          .in('appointment_id', apptIds);
+
+        if (detErr) throw detErr;
+
+        if (details) {
+          const staffIds = [...new Set(details.flatMap(d => d.artist_id ? [d.artist_id] : []))];
+          const { data: staffRoles } = await supabase
+            .from('staff')
+            .select('id, role:roles(name, color)')
+            .in('id', staffIds);
+
+          const roleMap = new Map<string, { name: string | null; color: string | null }>(
+            staffRoles?.map(s => [s.id, { name: (s.role as any)?.name || null, color: (s.role as any)?.color || null }])
+          );
+
+          for (const d of details) {
+            const key = d.artist_id || 'NO_ARTIST';
+            const role = d.artist_id ? roleMap.get(d.artist_id) : null;
+            const existing = map.get(key) || {
+              artist_id: d.artist_id,
+              artist_name: d.artist_name || (d.artist_id ? null : 'Sin artista'),
+              artist_role_name: role?.name || null,
+              artist_role_color: role?.color || null,
+              total_services: 0,
+              total_service_revenue: 0,
+              total_artist_commission: 0,
+              total_founder_share: 0,
+            };
+            existing.total_services += 1;
+            existing.total_service_revenue += Number(d.service_price) || 0;
+            existing.total_artist_commission += Number(d.artist_commission) || 0;
+            existing.total_founder_share += Number(d.founder_share) || 0;
+            map.set(key, existing);
+          }
+        }
       }
-      
-      return Array.from(map.values());
+
+      // Always fetch all active staff so artists without citas still appear
+      const { data: allStaff } = await supabase
+        .from('staff')
+        .select('id, name, role:roles(name, color)')
+        .eq('active', true)
+        .order('name');
+
+      if (allStaff) {
+        for (const s of allStaff) {
+          if (!map.has(s.id)) {
+            const role = s.role as any;
+            map.set(s.id, {
+              artist_id: s.id,
+              artist_name: s.name,
+              artist_role_name: role?.name || null,
+              artist_role_color: role?.color || null,
+              total_services: 0,
+              total_service_revenue: 0,
+              total_artist_commission: 0,
+              total_founder_share: 0,
+            });
+          } else {
+            // Ensure role info is populated for staff already in the map
+            const existing = map.get(s.id)!;
+            if (!existing.artist_role_name) {
+              const role = s.role as any;
+              existing.artist_role_name = role?.name || null;
+              existing.artist_role_color = role?.color || null;
+            }
+          }
+        }
+      }
+
+      // Sort: by total_service_revenue desc, zero-revenue last alphabetically
+      const rows = Array.from(map.values());
+      rows.sort((a, b) => {
+        if (b.total_service_revenue !== a.total_service_revenue) {
+          return b.total_service_revenue - a.total_service_revenue;
+        }
+        if (a.total_service_revenue === 0 && b.total_service_revenue === 0) {
+          return (a.artist_name || '').localeCompare(b.artist_name || '');
+        }
+        return 0;
+      });
+
+      return rows;
     } catch (e) {
       console.error('getCommissionReport error:', e);
       return [];
@@ -1350,7 +1403,7 @@ export async function getMonthlyReport(year: number, month: number) {
 
   return cachedQuery(key, 30_000, async () => {
     try {
-      const [apptsResult, paymentsResult, clientsResult, topSvcResult, topArtResult] = await Promise.all([
+      const [apptsResult, paymentsResult, clientsResult, topSvcResult, topArtResult, incomeByMethod, expensesByCategory] = await Promise.all([
         supabase
           .from('appointments')
           .select('id, total_price, status', { count: 'exact' })
@@ -1368,6 +1421,8 @@ export async function getMonthlyReport(year: number, month: number) {
           .lte('created_at', endDate),
         getTopServices(startDate, endDate),
         getTopArtistsByRevenue(startDate, endDate),
+        getIncomeByMethod(startDate, endDate),
+        getExpensesByCategory(startDate, endDate),
       ]);
 
       if (apptsResult.error) throw apptsResult.error;
@@ -1393,6 +1448,8 @@ export async function getMonthlyReport(year: number, month: number) {
         topServices: topSvcResult,
         topArtists: topArtResult,
         inactiveClients: inactiveData,
+        incomeByMethod,
+        expensesByCategory,
       };
     } catch (e) {
       console.error('getMonthlyReport error:', e);

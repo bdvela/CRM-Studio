@@ -1,14 +1,14 @@
 'use client';
 
-import { useReducer, useMemo, useEffect } from 'react';
+import { useReducer, useMemo, useEffect, useCallback } from 'react';
 import type { ClientFormModalProps } from './types';
 import type { ClientInsert } from '@/types/database';
 import { FORM_INIT } from './constants';
 import { Modal } from '@/components/ui/modal';
 import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { Toggle } from '@/components/ui/toggle';
 import { FlagPeru } from '@/components/ui/FlagPeru';
 import { formatPeruPhoneForInput } from '@/lib/utils';
 
@@ -45,7 +45,7 @@ export function ClientFormModal({
         dispatch({ ...FORM_INIT });
       }
     }
-  }, [open]);
+  }, [open, initialData]);
 
   const hasChanges = useMemo(() => {
     if (!isEdit || !initialData) return true;
@@ -53,6 +53,23 @@ export function ClientFormModal({
   }, [form, initialData, isEdit]);
 
   const isValid = form.name.trim().length > 0;
+
+  const isVip = form.status === 'vip';
+
+  const handleVipToggle = useCallback(() => {
+    const newVip = !isVip;
+    if (newVip) {
+      dispatch({ status: 'vip' as ClientInsert['status'] });
+    } else {
+      if (isEdit && initialData && initialData.status === 'vip') {
+        dispatch({ status: 'activa' as ClientInsert['status'] });
+      } else if (isEdit && initialData) {
+        dispatch({ status: initialData.status });
+      } else {
+        dispatch({ status: 'prospecto' as ClientInsert['status'] });
+      }
+    }
+  }, [isVip, isEdit, initialData]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -94,23 +111,17 @@ export function ClientFormModal({
           placeholder="@usuario"
           maxLength={50}
         />
-        <Select
-          label="Estado"
-          value={form.status}
-          onChange={(value) => dispatch({ status: value as ClientInsert['status'] })}
-          options={[
-            { value: 'prospecto', label: 'Prospecto' },
-            { value: 'activa', label: 'Activa' },
-            { value: 'inactiva', label: 'Inactiva' },
-            { value: 'vip', label: 'VIP' },
-          ]}
-        />
         <Textarea
           label="Notas"
           value={form.notes || ''}
           onChange={(value) => dispatch({ notes: value })}
           placeholder="Preferencias, alergias, etc."
           maxLength={500}
+        />
+        <Toggle
+          label="Clienta VIP"
+          checked={isVip}
+          onChange={handleVipToggle}
         />
         <div className="flex gap-3 pt-2">
           <Button type="button" variant="outline" className="flex-1" onClick={onClose}>

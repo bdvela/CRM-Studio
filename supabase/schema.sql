@@ -23,10 +23,10 @@ CREATE INDEX idx_roles_active ON roles(active) WHERE active = TRUE;
 -- Seed roles
 INSERT INTO roles (name, description, color) VALUES
   ('Nail Artist', 'Sistema de uñas, manicure, pedicure', '#8B5CF6'),
-  ('Lashista', 'Extensiones de pestañas', '#EC4899'),
+  ('Lashista', 'Extensiones de pestañas', '#F59E0B'),
   ('Pedicurista', 'Pedicure profesional', '#3B82F6'),
   ('Maquillista', 'Maquillaje profesional', '#EF4444'),
-  ('Dueña', 'Owner/CEO del salón', '#F59E0B')
+  ('Dueña', 'Owner/CEO del salón', '#EC4899')
 ON CONFLICT (name) DO NOTHING;
 
 -- ─── CLIENTS ────────────────────────────────────────────────────────────────

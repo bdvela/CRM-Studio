@@ -99,7 +99,7 @@ function SelectedClientView({ client, justCreated, onClear }: {
     <div className="space-y-1.5">
       <span className="block text-sm font-medium text-zinc-700">Clienta</span>
       <div className="flex items-center gap-2 p-3 rounded-xl border border-zinc-200 bg-zinc-50">
-        <div className="size-8 rounded-full bg-gradient-to-br from-salon-400 to-accent-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+        <div className="size-8 rounded-full bg-gradient-to-br from-salon-500/90 via-salon-400/50 to-salon-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0 shadow-sm shadow-salon-500/20">
           {client.name[0].toUpperCase()}
         </div>
         <span className="text-sm font-medium flex-1 truncate">{client.name}</span>

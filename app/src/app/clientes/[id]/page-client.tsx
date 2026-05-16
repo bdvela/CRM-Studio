@@ -102,6 +102,10 @@ export default function ClienteDetailClient({
     photo_url: client.photo_url,
   } as ClientInsert : undefined, [client]);
 
+  const handleViewAppointment = useCallback((appt: Appointment) => {
+    push(`/citas/${appt.id}`);
+  }, [push]);
+
   if (!client) {
     return (
       <>
@@ -147,7 +151,7 @@ export default function ClienteDetailClient({
         </div>
 
         <div className="animate-fadeInUp stagger-3">
-          <ClientAppointmentHistory appointments={appointments} />
+          <ClientAppointmentHistory appointments={appointments} onViewAppointment={handleViewAppointment} />
         </div>
       </div>
 

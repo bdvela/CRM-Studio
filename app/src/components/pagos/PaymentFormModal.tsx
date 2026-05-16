@@ -2,10 +2,10 @@
 
 import type { PaymentFormModalProps } from './types';
 import type { PaymentType, PaymentKind, PaymentMethod, PaymentCategory } from '@/types/database';
-import { DEPOSIT_AMOUNT } from '@/lib/constants';
 import { Modal } from '@/components/ui/modal';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
+import { CalendarInput } from '@/components/ui/CalendarInput';
 import { Button } from '@/components/ui/button';
 import { Receipt } from 'lucide-react';
 
@@ -43,7 +43,7 @@ export function PaymentFormModal({
           maxLength={200}
         />
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Input
             label="Monto *"
             type="number"
@@ -53,12 +53,11 @@ export function PaymentFormModal({
               dispatchForm({ type: 'SET', payload: { amount: parseFloat(value) || 0 } })
             }
           />
-          <Input
+          <CalendarInput
             label="Fecha"
-            type="date"
-            value={form.date}
+            value={form.date || null}
             onChange={(value) =>
-              dispatchForm({ type: 'SET', payload: { date: value } })
+              dispatchForm({ type: 'SET', payload: { date: value || '' } })
             }
           />
         </div>
@@ -73,9 +72,9 @@ export function PaymentFormModal({
                 dispatchForm({ type: 'SET', payload: { payment_kind: value as PaymentKind } })
               }
               options={[
-                { value: 'reserva', label: `Reserva (S/${DEPOSIT_AMOUNT})` },
-                { value: 'pago_completo', label: 'Pago completo (press-on)' },
-                { value: 'pago_final', label: 'Pago final (saldo)' },
+                { value: 'reserva', label: 'Reserva' },
+                { value: 'pago_completo', label: 'Pago completo' },
+                { value: 'pago_final', label: 'Saldo' },
               ]}
             />
             <Select
@@ -118,11 +117,10 @@ export function PaymentFormModal({
         <div className="flex flex-wrap gap-2 sm:gap-3 pt-4 sm:pt-6 mt-2 border-t border-zinc-100">
           <div className="hidden sm:block flex-1" />
           <div className="flex flex-1 sm:flex-none gap-2 order-first sm:order-none">
-            <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
+            <Button type="button" variant="outline" className="hidden sm:flex flex-1" onClick={onClose}>
               Cancelar
             </Button>
             <Button type="submit" className="flex-1" loading={submitting} disabled={!form.concept.trim() || form.amount <= 0}>
-              {!submitting && <Receipt className="size-4 mr-1" />}
               {submitting ? 'Guardando...' : 'Registrar'}
             </Button>
           </div>

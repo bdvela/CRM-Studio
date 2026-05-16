@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { getAppointmentById, updateAppointment, getServices, getStaff, getClients, promoteClientOnCompletion } from '@/lib/db/queries';
 import type { AppointmentWithDetails, AppointmentFormData } from '@/components/citas/types';
@@ -137,9 +137,9 @@ export default function CitaDetailPage({ initialAppointment }: {
   const { confirm } = useConfirm();
   const [appointment, setAppointment] = useState<AppointmentWithDetails | null>(initialAppointment || null);
   const [loading, setLoading] = useState(!initialAppointment);
-  const servicesRef = useRef<Service[]>([]);
-  const staffRef = useRef<StaffMember[]>([]);
-  const clientsRef = useRef<Client[]>([]);
+  const [servicesData, setServicesData] = useState<Service[]>([]);
+  const [staffData, setStaffData] = useState<StaffMember[]>([]);
+  const [clientsData, setClientsData] = useState<Client[]>([]);
   const [editLoading, setEditLoading] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showServiceSelector, setShowServiceSelector] = useState(false);
@@ -165,7 +165,7 @@ export default function CitaDetailPage({ initialAppointment }: {
     } finally {
       setLoading(false);
     }
-  }, [appointment?.id]);
+    }, [appointment]);
 
   const handleCancel = useCallback(async () => {
     if (!appointment) return;
@@ -233,7 +233,7 @@ export default function CitaDetailPage({ initialAppointment }: {
 
     setShowEditModal(true);
 
-    if (servicesRef.current.length === 0) {
+    if (servicesData.length === 0) {
       setEditLoading(true);
       try {
         const [s, st, c] = await Promise.all([
@@ -241,9 +241,9 @@ export default function CitaDetailPage({ initialAppointment }: {
           getStaff(false),
           getClients(),
         ]);
-        servicesRef.current = s as Service[];
-        staffRef.current = st as StaffMember[];
-        clientsRef.current = c as Client[];
+        setServicesData(s as Service[]);
+        setStaffData(st as StaffMember[]);
+        setClientsData(c as Client[]);
       } catch {
         toast.error('Error al cargar datos');
       } finally {
@@ -277,7 +277,7 @@ export default function CitaDetailPage({ initialAppointment }: {
       }));
       const firstArtistId = servicesData.find(s => s.artist_id)?.artist_id || null;
       await updateAppointment(appointment.id, {
-        title: generateAppointmentTitle(editServices, servicesRef.current as any),
+        title: generateAppointmentTitle(editServices, servicesData as any),
         client_id: editForm.client_id || '',
         artist_id: firstArtistId,
         start_time: startTime.toISOString(),
@@ -361,12 +361,12 @@ export default function CitaDetailPage({ initialAppointment }: {
           open={showEditModal}
           editingAppt={appointment}
           form={editForm}
-          clients={clientsRef.current as any}
+          clients={clientsData as any}
           selectedServices={editServices}
           serviceArtists={editArtists}
           customPrices={editPrices}
-          services={servicesRef.current as any}
-          staff={staffRef.current as any}
+          services={servicesData as any}
+          staff={staffData as any}
           overlapWarning={null}
           advancePaid={false}
           submitting={editSubmitting}
@@ -403,8 +403,8 @@ export default function CitaDetailPage({ initialAppointment }: {
           key={configuringServiceId || 'none'}
           open={showServiceConfig}
           serviceId={configuringServiceId}
-          services={servicesRef.current as any}
-          staff={staffRef.current as any}
+          services={servicesData as any}
+          staff={staffData as any}
           currentArtistId={editArtists[configuringServiceId || ''] || ''}
           currentPrice={editPrices[configuringServiceId || ''] ?? null}
           onSave={({ serviceId, artistId, price }) => {
@@ -438,8 +438,8 @@ export default function CitaDetailPage({ initialAppointment }: {
       >
         <ServiceSelectorModalContent
           open={showServiceSelector}
-          services={servicesRef.current as any}
-          staff={staffRef.current as any}
+          services={servicesData as any}
+          staff={staffData as any}
           initialSelectedIds={editServices}
           initialArtists={editArtists}
           initialPrices={editPrices}

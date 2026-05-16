@@ -5,10 +5,9 @@ import type { StaffWithDetails, StaffPerformance } from './types';
 import { isOwnerMember } from './types';
 import { Modal } from '@/components/ui/modal';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import {
-  Phone, Pencil, Cake, Clock, CalendarDays, Sparkles, ArrowUpRight,
+  Phone, Pencil, Cake, Clock, CalendarDays, Sparkles, ArrowUpRight, Trash2, ExternalLink,
 } from 'lucide-react';
 
 interface StaffDetailModalProps {
@@ -16,8 +15,12 @@ interface StaffDetailModalProps {
   member: StaffWithDetails | null;
   onClose: () => void;
   onEdit: (member: StaffWithDetails) => void;
+  onDelete?: (member: StaffWithDetails) => void;
+  onViewDetail?: () => void;
+  deletingId?: string | null;
   commissionOverridesCount?: number;
   recentPerformance?: StaffPerformance | null;
+  viewingLoading?: boolean;
 }
 
 function birthdayLabel(birthdayDate: string | null): { label: string; isSoon: boolean } | null {
@@ -49,8 +52,12 @@ export const StaffDetailModal = memo(function StaffDetailModal({
   member,
   onClose,
   onEdit,
+  onDelete,
+  onViewDetail,
+  deletingId,
   commissionOverridesCount = 0,
   recentPerformance,
+  viewingLoading,
 }: StaffDetailModalProps) {
   const roleColor = member?.role?.color || '#a78bfa';
   const stats = member?.staff_stats;
@@ -63,9 +70,9 @@ export const StaffDetailModal = memo(function StaffDetailModal({
       <div className="relative overflow-hidden rounded-xl bg-white">
 
         {/* ─── Header section ─── */}
-        <div className="relative pt-6 pb-4 px-5">
+        <div className="relative pt-2 pb-3 px-4">
           {/* Avatar — large, centered */}
-          <div className="flex justify-center mb-4">
+          <div className="flex justify-center mb-3">
             <div className="relative">
               <div
                 className="size-20 rounded-full bg-gradient-to-br flex items-center justify-center text-white font-bold text-3xl shadow-lg shadow-rose-200/40"
@@ -98,7 +105,7 @@ export const StaffDetailModal = memo(function StaffDetailModal({
 
         {/* ─── Stats row — elegant horizontal flow ─── */}
         {stats && (
-          <div className="px-5 pb-5">
+          <div className="px-4 pb-4">
             <div className="flex items-center justify-center gap-1 text-center">
               <div className="flex-1">
                 <p className="text-2xl font-bold text-zinc-800 tabular-nums">{stats.total_appointments}</p>
@@ -108,7 +115,11 @@ export const StaffDetailModal = memo(function StaffDetailModal({
               <div className="flex-1">
                 <p className="text-xl font-bold text-zinc-800 tabular-nums">{formatCurrency(stats.total_revenue)}</p>
                 <p className="text-[11px] text-zinc-400 mt-0.5 tracking-wide uppercase">Facturado</p>
-                {recentPerformance && recentPerformance.totalRevenue > 0 && (
+                {viewingLoading ? (
+                  <p className="text-[10px] text-zinc-300 mt-0.5 flex items-center justify-center gap-1">
+                    <span className="h-3 w-3 rounded-full border-2 border-salon-200 border-t-transparent animate-spin" />
+                  </p>
+                ) : recentPerformance && recentPerformance.totalRevenue > 0 && (
                   <p className="text-[10px] text-rose-400 mt-0.5 flex items-center justify-center gap-1">
                     <ArrowUpRight className="size-3" aria-hidden="true" />
                     30d: {formatCurrency(recentPerformance.totalRevenue)}
@@ -119,7 +130,11 @@ export const StaffDetailModal = memo(function StaffDetailModal({
               <div className="flex-1">
                 <p className="text-2xl font-bold text-rose-500 tabular-nums">{member.commission_pct}%</p>
                 <p className="text-[11px] text-zinc-400 mt-0.5 tracking-wide uppercase">Comision</p>
-                {commissionOverridesCount > 0 && (
+                {viewingLoading ? (
+                  <p className="text-[10px] text-zinc-300 mt-0.5 flex items-center justify-center gap-1">
+                    <span className="h-3 w-3 rounded-full border-2 border-salon-200 border-t-transparent animate-spin" />
+                  </p>
+                ) : commissionOverridesCount > 0 && (
                   <p className="text-[10px] text-amber-500 font-medium mt-0.5">
                     {commissionOverridesCount} excepcion{commissionOverridesCount !== 1 ? 'es' : ''}
                   </p>
@@ -132,7 +147,7 @@ export const StaffDetailModal = memo(function StaffDetailModal({
         <ThinDivider />
 
         {/* ─── Info cards — 2-column grid ─── */}
-        <div className="px-4 py-4 grid grid-cols-2 gap-2">
+        <div className="px-3 py-3 grid grid-cols-2 gap-2">
           {/* Left column: Phone + Birthday */}
           <div className="space-y-2">
             <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-zinc-50/60">
@@ -207,31 +222,39 @@ export const StaffDetailModal = memo(function StaffDetailModal({
 
         <ThinDivider />
 
-        {/* ─── Actions — right aligned ─── */}
-        <div className="px-4 py-4 flex items-center justify-end gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            className="border-zinc-200/80 text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50 hover:border-zinc-300 rounded-xl text-sm font-medium transition-colors"
-            onClick={onClose}
-          >
-            Cerrar
-          </Button>
+        {/* ─── Actions ─── */}
+        <div className="px-3 py-3 flex gap-3">
           {!isOwnerMember(member) && (
             <button
               type="button"
-              onClick={() => {
-                onClose();
-                onEdit(member);
-              }}
-              className="flex items-center justify-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold text-white hover:shadow-lg hover:shadow-rose-200/40 active:scale-[0.97] transition-all duration-200"
-              style={{ background: `linear-gradient(135deg, ${roleColor}cc, ${roleColor})` }}
+              onClick={() => onDelete?.(member)}
+              disabled={deletingId === member.id}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-medium text-red-600 border border-red-200 hover:bg-red-50 disabled:opacity-50 transition-colors"
             >
-              <Pencil className="size-4" aria-hidden="true" />
-              Editar
+              <Trash2 className="size-3.5" aria-hidden="true" />
+              {deletingId === member.id ? 'Eliminando...' : 'Eliminar'}
             </button>
           )}
+          <button
+            type="button"
+            onClick={() => onEdit(member)}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-medium text-salon-700 border border-salon-200 hover:bg-salon-50 transition-colors"
+          >
+            <Pencil className="size-3.5" aria-hidden="true" />
+            Editar
+          </button>
         </div>
+
+        {onViewDetail && (
+          <button
+            type="button"
+            onClick={onViewDetail}
+            className="w-full px-3 pb-3 flex items-center justify-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-600 transition-colors"
+          >
+            <ExternalLink className="size-3.5" aria-hidden="true" />
+            Ver detalle completo
+          </button>
+        )}
 
       </div>
     </Modal>

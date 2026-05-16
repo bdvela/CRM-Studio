@@ -32,11 +32,11 @@ export function useCitasHandlers(ctx: {
   dispatchData: React.Dispatch<DataAction>; dispatchUi: React.Dispatch<UiAction>;
   confirm: ReturnType<typeof useConfirm>['confirm'];
   load: () => Promise<void>;
-  initialForm: React.MutableRefObject<AppointmentFormData | null>;
-  initialSelectedServices: React.MutableRefObject<string[]>;
-  initialServiceArtists: React.MutableRefObject<Record<string, string>>;
-  initialCustomPrices: React.MutableRefObject<Record<string, number>>;
-  initialAdvancePaid: React.MutableRefObject<boolean>;
+  initialFormRef: React.MutableRefObject<AppointmentFormData | null>;
+  initialSelectedServicesRef: React.MutableRefObject<string[]>;
+  initialServiceArtistsRef: React.MutableRefObject<Record<string, string>>;
+  initialCustomPricesRef: React.MutableRefObject<Record<string, number>>;
+  initialAdvancePaidRef: React.MutableRefObject<boolean>;
 }) {
   const {
     staff, services, appointments, editingAppt, selectedServices, serviceArtists,
@@ -44,8 +44,8 @@ export function useCitasHandlers(ctx: {
     pendingDate, listFilter, listFilterArtist, listFilterStatus,
     setForm, setEditingAppt, setSelectedServices, setServiceArtists, setCustomPrices,
     dispatchData, dispatchUi, confirm, load,
-    initialForm, initialSelectedServices, initialServiceArtists,
-    initialCustomPrices, initialAdvancePaid,
+    initialFormRef, initialSelectedServicesRef, initialServiceArtistsRef,
+    initialCustomPricesRef, initialAdvancePaidRef,
   } = ctx;
 
   const overlapTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -69,18 +69,18 @@ export function useCitasHandlers(ctx: {
   }
 
   function haveChanges(): boolean {
-    if (!editingAppt || !initialForm.current) return true;
-    if (form.client_id !== initialForm.current.client_id) return true;
-    if (form.start_time !== initialForm.current.start_time) return true;
-    if (form.status !== initialForm.current.status) return true;
-    if (form.notes !== initialForm.current.notes) return true;
-    if (form.color !== initialForm.current.color) return true;
+    if (!editingAppt || !initialFormRef.current) return true;
+    if (form.client_id !== initialFormRef.current.client_id) return true;
+    if (form.start_time !== initialFormRef.current.start_time) return true;
+    if (form.status !== initialFormRef.current.status) return true;
+    if (form.notes !== initialFormRef.current.notes) return true;
+    if (form.color !== initialFormRef.current.color) return true;
     const sortedSelected = [...selectedServices].sort();
-    const sortedInitial = [...initialSelectedServices.current].sort();
+    const sortedInitial = [...initialSelectedServicesRef.current].sort();
     if (sortedSelected.length === sortedInitial.length && sortedSelected.every((id, i) => id === sortedInitial[i])) {
       for (const svcId of sortedSelected) {
-        if (serviceArtists[svcId] !== initialServiceArtists.current[svcId]) return true;
-        if (customPrices[svcId] !== initialCustomPrices.current[svcId]) return true;
+        if (serviceArtists[svcId] !== initialServiceArtistsRef.current[svcId]) return true;
+        if (customPrices[svcId] !== initialCustomPricesRef.current[svcId]) return true;
       }
       return false;
     }
@@ -171,7 +171,7 @@ export function useCitasHandlers(ctx: {
         if (advancePaid) {
           await createPayment({
             concept: 'Adelanto de cita', amount: DEPOSIT_AMOUNT, type: 'ingreso', category: 'servicio',
-            appointment_id: newAppt.id, client_id: form.client_id || null,
+            payment_kind: 'reserva', appointment_id: newAppt.id, client_id: form.client_id || null,
           });
         }
         toast.success('Cita creada');
@@ -209,11 +209,11 @@ export function useCitasHandlers(ctx: {
     });
     setCustomPrices(pricemap);
     dispatchUi({ type: 'SET_ADVANCE_PAID', advancePaid: false });
-    initialForm.current = { ...formData };
-    initialSelectedServices.current = [...svcIds];
-    initialServiceArtists.current = { ...svcArtistMap };
-    initialCustomPrices.current = { ...pricemap };
-    initialAdvancePaid.current = false;
+    initialFormRef.current = { ...formData };
+    initialSelectedServicesRef.current = [...svcIds];
+    initialServiceArtistsRef.current = { ...svcArtistMap };
+    initialCustomPricesRef.current = { ...pricemap };
+    initialAdvancePaidRef.current = false;
     dispatchUi({ type: 'SET_SHOW_MODAL', showModal: true });
   }
 
@@ -224,11 +224,11 @@ export function useCitasHandlers(ctx: {
     setServiceArtists({});
     setCustomPrices({});
     dispatchUi({ type: 'SET_ADVANCE_PAID', advancePaid: true });
-    initialForm.current = null;
-    initialSelectedServices.current = [];
-    initialServiceArtists.current = {};
-    initialCustomPrices.current = {};
-    initialAdvancePaid.current = true;
+    initialFormRef.current = null;
+    initialSelectedServicesRef.current = [];
+    initialServiceArtistsRef.current = {};
+    initialCustomPricesRef.current = {};
+    initialAdvancePaidRef.current = true;
     dispatchUi({ type: 'SET_OVERLAP_WARNING', overlapWarning: null });
     dispatchUi({ type: 'SET_SHOW_MODAL', showModal: true });
   }
@@ -241,11 +241,11 @@ export function useCitasHandlers(ctx: {
     setServiceArtists({});
     setCustomPrices({});
     dispatchUi({ type: 'SET_ADVANCE_PAID', advancePaid: true });
-    initialForm.current = null;
-    initialSelectedServices.current = [];
-    initialServiceArtists.current = {};
-    initialCustomPrices.current = {};
-    initialAdvancePaid.current = true;
+    initialFormRef.current = null;
+    initialSelectedServicesRef.current = [];
+    initialServiceArtistsRef.current = {};
+    initialCustomPricesRef.current = {};
+    initialAdvancePaidRef.current = true;
     dispatchUi({ type: 'SET_OVERLAP_WARNING', overlapWarning: null });
     dispatchUi({ type: 'SET_SHOW_MODAL', showModal: true });
   }
@@ -283,7 +283,7 @@ export function useCitasHandlers(ctx: {
       if (newStatus === 'completada') {
         const pendingBalance = Number(appt.appointment_balance?.pending_balance || 0);
         if (pendingBalance > 0) {
-          await createPayment({ concept: 'Pago completo de cita', amount: pendingBalance, type: 'ingreso', category: 'servicio', appointment_id: appt.id, client_id: appt.client_id || null });
+          await createPayment({ concept: 'Saldo de cita', amount: pendingBalance, type: 'ingreso', category: 'servicio', payment_kind: 'pago_final', appointment_id: appt.id, client_id: appt.client_id || null });
         }
       }
       const statusLabel = APPOINTMENT_STATUS_LABELS[newStatus as keyof typeof APPOINTMENT_STATUS_LABELS];

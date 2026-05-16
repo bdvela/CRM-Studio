@@ -464,11 +464,12 @@ npm run start
 9. `HU-28-rls-appointment-services.sql` (✅ Aplicada)
 10. `HU-29-rls-appointment-services-v2.sql` (versión mejorada con DROP IF EXISTS)
 11. `HU-30-client-status-functions.sql` (✅ Aplicada — cron job inactividad + función `promoteClientOnCompletion`)
+12. `HU-31-fix-founder-commission.sql` (⏳ Pendiente — founder commission 100% → Studio)
 
 ### Migraciones Pendientes
 | Migración | Descripción |
 |------------|-------------|
-| **Ninguna actualmente** | Todas las migraciones principales aplicadas |
+| `HU-31-fix-founder-commission.sql` | Corrige `commission_details`: founder recibe 0% comisión, 100% va al Studio |
 
 ### Migraciones Aplicadas Recientemente
 | Migración | Descripción |
@@ -580,7 +581,7 @@ npm run start
 ### Ubicación
 - Directorio: `docs/specs/`
 
-### Todas las HUs Implementadas ✓
+### Todas las HUs (28 implementadas)
 
 | HU | Descripción | Estado |
 |-----|-------------|--------|
@@ -610,6 +611,8 @@ npm run start
 | HU-24 | Comisiones dinamicas | ✅ |
 | HU-25 | Panel servicios mejoras | ✅ |
 | HU-26 | Transición automática de estados de clienta | ✅ |
+| HU-27 | Toggle VIP sin selector de estado | ✅ |
+| HU-28 | Comisiones — filtro por rango de fechas | ✅ |
 
 ### Próximas Sesiones (no son HU)
 - Tests unitarios y E2E
@@ -619,48 +622,22 @@ npm run start
 
 ## Issues Conocidos
 
-**✅ Ninguno actualmente - Issues anteriores resueltos:**
+**✅ Ninguno actualmente — Issues anteriores resueltos:**
 
-| Issue Anterior | Estado | Solución |
-|----------------|--------|----------|
-| RLS en `appointment_services` (Error 401) | ✅ Fixeado | Migración HU-28/HU-29 |
-| Columna `service_price` faltante | ✅ Fixeado | Migración HU-27 |
-| Servicios no cargan al editar cita | ✅ Fixeado | Solución de RLS |
-| params síncronos en Next.js 15+ | ✅ Fixeado | Refactor a `await params` + validación UUID |
-| Turbopack loop infinito (2 package-lock.json) | ✅ Fixeado | Eliminar package.json del root |
-| Filtros de Lista contaminaban datos del Calendario | ✅ Fixeado | Separar estado de filtros (listFilterArtist/Status) + filtrado client-side |
-| Todas/Hoy/Semana disparaban fetch al servidor | ✅ Fixeado | Filtro de periodo 100% client-side sobre dataset base |
-| CalendarView se re-montaba al cambiar Mes/Semana/Día | ✅ Fixeado | Eliminado `key={ui.view}`, los 3 views coexisten con CSS toggle |
-| Modales cargaban en bundle inicial | ✅ Fixeado | Lazy-load con `React.lazy` + `Suspense` (3 chunks separados) |
-| Intervalo del reloj corría con tab oculta | ✅ Fixeado | `visibilitychange` pausa/reanuda el setInterval de 60s |
-| Sin lazy-loading en modales pesados | ✅ Fixeado | AppointmentFormModal, ServiceSelectorModal, ServiceConfigModal |
-| Sin animación fluida al cambiar vista calendario | ✅ Fixeado | `animate-fadeIn` en cada view activo sin re-mount |
-| Skeleton de detalle no coincidía con layout real | ✅ Fixeado | Rediseño del skeleton en `citas/[id]/page-client.tsx` — ahora replica las 5 secciones reales (header, notes, balance grid 3-cols, services card, commissions card) en vez de bloques genéricos `h-16`/`h-24` |
-| Detalle de cita sin stagger animations | ✅ Fixeado | Cada sección envuelta en `animate-fadeInUp` con stagger 1-4 (50ms delay) |
-| Modales cargaban en bundle inicial (Servicios) | ✅ Fixeado | Lazy-load de `ServicioFormModal` con `React.lazy` + `Suspense` en `servicios/page-client.tsx` |
-| Skeleton servicios no usaba categorías reales | ✅ Fixeado | Skeleton de vista "Todos" ahora usa `categories` reales con color dinámico (antes 3 grupos hardcodeados) |
-| Skeleton filtrado genérico (6 cards) | ✅ Fixeado | Reducido a 3 cards para matchear `lg:grid-cols-3` real |
-| ServiceCard sin feedback táctil | ✅ Fixeado | `active:scale-[0.97]` agregado a la card clickeable |
-| ServicioStaffTab sin memoización | ✅ Fixeado | Envuelto en `memo()` para evitar re-renders innecesarios |
-| Prefijos de precio con font-size <16px (iOS) | ✅ Fixeado | `text-sm` → `text-base` en los 3 `S/` prefixes del formulario |
-| Empty states sin animación de entrada | ✅ Fixeado | `animate-fadeIn` en empty state de servicios y advertencia amber del StaffTab |
-| CTA "Registrar primera clienta" rota en ClientListContent | ✅ Fixeado | Reemplazado `getElementById` por prop `onOpenNew` que abre el modal vía dispatch |
-| Crash si `client.name` está vacío en ClientDetailModal | ✅ Fixeado | `client.name[0]` → `client.name?.[0]?.toUpperCase() ?? '?'` |
-| Auto-refresh sin pause de visibilidad en Clientes | ✅ Fixeado | `visibilitychange` pausa/reanuda el setInterval — igual que Dashboard |
-| Sin lazy-loading en modales de Clientes | ✅ Fixeado | `ClientFormModal` + `ClientDetailModal` con `React.lazy` + `Suspense` en ambos page-client |
-| `ClientDetailModal` sin memoización | ✅ Fixeado | Envuelto en `memo()` (182 líneas) |
-| `ClientDetailProfile` sin memoización | ✅ Fixeado | Envuelto en `memo()` |
-| `ClientDetailStats` sin memoización | ✅ Fixeado | Envuelto en `memo()` |
-| `ClientAppointmentHistory` sin memoización | ✅ Fixeado | Envuelto en `memo()` |
-| `ClientCard` sin feedback táctil | ✅ Fixeado | `active:scale-[0.97]` agregado |
-| Error silenciado en detail page | ✅ Fixeado | `// silent` → `toast.error('Error al recargar datos')` |
-| `APPT_STATUS_STYLES` sin tipado fuerte | ✅ Fixeado | `Record<string, string>` → `Record<AppointmentStatus, string>` |
-| Botón delete sin `variant="danger"` | ✅ Fixeado | `variant="outline"` con overrides manuales → `variant="danger"` + `disabled={deleting}` |
-| Detail page sin stagger animations | ✅ Fixeado | `animate-fadeInUp` con stagger 1-3 en Profile, Stats, AppointmentHistory |
+| Issue Anterior | Solución |
+|----------------|----------|
+| Toggle circle mal centrado (StaffFormModal) | `top-0.5` → `top-1` para centrar verticalmente |
+| `window.location.href` en StaffComisionesTab | `router.push('/reportes/comisiones')` + import `useRouter` |
+| Default payment method `efectivo` | `payment_method` default → `yape_plin` en types.ts y page-client |
+| Fecha default muestra mañana (UTC bug) | Nuevo helper `getLocalDateString()` en utils.ts, reemplazado en 4 archivos |
+| Skeleton flicker en auto-refresh | `load(false)` faltaba en `setInterval` tras `visibilitychange` |
+| 16 lint warnings | refs→state en citas/[id], eslint-disable inline, `initialData` en deps de ClientFormModal |
+
+
 
 ---
 
 ## Última Actualización
-- **Fecha**: 14 Mayo 2026
+- **Fecha**: 16 Mayo 2026
 - **Rama**: `main`
-- **Cambios recientes**: Optimización completa del módulo Staff — 19 mejoras: lazy-load de `StaffFormModal` (Suspense + prefetch), 6 componentes de detalle envueltos en `memo()`, visibilitychange pause en lista y detalle, stagger animations `animate-fadeInUp stagger-1→6` en detalle, skeleton rediseñado (loading.tsx + StaffDetailStats) que replica layout real, `useMemo` en `filteredServices`, `useCallback` estable en `onSearchChange` y `handlePeriodChange`, separación de `useEffect` dual en dos hooks, toggle Tailwind (sin inline styles), `active:scale-[0.97]` en StaffCard, `text-base` en input de búsqueda, `APPOINTMENT_BADGE` tipado como `Record<AppointmentStatus>`, `aria-live` en empty state, eliminación de botón Editar roto + `window.location.href` → `push()` en comisiones.
+- **Cambios recientes**: Corrección de 5 issues (toggle StaffFormModal, router.push en StaffComisionesTab, default yape_plin, fecha local en pagos, auto-refresh flicker) + 16 lint warnings resueltos (refs→state, eslint-disable inline, missing deps). Lint: 0 errors, 0 warnings.

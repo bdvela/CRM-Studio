@@ -40,6 +40,7 @@ export const ClientFilters = memo(function ClientFilters({
           value={statusFilter}
           onChange={handleStatusChange}
           options={STATUS_OPTIONS.map(o => ({ value: o.value, label: o.label }))}
+          className="py-3 border-zinc-200"
         />
       </div>
     </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef, useReducer, useCallback, lazy, Suspense } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   getStaff,
   createStaff,
@@ -62,6 +63,7 @@ interface UIState {
   viewingMember: StaffWithDetails | null;
   viewingPerformance: StaffPerformance | null;
   viewingOverridesCount: number;
+  viewingLoading: boolean;
   search: string;
   activeTab: StaffModalTab;
   specialtySelections: string[];
@@ -71,6 +73,7 @@ interface UIState {
 const UI_INIT: UIState = {
   submitting: false, deletingId: null, showModal: false, showDetailModal: false,
   editingMember: null, viewingMember: null, viewingPerformance: null, viewingOverridesCount: 0,
+  viewingLoading: false,
   search: '', activeTab: 'basicos',
   specialtySelections: [], overrides: {},
 };
@@ -83,6 +86,7 @@ export default function StaffPage({ initialData }: {
   initialData?: { members: StaffWithDetails[]; roles: Role[]; categories: Category[]; services: Service[] };
 }) {
   const { confirm } = useConfirm();
+  const { push } = useRouter();
   const [data, dispatchData] = useReducer(
     dataReducer,
     initialData ? { ...initialData, loading: false } : DATA_INIT,
@@ -117,7 +121,7 @@ export default function StaffPage({ initialData }: {
   const handleSearchChange = useCallback((v: string) => dispatchUI({ search: v }), []);
 
   const openDetail = useCallback(async (member: StaffWithDetails) => {
-    dispatchUI({ viewingMember: member, showDetailModal: true });
+    dispatchUI({ viewingMember: member, showDetailModal: true, viewingLoading: true, viewingPerformance: null, viewingOverridesCount: 0 });
 
     const now = new Date();
     const from = new Date(now);
@@ -131,15 +135,22 @@ export default function StaffPage({ initialData }: {
       dispatchUI({
         viewingPerformance: perf as unknown as StaffPerformance,
         viewingOverridesCount: overrides.length,
+        viewingLoading: false,
       });
     } catch {
-      // silent — modal already visible with basic data
+      dispatchUI({ viewingLoading: false });
     }
   }, []);
 
   const closeDetail = useCallback(() => {
-    dispatchUI({ showDetailModal: false, viewingMember: null, viewingPerformance: null, viewingOverridesCount: 0 });
+    dispatchUI({ showDetailModal: false, viewingMember: null, viewingPerformance: null, viewingOverridesCount: 0, viewingLoading: false });
   }, []);
+
+  const handleViewDetail = useCallback(() => {
+    if (!ui.viewingMember) return;
+    closeDetail();
+    push(`/staff/${ui.viewingMember.id}`);
+  }, [ui.viewingMember, closeDetail, push]);
 
   useEffect(() => {
     if (skipInitialLoad.current) {
@@ -265,6 +276,7 @@ export default function StaffPage({ initialData }: {
       specialtySelections: currentSpecIds,
       overrides: map,
       activeTab: 'basicos',
+      showDetailModal: false,
       showModal: true,
     });
   }, []);
@@ -349,15 +361,19 @@ export default function StaffPage({ initialData }: {
           member={ui.viewingMember}
           onClose={closeDetail}
           onEdit={openEdit}
+          onDelete={handleDelete}
+          onViewDetail={handleViewDetail}
+          deletingId={ui.deletingId}
           recentPerformance={ui.viewingPerformance}
           commissionOverridesCount={ui.viewingOverridesCount}
+          viewingLoading={ui.viewingLoading}
         />
       </Suspense>
 
       <Suspense fallback={null}>
         <StaffFormModal
           open={ui.showModal}
-        onClose={() => dispatchUI({ showModal: false, editingMember: null })}
+        onClose={() => dispatchUI({ showModal: false, editingMember: null, showDetailModal: !!ui.editingMember })}
         editingMember={ui.editingMember}
         form={form}
         dispatch={dispatch}
@@ -373,7 +389,6 @@ export default function StaffPage({ initialData }: {
           overrides: typeof v === 'function' ? v(ui.overrides) : v,
         })}
         submitting={ui.submitting}
-        deletingId={ui.deletingId}
         activeTab={ui.activeTab}
         setActiveTab={(v) => dispatchUI({
           activeTab: typeof v === 'function' ? v(ui.activeTab) : v,
@@ -382,7 +397,6 @@ export default function StaffPage({ initialData }: {
         initialSpecialties={initialSpecialties}
         initialOverrides={initialOverrides}
         onSubmit={handleSubmit}
-        onDelete={handleDelete}
         isOwner={isOwnerMember}
       />
       </Suspense>

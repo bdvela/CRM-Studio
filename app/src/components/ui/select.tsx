@@ -1,6 +1,7 @@
 import { cn } from '@/lib/utils';
 import { ChevronDown, Check } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 interface SelectOption {
   value: string;
@@ -38,9 +39,11 @@ export function Select({
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
+      const target = event.target as Node;
       if (
-        containerRef.current && 
-        !containerRef.current.contains(event.target as Node)
+        containerRef.current &&
+        !containerRef.current.contains(target) &&
+        !dropdownRef.current?.contains(target)
       ) {
         setIsOpen(false);
       }
@@ -51,7 +54,10 @@ export function Select({
   }, []);
 
   useEffect(() => {
-    if (isOpen && dropdownRef.current && containerRef.current) {
+    if (!isOpen) return;
+    
+    function positionDropdown() {
+      if (!dropdownRef.current || !containerRef.current) return;
       const rect = containerRef.current.getBoundingClientRect();
       const dropdown = dropdownRef.current;
       
@@ -60,13 +66,29 @@ export function Select({
       const dropdownHeight = Math.min(dropdown.scrollHeight, 280);
       const above = spaceBelow < dropdownHeight && spaceAbove > spaceBelow;
       
+      const maxH = above
+        ? Math.min(dropdownHeight, spaceAbove - 8)
+        : Math.min(dropdownHeight, spaceBelow - 8);
+      
       Object.assign(dropdown.style, {
-        top: above ? 'auto' : '100%',
-        bottom: above ? '100%' : 'auto',
-        marginTop: above ? '0' : '4px',
-        marginBottom: above ? '4px' : '0',
+        left: rect.left + 'px',
+        top: above ? (rect.top - maxH - 4) + 'px' : (rect.bottom + 4) + 'px',
+        width: rect.width + 'px',
+        maxHeight: maxH + 'px',
+        visibility: 'visible',
       });
     }
+    
+    const raf = requestAnimationFrame(() => {
+      positionDropdown();
+      window.addEventListener('resize', positionDropdown);
+      window.addEventListener('scroll', positionDropdown, true);
+    });
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', positionDropdown);
+      window.removeEventListener('scroll', positionDropdown, true);
+    };
   }, [isOpen]);
 
   function handleSelect(optValue: string) {
@@ -111,16 +133,15 @@ export function Select({
            />
          </button>
 
-        {isOpen && (
+        {isOpen && createPortal(
           <div
             ref={dropdownRef}
             className={cn(
-              'absolute left-0 right-0 z-50',
               'max-h-70 overflow-y-auto',
               'bg-white border border-zinc-200 rounded-xl shadow-xl',
-               'animate-in fade-in-0 zoom-in-95 origin-top'
+              'animate-in fade-in-0 zoom-in-95 origin-top'
             )}
-            style={{ maxHeight: '280px' }}
+            style={{ position: 'fixed', maxHeight: '280px', zIndex: 70, visibility: 'hidden' }}
           >
             {options.length === 0 ? (
               <div className="px-4 py-3 text-sm text-zinc-400 text-center">
@@ -147,7 +168,8 @@ export function Select({
                 </button>
               ))
             )}
-          </div>
+          </div>,
+          document.body
         )}
       </div>
       {error && <p className="text-xs text-red-600">{error}</p>}

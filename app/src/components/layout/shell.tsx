@@ -64,7 +64,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const isCalendarPage = pathname === '/citas' || pathname.startsWith('/citas/');
 
   useEffect(() => {
-    if (isCalendarPage) setSidebarCollapsed(true);
+    if (isCalendarPage) setSidebarCollapsed(true); // eslint-disable-line react-hooks/set-state-in-effect -- intentional
   }, [isCalendarPage]);
 
   useEffect(() => {

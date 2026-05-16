@@ -14,7 +14,7 @@ import { DatePicker } from '@/components/ui/DatePicker';
 import { FlagPeru } from '@/components/ui/FlagPeru';
 import { Checkbox } from '@/components/ui/checkbox';
 import { formatPeruPhoneForInput } from '@/lib/utils';
-import { UserRound, Briefcase, DollarSign, Check, Trash2, Clock, X } from 'lucide-react';
+import { UserRound, Briefcase, DollarSign, Check, Clock, X } from 'lucide-react';
 
 const STAFF_TABS = [
   { id: 'basicos' as const, label: 'Datos Básicos', icon: <UserRound className="size-4" /> },
@@ -38,10 +38,10 @@ export function StaffFormModal({
   roles, categories, services,
   specialtySelections, setSpecialtySelections,
   overrides, setOverrides,
-  submitting, deletingId,
+  submitting,
   activeTab, setActiveTab,
   initialForm, initialSpecialties, initialOverrides,
-  onSubmit, onDelete, isOwner,
+  onSubmit, isOwner,
 }: StaffFormModalProps) {
   const firstInputRef = useRef<HTMLInputElement>(null);
   const isOwnerMember = isOwner(editingMember);
@@ -100,7 +100,7 @@ export function StaffFormModal({
               aria-label={form.active ? 'Desactivar miembro' : 'Activar miembro'}
             >
               <div
-                className={`absolute top-0.5 size-5 bg-white rounded-full shadow transition-transform ${form.active ? 'left-7' : 'left-1'}`}
+                className={`absolute left-1 top-1 size-5 bg-white rounded-full shadow transition-transform ${form.active ? 'translate-x-6' : 'translate-x-0'}`}
               />
             </button>
           </div>
@@ -239,46 +239,24 @@ export function StaffFormModal({
             />
           )}
 
-          <div className="flex flex-wrap gap-2 sm:gap-3 pt-4 sm:pt-6 mt-2 border-t border-zinc-100">
-            {editingMember && !isOwnerMember && (
+          <div className="flex gap-2 sm:gap-3 pt-4 sm:pt-6 mt-2 border-t border-zinc-100 justify-end">
               <Button
                 type="button"
                 variant="outline"
-                className="w-full sm:w-auto border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 order-last sm:order-none"
-                loading={deletingId === editingMember.id}
-                onClick={async () => {
-                  if (editingMember) {
-                    handleClose();
-                    await onDelete(editingMember);
-                  }
-                }}
-              >
-                {deletingId !== editingMember.id && <Trash2 className="size-4 mr-1" />}
-                {deletingId === editingMember.id ? 'Eliminando...' : 'Eliminar'}
-              </Button>
-            )}
-
-            <div className="hidden sm:block flex-1" />
-
-            <div className="flex flex-1 sm:flex-none gap-2 order-first sm:order-none">
-              <Button
-                type="button"
-                variant="outline"
-                className="flex-1"
+                className="flex-1 sm:flex-none"
                 onClick={handleClose}
               >
                 Cancelar
               </Button>
               <Button
                 type="submit"
-                className="flex-1"
+                className="flex-1 sm:flex-none"
                 disabled={!hasChanges}
                 loading={submitting}
               >
                 {!submitting && <Check className="size-4 mr-1" />}
                 {submitting ? 'Guardando...' : (editingMember ? 'Actualizar' : 'Crear')}
               </Button>
-            </div>
           </div>
         </form>
       </div>

@@ -12,16 +12,16 @@ export const ClientDetailProfile = memo(function ClientDetailProfile({ client }:
       <div className="px-5 py-6">
         <div className="flex items-start gap-5">
           <div
-            className="size-16 rounded-full bg-gradient-to-br from-rose-100 to-purple-100 flex items-center justify-center text-2xl font-bold text-rose-600 flex-shrink-0"
+            className="size-16 rounded-full bg-gradient-to-br from-salon-500/90 via-salon-400/50 to-salon-500 flex items-center justify-center text-2xl font-bold text-white flex-shrink-0 shadow-md shadow-salon-500/20"
             aria-label={`Inicial de ${client.name}`}
             role="img"
           >
             {client.name[0]?.toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-3 flex-wrap">
+            <div>
               <h1 className="text-xl font-bold text-zinc-900">{client.name}</h1>
-              <Badge variant={STATUS_BADGE_VARIANT[client.status]}>{STATUS_LABELS[client.status]}</Badge>
+              <Badge variant={STATUS_BADGE_VARIANT[client.status]} className="mt-1.5">{STATUS_LABELS[client.status]}</Badge>
             </div>
             <div className="flex flex-wrap gap-4 mt-3 text-sm text-zinc-500">
               {client.phone && (

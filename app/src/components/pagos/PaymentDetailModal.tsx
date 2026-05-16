@@ -189,9 +189,11 @@ export function PaymentDetailModal({
         <div className="flex flex-wrap gap-2 sm:gap-3 pt-4 sm:pt-6 mt-2 border-t border-zinc-100">
           <div className="hidden sm:block flex-1" />
           <div className="flex flex-1 sm:flex-none gap-2 order-first sm:order-none">
-            <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
-              Cerrar
-            </Button>
+            <div className="flex-1 hidden sm:block">
+              <Button type="button" variant="outline" className="w-full" onClick={onClose}>
+                Cerrar
+              </Button>
+            </div>
           </div>
         </div>
       </div>

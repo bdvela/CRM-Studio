@@ -80,14 +80,12 @@ export interface StaffFormModalProps {
   overrides: Record<string, number | null>;
   setOverrides: React.Dispatch<React.SetStateAction<Record<string, number | null>>>;
   submitting: boolean;
-  deletingId: string | null;
   activeTab: StaffModalTab;
   setActiveTab: React.Dispatch<React.SetStateAction<StaffModalTab>>;
   initialForm: StaffFormState;
   initialSpecialties: string[];
   initialOverrides: Record<string, number | null>;
   onSubmit: (e: React.FormEvent) => Promise<void>;
-  onDelete: (member: StaffWithDetails) => Promise<void>;
   isOwner: (member: StaffWithDetails | null) => boolean;
 }
 

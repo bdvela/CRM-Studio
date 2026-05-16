@@ -88,17 +88,16 @@ export function ServicioFormModal({
 
         <div className="flex flex-wrap gap-2 sm:gap-3 pt-4 sm:pt-6 mt-2 border-t border-zinc-100">
           {editingService && (
-            <Button
+            <button
               type="button"
-              variant="outline"
-              className="w-full sm:w-auto border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 order-last sm:order-none"
-              loading={deletingServiceId === editingService.id}
               onClick={onDelete}
+              disabled={deletingServiceId === editingService.id}
+              className="w-full sm:w-auto flex items-center gap-1.5 text-xs text-red-400 hover:text-red-600 disabled:opacity-50 transition-colors order-last sm:order-none"
               aria-label={`Eliminar servicio ${editingService.name}`}
             >
-              {deletingServiceId !== editingService.id && <Trash2 className="size-4 mr-1" aria-hidden="true" />}
+              <Trash2 className="size-3.5" aria-hidden="true" />
               {deletingServiceId === editingService.id ? 'Eliminando...' : 'Eliminar'}
-            </Button>
+            </button>
           )}
 
           <div className="hidden sm:block flex-1" />

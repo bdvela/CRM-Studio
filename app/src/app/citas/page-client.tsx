@@ -168,11 +168,11 @@ export default function CitasPage({ initialData }: { initialData?: InitialData }
   }
   function setConfiguringServiceId(v: string | null) { setFormMeta(prev => ({ ...prev, configuringServiceId: v })); }
 
-  const initialForm = useRef<AppointmentFormData | null>(null);
-  const initialSelectedServices = useRef<string[]>([]);
-  const initialServiceArtists = useRef<Record<string, string>>({});
-  const initialCustomPrices = useRef<Record<string, number>>({});
-  const initialAdvancePaid = useRef<boolean>(false);
+  const initialFormRef = useRef<AppointmentFormData | null>(null);
+  const initialSelectedServicesRef = useRef<string[]>([]);
+  const initialServiceArtistsRef = useRef<Record<string, string>>({});
+  const initialCustomPricesRef = useRef<Record<string, number>>({});
+  const initialAdvancePaidRef = useRef<boolean>(false);
 
   const [form, setForm] = useState<AppointmentFormData>({
     client_id: '',
@@ -238,8 +238,8 @@ export default function CitasPage({ initialData }: { initialData?: InitialData }
     pendingDate, listFilter, listFilterArtist, listFilterStatus,
     setForm, setEditingAppt, setSelectedServices, setServiceArtists, setCustomPrices,
     dispatchData, dispatchUi, confirm, load: loadAppointments,
-    initialForm, initialSelectedServices, initialServiceArtists,
-    initialCustomPrices, initialAdvancePaid,
+    initialFormRef, initialSelectedServicesRef, initialServiceArtistsRef,
+    initialCustomPricesRef, initialAdvancePaidRef,
   });
 
   return (

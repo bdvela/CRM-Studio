@@ -20,11 +20,10 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
 
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional exit animation
       setMounted(true);
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional exit animation trigger
       setExiting(false);
     } else if (mounted) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional exit animation trigger
       setExiting(true);
       exitTimerRef.current = setTimeout(() => {
         setMounted(false);
@@ -34,7 +33,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
     return () => {
       if (exitTimerRef.current) clearTimeout(exitTimerRef.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mounted is intentionally excluded
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mounted not in deps to avoid loop
   }, [open]);
 
   useEffect(() => {
@@ -89,7 +88,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
   if (!mounted) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div
         className={cn(
           'fixed inset-0',
@@ -102,7 +101,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
       <div
         ref={dialogRef}
         className={cn(
-          'relative w-full sm:max-w-lg md:max-w-xl lg:max-w-2xl bg-white rounded-t-3xl sm:rounded-2xl shadow-xl max-h-[85vh] sm:max-h-[90vh] overflow-y-auto',
+          'relative w-full sm:max-w-lg md:max-w-xl lg:max-w-2xl bg-white rounded-t-3xl sm:rounded-2xl shadow-xl max-h-[80vh] sm:max-h-[85vh] overflow-y-auto',
           exiting
             ? 'animate-[zoomOut95_150ms_cubic-bezier(0.23,1,0.32,1)_forwards]'
             : 'animate-in zoom-in-95'
@@ -111,6 +110,9 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
         aria-modal="true"
         aria-label={title || 'Dialog'}
       >
+        <div className="sm:hidden flex justify-center pt-3 pb-0" aria-hidden="true">
+          <div className="w-10 h-1 rounded-full bg-zinc-300" />
+        </div>
         <div className="sticky top-0 bg-white border-b border-zinc-100 px-4 sm:px-6 py-4 flex items-center justify-between rounded-t-3xl sm:rounded-t-2xl z-10">
           {title ? (
             <h2 className="text-lg font-semibold text-zinc-900 truncate pr-4">{title}</h2>
@@ -127,7 +129,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
             </svg>
           </button>
         </div>
-        <div className="p-4 sm:p-6">{children}</div>
+        <div className="px-4 pt-4 pb-2 sm:p-6">{children}</div>
       </div>
     </div>
   );

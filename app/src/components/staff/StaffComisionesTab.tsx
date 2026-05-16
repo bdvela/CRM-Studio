@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import type { StaffComisionesTabProps } from './types';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
@@ -15,6 +16,7 @@ export function StaffComisionesTab({
   overrides,
   setOverrides,
 }: StaffComisionesTabProps) {
+  const router = useRouter();
   const [overrideSearch, setOverrideSearch] = useState('');
   const [overrideDropdownOpen, setOverrideDropdownOpen] = useState(false);
   const overrideDropdownRef = useRef<HTMLDivElement>(null);
@@ -242,7 +244,7 @@ export function StaffComisionesTab({
             </p>
             <button
               type="button"
-              onClick={() => window.location.href = '/reportes/comisiones'}
+              onClick={() => router.push('/reportes/comisiones')}
               className="text-xs text-salon-600 hover:text-salon-700 font-medium flex items-center gap-1"
             >
               Ver reporte completo

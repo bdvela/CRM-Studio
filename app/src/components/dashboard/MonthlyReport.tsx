@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { CalendarDays, ChevronDown, Star, Briefcase, Sparkles, Clock } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
+import { PAYMENT_METHOD_LABELS, PAYMENT_CATEGORY_LABELS } from '@/types/database';
 import type { MonthlyReport as MonthlyReportType } from './types';
 
 interface Props {
@@ -112,6 +113,62 @@ export function MonthlyReport({ report, loading }: Props) {
             </div>
           ) : (
             <p className="text-sm text-zinc-400 text-center py-4">No hay datos para este mes</p>
+          )}
+
+          {/* Breakdowns: Income by method + Expenses by category */}
+          {report && (report.incomeByMethod?.length || report.expensesByCategory?.length) && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-zinc-100 mt-4">
+              {report.incomeByMethod && report.incomeByMethod.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">
+                    Ingresos por método
+                  </p>
+                  <div className="space-y-2">
+                    {report.incomeByMethod.map((item) => {
+                      const pct = report.totalIncome > 0 ? Math.round((item.total / report.totalIncome) * 100) : 0;
+                      return (
+                        <div key={item.method} className="space-y-1">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-medium text-zinc-700">
+                              {PAYMENT_METHOD_LABELS[item.method as keyof typeof PAYMENT_METHOD_LABELS] || item.method}
+                            </span>
+                            <span className="font-semibold text-zinc-700 tabular-nums">{formatCurrency(item.total)}</span>
+                          </div>
+                          <div className="w-full h-1.5 bg-zinc-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              {report.expensesByCategory && report.expensesByCategory.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">
+                    Gastos por categoría
+                  </p>
+                  <div className="space-y-2">
+                    {report.expensesByCategory.map((item) => {
+                      const pct = report.totalExpenses > 0 ? Math.round((item.total / report.totalExpenses) * 100) : 0;
+                      return (
+                        <div key={item.category} className="space-y-1">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-medium text-zinc-700">
+                              {PAYMENT_CATEGORY_LABELS[item.category as keyof typeof PAYMENT_CATEGORY_LABELS] || item.category}
+                            </span>
+                            <span className="font-semibold text-zinc-700 tabular-nums">{formatCurrency(item.total)}</span>
+                          </div>
+                          <div className="w-full h-1.5 bg-zinc-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-red-400 rounded-full" style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
           )}
         </div>
       )}

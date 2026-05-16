@@ -86,7 +86,7 @@ export const AppointmentDetailHeader = memo(function AppointmentDetailHeader({
           <div className="flex items-center gap-4 min-w-0">
             <button
               onClick={() => appointment.client_id && onGoToClient(appointment.client_id)}
-              className="size-14 rounded-full bg-gradient-to-br from-rose-100 to-purple-100 flex items-center justify-center text-xl font-bold text-rose-600 flex-shrink-0 hover:from-rose-200 hover:to-purple-200 transition-colors cursor-pointer"
+              className="size-14 rounded-full bg-gradient-to-br from-salon-500/90 via-salon-400/50 to-salon-500 flex items-center justify-center text-xl font-bold text-white flex-shrink-0 shadow-md shadow-salon-500/20 cursor-pointer hover:opacity-90 transition-opacity"
               aria-label={`Ir al perfil de ${appointment.client?.name || 'Sin clienta'}`}
               title="Ver perfil de clienta"
             >

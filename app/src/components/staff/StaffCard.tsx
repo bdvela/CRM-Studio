@@ -14,7 +14,7 @@ export const StaffCard = memo(function StaffCard({ member, onView }: StaffCardPr
   return (
     <div
       onClick={() => onView(member)}
-      className={`rounded-2xl border border-zinc-200 bg-white shadow-sm cursor-pointer hover:shadow-md hover:border-salon-300 transition-shadow transition-colors active:scale-[0.97] ${!member.active ? 'opacity-60' : ''}`}
+      className={`h-full flex flex-col rounded-2xl border border-zinc-200 bg-white shadow-sm cursor-pointer hover:shadow-md hover:border-salon-300 transition-shadow transition-colors active:scale-[0.97] ${!member.active ? 'opacity-60' : ''}`}
       role="button"
       tabIndex={0}
       aria-label={`Ver detalles de ${member.name}`}
@@ -25,14 +25,17 @@ export const StaffCard = memo(function StaffCard({ member, onView }: StaffCardPr
         }
       }}
     >
-      <div className="py-5 px-5">
+      <div className="flex flex-col flex-1 py-5 px-5">
         <div className="flex items-start gap-4">
           <div
-            className="size-12 rounded-full bg-gradient-to-br from-rose-100 to-purple-100 flex items-center justify-center text-rose-600 font-bold text-lg flex-shrink-0"
+            className="size-12 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0 shadow-md shadow-rose-200/30"
+            style={{
+              backgroundImage: `linear-gradient(135deg, ${roleColor}dd, ${roleColor}88, ${roleColor})`,
+            }}
             aria-label={`Inicial de ${member.name}`}
             role="img"
           >
-            {member.name[0].toUpperCase()}
+            {member.name[0]?.toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-zinc-900 truncate">{member.name}</p>
@@ -77,7 +80,7 @@ export const StaffCard = memo(function StaffCard({ member, onView }: StaffCardPr
           </div>
         )}
 
-        <div className="flex items-center justify-between mt-3 pt-3 border-t border-zinc-100">
+        <div className="flex items-center justify-between mt-auto pt-3 border-t border-zinc-100">
           <span className="text-xs text-zinc-400">
             Comisión: <span className="font-semibold text-zinc-700">{member.commission_pct}%</span>
           </span>

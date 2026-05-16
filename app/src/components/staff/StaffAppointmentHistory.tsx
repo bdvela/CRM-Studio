@@ -68,8 +68,8 @@ export const StaffAppointmentHistory = memo(function StaffAppointmentHistory({ a
                     </td>
                     <td className="py-3 pr-4 hidden sm:table-cell">
                       <div className="flex flex-wrap gap-1">
-                        {appt.appointment_services?.slice(0, 2).map((s) => (
-                          <Badge key={s.service_id} variant="default" className="text-[10px]">
+                        {appt.appointment_services?.slice(0, 2).map((s, si) => (
+                          <Badge key={`${s.service_id}-${si}`} variant="default" className="text-[10px]">
                             {s.service?.name || 'Servicio'}
                           </Badge>
                         ))}

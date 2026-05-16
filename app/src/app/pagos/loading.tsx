@@ -3,7 +3,7 @@ export default function Loading() {
     <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-4 animate-pulse" role="status" aria-label="Cargando página de pagos">
       <div className="h-8 w-36 rounded-xl bg-zinc-200" />
       <div className="flex gap-1 p-1">
-        {[1, 2, 3, 4].map((n) => (
+        {[1, 2].map((n) => (
           <div key={n} className="h-10 w-28 rounded-xl bg-zinc-200" />
         ))}
       </div>

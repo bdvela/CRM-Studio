@@ -83,6 +83,8 @@ export interface MonthlyReport {
   topServices: Array<{ service_id: string; name: string; count: number; revenue: number }>;
   topArtists: Array<{ artist_id: string; artist_name: string; totalRevenue: number; totalServices: number; totalCommission: number }>;
   inactiveClients: Array<{ id: string; name: string }>;
+  incomeByMethod?: Array<{ method: string; total: number }>;
+  expensesByCategory?: Array<{ category: string; total: number }>;
 }
 
 export interface DashboardSkeletonProps {

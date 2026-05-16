@@ -1,11 +1,12 @@
 'use client';
 
+import { memo } from 'react';
 import type { PagosSummaryCardsProps } from './types';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
 
-export function PagosSummaryCards({ totalIngresos, totalEgresos }: PagosSummaryCardsProps) {
+export const PagosSummaryCards = memo(function PagosSummaryCards({ totalIngresos, totalEgresos }: PagosSummaryCardsProps) {
   const netProfit = totalIngresos - totalEgresos;
 
   return (
@@ -44,10 +45,10 @@ export function PagosSummaryCards({ totalIngresos, totalEgresos }: PagosSummaryC
           <div>
             <p className="text-xs text-zinc-400">Ganancia neta</p>
             <p
-              className={[
+              className={cn(
                 'text-lg font-bold tabular-nums',
                 netProfit >= 0 ? 'text-salon-600' : 'text-red-600',
-              ].join(' ')}
+              )}
             >
               {formatCurrency(netProfit)}
             </p>
@@ -56,4 +57,4 @@ export function PagosSummaryCards({ totalIngresos, totalEgresos }: PagosSummaryC
       </Card>
     </div>
   );
-}
+});

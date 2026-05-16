@@ -6,7 +6,7 @@ import type {
   Client,
 } from '@/types/database';
 
-export type TabId = 'registrar' | 'pendientes' | 'resumen' | 'comisiones';
+export type TabId = 'registrar' | 'comisiones';
 
 export interface PaymentWithRelations extends Omit<Payment, 'client' | 'appointment'> {
   client?: { name: string; phone?: string | null; id?: string } | null;
@@ -82,7 +82,7 @@ export const FORM_INIT: PaymentInsert = {
   type: 'ingreso',
   category: 'servicio',
   payment_kind: 'reserva',
-  payment_method: 'efectivo',
+  payment_method: 'yape_plin',
   appointment_id: null,
   client_id: null,
   receipt_url: null,
@@ -91,8 +91,18 @@ export const FORM_INIT: PaymentInsert = {
 
 export function formReducer(state: PaymentInsert, action: FormAction): PaymentInsert {
   switch (action.type) {
-    case 'SET':
-      return { ...state, ...action.payload };
+    case 'SET': {
+      const result = { ...state, ...action.payload };
+      if (action.payload.type && action.payload.type !== state.type) {
+        if (action.payload.type === 'egreso') {
+          result.payment_kind = null;
+          result.payment_method = null;
+        } else {
+          result.category = 'servicio';
+        }
+      }
+      return result;
+    }
     case 'RESET':
       return action.payload;
     default:

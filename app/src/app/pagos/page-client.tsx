@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useReducer, useMemo, useState } from 'react';
+import { useEffect, useRef, useReducer, useMemo, useState, useCallback, lazy, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { getPayments, createPayment, getAppointments, getClients } from '@/lib/db/queries';
 import type { Payment, Client, Appointment } from '@/types/database';
@@ -13,14 +13,18 @@ import {
   PagosSummaryCards,
   PaymentFilters,
   PaymentCard,
-  PaymentFormModal,
-  PaymentDetailModal,
 } from '@/components/pagos';
 import { formReducer, FORM_INIT } from '@/components/pagos/types';
 import type { TabId } from '@/components/pagos/types';
-import PendientesTab from './_tabs/pendientes-tab';
-import ResumenTab from './_tabs/resumen-tab';
+import { getLocalDateString } from '@/lib/utils';
 import ComisionesTab from './_tabs/comisiones-tab';
+
+const PaymentFormModal = lazy(() =>
+  import('@/components/pagos/PaymentFormModal').then(m => ({ default: m.PaymentFormModal }))
+);
+const PaymentDetailModal = lazy(() =>
+  import('@/components/pagos/PaymentDetailModal').then(m => ({ default: m.PaymentDetailModal }))
+);
 
 interface UIState {
   loading: boolean;
@@ -49,13 +53,13 @@ export default function PagosPage({ initialData }: {
   );
   const [form, dispatchForm] = useReducer(
     formReducer,
-    { ...FORM_INIT, date: new Date().toISOString().split('T')[0] }
+{ ...FORM_INIT, date: getLocalDateString() }
   );
   const skipInitialLoad = useRef(!!initialData);
   const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(null);
 
-  async function load() {
-    setUI({ loading: true });
+  async function load(showLoader = true) {
+    if (showLoader) setUI({ loading: true });
     try {
       const [p, a, c] = await Promise.all([getPayments(), getAppointments(), getClients()]);
       setPayments(p);
@@ -73,6 +77,32 @@ export default function PagosPage({ initialData }: {
     load();
   }, []);
 
+  useEffect(() => {
+    const id = setTimeout(() => {
+      import('@/components/pagos/PaymentFormModal');
+      import('@/components/pagos/PaymentDetailModal');
+    }, 500);
+    return () => clearTimeout(id);
+  }, []);
+
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval> | null = setInterval(() => load(false), 60000);
+
+    function handleVisibility() {
+      if (document.hidden && interval) {
+        clearInterval(interval);
+        interval = null;
+      } else if (!document.hidden && !interval) {
+        interval = setInterval(() => load(false), 60000);
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      if (interval) clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, []);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (ui.submitting) return;
@@ -82,7 +112,7 @@ export default function PagosPage({ initialData }: {
       await createPayment(form);
       toast.success('Pago registrado');
       setUI({ showModal: false });
-      dispatchForm({ type: 'RESET', payload: { ...FORM_INIT, date: new Date().toISOString().split('T')[0] } });
+      dispatchForm({ type: 'RESET', payload: { ...FORM_INIT, date: getLocalDateString() } });
       load();
     } catch {
       toast.error('Error al registrar');
@@ -116,6 +146,18 @@ export default function PagosPage({ initialData }: {
     return clientsData.find((c) => c.id === selectedPayment.client_id) || null;
   }, [selectedPayment, clientsData]);
 
+  const handleGoToAppointment = useCallback(() => {
+    if (!selectedPayment?.appointment_id) return;
+    setSelectedPaymentId(null);
+    push('/citas/' + selectedPayment.appointment_id);
+  }, [selectedPayment, push]);
+
+  const handleGoToClient = useCallback(() => {
+    if (!selectedClient) return;
+    setSelectedPaymentId(null);
+    push(`/clientes/${selectedClient.id}`);
+  }, [selectedClient, push]);
+
   return (
     <>
       <Header title="Pagos" />
@@ -130,7 +172,16 @@ export default function PagosPage({ initialData }: {
               filterType={ui.filterType}
               onSearchChange={(v) => setUI({ search: v })}
               onFilterTypeChange={(v) => setUI({ filterType: v })}
-              onNewClick={() => setUI({ showModal: true })}
+              onNewClick={() => {
+                const targetType = ui.filterType !== 'all' ? ui.filterType as 'ingreso' | 'egreso' : 'ingreso';
+                const today = getLocalDateString();
+                if (targetType === 'egreso') {
+                  dispatchForm({ type: 'SET', payload: { type: 'egreso', payment_kind: null, payment_method: null, category: 'servicio', date: today } });
+                } else {
+                  dispatchForm({ type: 'SET', payload: { type: 'ingreso', category: 'servicio', payment_kind: 'reserva', payment_method: 'yape_plin', date: today } });
+                }
+                setUI({ showModal: true });
+              }}
             />
             {ui.loading ? (
               <div className="space-y-3" role="status" aria-label="Cargando pagos">
@@ -147,41 +198,44 @@ export default function PagosPage({ initialData }: {
               </Card>
             ) : (
               <div className="space-y-2" role="list" aria-label="Lista de pagos">
-                {filtered.map((payment) => (
-                  <PaymentCard
-                    key={payment.id}
-                    payment={payment}
-                    onClick={() => setSelectedPaymentId(payment.id)}
-                  />
+                {filtered.map((payment, i) => (
+                  <div key={payment.id} className="animate-fadeInUp" style={{ animationDelay: `${Math.min(i * 50, 300)}ms`, opacity: 0 }}>
+                    <PaymentCard
+                      payment={payment}
+                      onClick={() => setSelectedPaymentId(payment.id)}
+                    />
+                  </div>
                 ))}
               </div>
             )}
           </>
         )}
 
-        {ui.activeTab === 'pendientes' && <PendientesTab />}
-        {ui.activeTab === 'resumen' && <ResumenTab />}
         {ui.activeTab === 'comisiones' && <ComisionesTab />}
       </div>
 
-      <PaymentFormModal
-        open={ui.showModal}
-        submitting={ui.submitting}
-        form={form}
-        dispatchForm={dispatchForm}
-        onSubmit={handleSubmit}
-        onClose={() => setUI({ showModal: false })}
-      />
+      <Suspense fallback={null}>
+        <PaymentFormModal
+          open={ui.showModal}
+          submitting={ui.submitting}
+          form={form}
+          dispatchForm={dispatchForm}
+          onSubmit={handleSubmit}
+          onClose={() => setUI({ showModal: false })}
+        />
+      </Suspense>
 
       {selectedPayment && (
-        <PaymentDetailModal
-          payment={selectedPayment}
-          appointment={selectedAppointment}
-          client={selectedClient}
-          onClose={() => setSelectedPaymentId(null)}
-          onGoToAppointment={() => { if (!selectedPayment.appointment_id) return; setSelectedPaymentId(null); push('/citas/' + selectedPayment.appointment_id); }}
-          onGoToClient={() => { if (!selectedClient) return; setSelectedPaymentId(null); push(`/clientes/${selectedClient.id}`); }}
-        />
+        <Suspense fallback={null}>
+          <PaymentDetailModal
+            payment={selectedPayment}
+            appointment={selectedAppointment}
+            client={selectedClient}
+            onClose={() => setSelectedPaymentId(null)}
+            onGoToAppointment={handleGoToAppointment}
+            onGoToClient={handleGoToClient}
+          />
+        </Suspense>
       )}
     </>
   );
