@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -114,8 +115,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         sidebarCollapsed ? 'w-20' : 'w-64'
       )}>
         <div className="flex items-center gap-3 p-5 border-b border-zinc-100">
-          <div className="size-10 rounded-xl bg-gradient-to-br from-salon-500 to-accent-600 flex items-center justify-center flex-shrink-0">
-            <span className="text-white text-lg">🌸</span>
+          <div className="size-10 rounded-xl overflow-hidden flex-shrink-0">
+            <Image src="/icon-192.png" alt="Logo" width={40} height={40} className="w-full h-full object-cover" />
           </div>
           {!sidebarCollapsed && (
             <div className="overflow-hidden">
@@ -178,8 +179,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         )}>
           <div className="flex items-center justify-between p-4 border-b border-zinc-100">
             <div className="flex items-center gap-3">
-              <div className="size-9 rounded-lg bg-gradient-to-br from-salon-500 to-accent-600 flex items-center justify-center">
-                <span className="text-white text-lg">🌸</span>
+              <div className="size-9 rounded-lg overflow-hidden">
+                <Image src="/icon-192.png" alt="Logo" width={36} height={36} className="w-full h-full object-cover" />
               </div>
               <div>
                 <h1 className="text-sm font-semibold text-zinc-900 leading-tight">Ara Zevallos</h1>
