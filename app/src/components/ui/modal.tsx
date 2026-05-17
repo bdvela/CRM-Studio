@@ -78,21 +78,18 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
     };
   }, [modalState]);
 
-  // ─── Swipe-to-dismiss via @use-gesture/react ─────────────────────────────────
+  // ─── Swipe-to-dismiss ────────────────────────────────────────────────────────
   const bind = useDrag(
     ({ movement: [, my], last, active, cancel }) => {
       const dialog = dialogRef.current;
       if (!dialog) return;
-
-      // Block upward drag
       if (my < 0) { cancel(); return; }
 
-      if (active) {
-        dialog.style.transition = 'none';
-        dialog.style.transform = `translateY(${my}px)`;
-        if (backdropRef.current) {
-          backdropRef.current.style.opacity = String(Math.max(0, 1 - my / 250));
-        }
+      dialog.style.transition = 'none';
+      dialog.style.transform = `translateY(${my}px)`;
+
+      if (backdropRef.current) {
+        backdropRef.current.style.opacity = String(Math.max(0, 1 - my / 250));
       }
 
       if (last) {
@@ -113,7 +110,6 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
       axis: 'y',
       filterTaps: true,
       pointer: { touch: true, mouse: false },
-      from: () => [0, 0],
     }
   );
 
@@ -143,16 +139,23 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
         aria-modal="true"
         aria-label={title || 'Dialog'}
       >
-        {/* ── Mobile drag zone (handle + header) ── */}
+        {/*
+          Drag zone: ALWAYS in the DOM (no sm:hidden — that was hiding it on
+          wide mobile / landscape / tablet and breaking the gesture entirely).
+          The visual handle bar is hidden on sm+ via sm:hidden.
+        */}
         <div
           {...bind()}
-          className="sm:hidden flex-shrink-0 select-none touch-none"
+          className="flex-shrink-0 select-none touch-none"
           aria-hidden="true"
         >
-          <div className="flex justify-center pt-3 pb-1">
+          {/* Handle bar — visual only, hidden on desktop */}
+          <div className="sm:hidden flex justify-center pt-3 pb-1">
             <div className="w-10 h-1 rounded-full bg-zinc-300" />
           </div>
-          <div className="bg-white border-b border-zinc-100 px-4 py-4 flex items-center justify-between rounded-t-3xl">
+
+          {/* Header */}
+          <div className="bg-white border-b border-zinc-100 px-4 sm:px-6 py-4 flex items-center justify-between rounded-t-3xl sm:rounded-t-2xl">
             {title ? (
               <span className="text-lg font-semibold text-zinc-900 truncate pr-4">{title}</span>
             ) : (
@@ -171,25 +174,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
           </div>
         </div>
 
-        {/* ── Desktop header (sm+) ── */}
-        <div className="hidden sm:flex flex-shrink-0 bg-white border-b border-zinc-100 px-6 py-4 items-center justify-between rounded-t-2xl">
-          {title ? (
-            <h2 className="text-lg font-semibold text-zinc-900 truncate pr-4">{title}</h2>
-          ) : (
-            <div />
-          )}
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg hover:bg-zinc-100 transition-colors flex-shrink-0"
-            aria-label="Cerrar"
-          >
-            <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        {/* ── Scrollable content ── */}
+        {/* Scrollable content */}
         <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-4 sm:py-6">
           {children}
         </div>
