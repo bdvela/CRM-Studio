@@ -13,12 +13,11 @@ interface ModalProps {
 export function Modal({ open, onClose, title, children }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
+  const handleRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const onCloseEvent = useEffectEvent(onClose);
   const [modalState, setModalState] = useState<'closed' | 'open' | 'exiting'>(open ? 'open' : 'closed');
   const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Swipe-to-dismiss state (refs to avoid re-renders during drag)
   const dragStartY = useRef<number | null>(null);
   const dragCurrentY = useRef(0);
 
@@ -34,17 +33,12 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
 
   useEffect(() => {
     if (modalState !== 'exiting') return;
-    exitTimerRef.current = setTimeout(() => {
-      setModalState('closed');
-    }, 150);
-    return () => {
-      if (exitTimerRef.current) clearTimeout(exitTimerRef.current);
-    };
+    exitTimerRef.current = setTimeout(() => setModalState('closed'), 150);
+    return () => { if (exitTimerRef.current) clearTimeout(exitTimerRef.current); };
   }, [modalState]);
 
   useEffect(() => {
     if (modalState !== 'open') return;
-
     previousFocusRef.current = document.activeElement as HTMLElement;
 
     function handleEscape(e: KeyboardEvent) {
@@ -57,31 +51,21 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
         'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
       );
       if (focusable.length === 0) return;
-
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
-
       if (e.shiftKey) {
-        if (document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        }
+        if (document.activeElement === first) { e.preventDefault(); last.focus(); }
       } else {
-        if (document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
+        if (document.activeElement === last) { e.preventDefault(); first.focus(); }
       }
     }
 
     document.addEventListener('keydown', handleEscape);
     document.addEventListener('keydown', handleTab);
-
     requestAnimationFrame(() => {
-      const first = dialogRef.current?.querySelector<HTMLElement>(
+      dialogRef.current?.querySelector<HTMLElement>(
         'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-      );
-      first?.focus();
+      )?.focus();
     });
 
     return () => {
@@ -91,57 +75,66 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
     };
   }, [modalState]);
 
-  // ─── Swipe handlers ──────────────────────────────────────────────────────────
+  // ─── Swipe-to-dismiss — imperative non-passive listeners ─────────────────────
+  // Must be non-passive to call preventDefault() and stop scroll container
+  // from stealing the touch event.
+  useEffect(() => {
+    if (modalState !== 'open') return;
+    const handle = handleRef.current;
+    if (!handle) return;
 
-  function onDragStart(e: React.TouchEvent) {
-    dragStartY.current = e.touches[0].clientY;
-    dragCurrentY.current = 0;
-    if (dialogRef.current) dialogRef.current.style.transition = 'none';
-  }
-
-  function onDragMove(e: React.TouchEvent) {
-    if (dragStartY.current === null) return;
-    const dy = Math.max(0, e.touches[0].clientY - dragStartY.current);
-    dragCurrentY.current = dy;
-
-    if (dialogRef.current) {
-      dialogRef.current.style.transform = `translateY(${dy}px)`;
+    function start(e: TouchEvent) {
+      dragStartY.current = e.touches[0].clientY;
+      dragCurrentY.current = 0;
+      if (dialogRef.current) dialogRef.current.style.transition = 'none';
     }
-    if (backdropRef.current) {
-      // Fade backdrop as modal slides away
-      backdropRef.current.style.opacity = String(Math.max(0, 1 - dy / 250));
-    }
-  }
 
-  function onDragEnd() {
-    if (dragStartY.current === null) return;
-    const dy = dragCurrentY.current;
-    dragStartY.current = null;
-    dragCurrentY.current = 0;
-
-    const spring = 'transform 280ms cubic-bezier(0.23,1,0.32,1)';
-
-    if (dy > 120) {
-      // Swipe far enough → dismiss
+    function move(e: TouchEvent) {
+      if (dragStartY.current === null) return;
+      e.preventDefault();
+      const dy = Math.max(0, e.touches[0].clientY - dragStartY.current);
+      dragCurrentY.current = dy;
       if (dialogRef.current) {
-        dialogRef.current.style.transition = spring;
-        dialogRef.current.style.transform = `translateY(100%)`;
-      }
-      setTimeout(() => onCloseEvent(), 220);
-    } else {
-      // Not far enough → snap back
-      if (dialogRef.current) {
-        dialogRef.current.style.transition = spring;
-        dialogRef.current.style.transform = '';
-        setTimeout(() => {
-          if (dialogRef.current) dialogRef.current.style.transition = '';
-        }, 280);
+        dialogRef.current.style.transform = `translateY(${dy}px)`;
       }
       if (backdropRef.current) {
-        backdropRef.current.style.opacity = '';
+        backdropRef.current.style.opacity = String(Math.max(0, 1 - dy / 250));
       }
     }
-  }
+
+    function end() {
+      if (dragStartY.current === null) return;
+      const dy = dragCurrentY.current;
+      dragStartY.current = null;
+      dragCurrentY.current = 0;
+      const spring = 'transform 280ms cubic-bezier(0.23,1,0.32,1)';
+
+      if (dy > 120) {
+        if (dialogRef.current) {
+          dialogRef.current.style.transition = spring;
+          dialogRef.current.style.transform = 'translateY(100%)';
+        }
+        setTimeout(() => onCloseEvent(), 220);
+      } else {
+        if (dialogRef.current) {
+          dialogRef.current.style.transition = spring;
+          dialogRef.current.style.transform = '';
+          setTimeout(() => { if (dialogRef.current) dialogRef.current.style.transition = ''; }, 280);
+        }
+        if (backdropRef.current) backdropRef.current.style.opacity = '';
+      }
+    }
+
+    handle.addEventListener('touchstart', start, { passive: true });
+    handle.addEventListener('touchmove', move, { passive: false });
+    handle.addEventListener('touchend', end, { passive: true });
+
+    return () => {
+      handle.removeEventListener('touchstart', start);
+      handle.removeEventListener('touchmove', move);
+      handle.removeEventListener('touchend', end);
+    };
+  }, [modalState]);
 
   if (modalState === 'closed') return null;
 
@@ -157,10 +150,11 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
         role="presentation"
         style={{ background: 'rgba(0,0,0,0.4)' }}
       />
+      {/* flex-col so handle+header are outside the scroll area */}
       <div
         ref={dialogRef}
         className={cn(
-          'relative w-full sm:max-w-lg md:max-w-xl lg:max-w-2xl bg-white rounded-t-3xl sm:rounded-2xl shadow-xl max-h-[80vh] sm:max-h-[85vh] overflow-y-auto',
+          'relative w-full sm:max-w-lg md:max-w-xl lg:max-w-2xl bg-white rounded-t-3xl sm:rounded-2xl shadow-xl max-h-[80vh] sm:max-h-[85vh] flex flex-col',
           modalState === 'exiting'
             ? 'animate-[zoomOut95_150ms_cubic-bezier(0.23,1,0.32,1)_forwards]'
             : 'animate-in zoom-in-95'
@@ -169,24 +163,17 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
         aria-modal="true"
         aria-label={title || 'Dialog'}
       >
-        {/* Drag handle — touch-action:none prevents scroll conflict */}
+        {/* Drag handle — outside overflow-y-auto so touch events aren't intercepted */}
         <div
-          className="sm:hidden flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing"
+          ref={handleRef}
+          className="sm:hidden flex justify-center pt-3 pb-1 flex-shrink-0 cursor-grab active:cursor-grabbing select-none"
           aria-hidden="true"
-          style={{ touchAction: 'none' }}
-          onTouchStart={onDragStart}
-          onTouchMove={onDragMove}
-          onTouchEnd={onDragEnd}
         >
           <div className="w-10 h-1 rounded-full bg-zinc-300" />
         </div>
-        <div
-          className="sticky top-0 bg-white border-b border-zinc-100 px-4 sm:px-6 py-4 flex items-center justify-between rounded-t-3xl sm:rounded-t-2xl z-10 sm:cursor-auto"
-          style={{ touchAction: 'none' }}
-          onTouchStart={onDragStart}
-          onTouchMove={onDragMove}
-          onTouchEnd={onDragEnd}
-        >
+
+        {/* Header — outside scroll area */}
+        <div className="flex-shrink-0 bg-white border-b border-zinc-100 px-4 sm:px-6 py-4 flex items-center justify-between rounded-t-3xl sm:rounded-t-2xl">
           {title ? (
             <h2 className="text-lg font-semibold text-zinc-900 truncate pr-4">{title}</h2>
           ) : (
@@ -202,7 +189,11 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
             </svg>
           </button>
         </div>
-        <div className="px-4 sm:px-6 py-4 sm:py-6">{children}</div>
+
+        {/* Scrollable content */}
+        <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-4 sm:py-6">
+          {children}
+        </div>
       </div>
     </div>
   );
