@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useEffectEvent, useState, startTransition } from 'react';
+import { useDrag } from '@use-gesture/react';
 import { cn } from '@/lib/utils';
 
 interface ModalProps {
@@ -17,11 +18,6 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
   const onCloseEvent = useEffectEvent(onClose);
   const [modalState, setModalState] = useState<'closed' | 'open' | 'exiting'>(open ? 'open' : 'closed');
   const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Drag state — refs to avoid re-renders during gesture
-  const dragActive = useRef(false);
-  const dragStartY = useRef(0);
-  const dragCurrentDY = useRef(0);
 
   useEffect(() => {
     startTransition(() => {
@@ -82,55 +78,46 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
     };
   }, [modalState]);
 
-  // ─── Gesture handlers (React synthetic events — no useEffect timing issues) ──
+  // ─── Swipe-to-dismiss via @use-gesture/react ─────────────────────────────────
+  const bind = useDrag(
+    ({ movement: [, my], last, active, cancel }) => {
+      const dialog = dialogRef.current;
+      if (!dialog) return;
 
-  function onDragDown(e: React.PointerEvent<HTMLDivElement>) {
-    if (e.pointerType === 'mouse') return;
-    dragActive.current = true;
-    dragStartY.current = e.clientY;
-    dragCurrentDY.current = 0;
-    if (dialogRef.current) dialogRef.current.style.transition = 'none';
-    // Capture: ALL subsequent pointer events route to this element
-    e.currentTarget.setPointerCapture(e.pointerId);
-  }
+      // Block upward drag
+      if (my < 0) { cancel(); return; }
 
-  function onDragMove(e: React.PointerEvent<HTMLDivElement>) {
-    if (!dragActive.current) return;
-    const dy = Math.max(0, e.clientY - dragStartY.current);
-    dragCurrentDY.current = dy;
-    if (dialogRef.current) dialogRef.current.style.transform = `translateY(${dy}px)`;
-    if (backdropRef.current) {
-      backdropRef.current.style.opacity = String(Math.max(0, 1 - dy / 250));
+      if (active) {
+        dialog.style.transition = 'none';
+        dialog.style.transform = `translateY(${my}px)`;
+        if (backdropRef.current) {
+          backdropRef.current.style.opacity = String(Math.max(0, 1 - my / 250));
+        }
+      }
+
+      if (last) {
+        const spring = 'transform 280ms cubic-bezier(0.23,1,0.32,1)';
+        if (my > 120) {
+          dialog.style.transition = spring;
+          dialog.style.transform = 'translateY(100%)';
+          setTimeout(() => onCloseEvent(), 220);
+        } else {
+          dialog.style.transition = spring;
+          dialog.style.transform = '';
+          setTimeout(() => { dialog.style.transition = ''; }, 280);
+          if (backdropRef.current) backdropRef.current.style.opacity = '';
+        }
+      }
+    },
+    {
+      axis: 'y',
+      filterTaps: true,
+      pointer: { touch: true, mouse: false },
+      from: () => [0, 0],
     }
-  }
-
-  function onDragEnd() {
-    if (!dragActive.current) return;
-    dragActive.current = false;
-    const dy = dragCurrentDY.current;
-    const spring = 'transform 280ms cubic-bezier(0.23,1,0.32,1)';
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-    if (dy > 120) {
-      dialog.style.transition = spring;
-      dialog.style.transform = 'translateY(100%)';
-      setTimeout(() => onCloseEvent(), 220);
-    } else {
-      dialog.style.transition = spring;
-      dialog.style.transform = '';
-      setTimeout(() => { dialog.style.transition = ''; }, 280);
-      if (backdropRef.current) backdropRef.current.style.opacity = '';
-    }
-  }
+  );
 
   if (modalState === 'closed') return null;
-
-  const dragHandlers = {
-    onPointerDown: onDragDown,
-    onPointerMove: onDragMove,
-    onPointerUp: onDragEnd,
-    onPointerCancel: onDragEnd,
-  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
@@ -156,17 +143,15 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
         aria-modal="true"
         aria-label={title || 'Dialog'}
       >
-        {/* ── Mobile: drag zone (handle + header) ── */}
+        {/* ── Mobile drag zone (handle + header) ── */}
         <div
-          {...dragHandlers}
-          className="sm:hidden flex-shrink-0 select-none touch-none cursor-grab"
+          {...bind()}
+          className="sm:hidden flex-shrink-0 select-none touch-none"
           aria-hidden="true"
         >
-          {/* Handle bar */}
           <div className="flex justify-center pt-3 pb-1">
             <div className="w-10 h-1 rounded-full bg-zinc-300" />
           </div>
-          {/* Header inside drag zone on mobile */}
           <div className="bg-white border-b border-zinc-100 px-4 py-4 flex items-center justify-between rounded-t-3xl">
             {title ? (
               <span className="text-lg font-semibold text-zinc-900 truncate pr-4">{title}</span>
@@ -174,7 +159,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
               <div />
             )}
             <button
-              onPointerDown={e => e.stopPropagation()}
+              onPointerDownCapture={e => e.stopPropagation()}
               onClick={onClose}
               className="p-2 rounded-lg hover:bg-zinc-100 transition-colors flex-shrink-0"
               aria-label="Cerrar"
