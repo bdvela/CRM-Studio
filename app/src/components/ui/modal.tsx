@@ -80,28 +80,33 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
 
   // ─── Swipe-to-dismiss ────────────────────────────────────────────────────────
   const bind = useDrag(
-    ({ movement: [, my], last, active, cancel }) => {
+    ({ movement: [, my], velocity: [, vy], last, cancel }) => {
       const dialog = dialogRef.current;
       if (!dialog) return;
       if (my < 0) { cancel(); return; }
 
+      // Follow finger in real time
       dialog.style.transition = 'none';
       dialog.style.transform = `translateY(${my}px)`;
-
       if (backdropRef.current) {
-        backdropRef.current.style.opacity = String(Math.max(0, 1 - my / 250));
+        backdropRef.current.style.opacity = String(Math.max(0, 1 - my / 300));
       }
 
       if (last) {
-        const spring = 'transform 280ms cubic-bezier(0.23,1,0.32,1)';
-        if (my > 120) {
+        const spring = 'transform 300ms cubic-bezier(0.32,0.72,0,1)';
+        // Dismiss: dragged > 40% of modal height OR fast flick downward
+        const rect = dialog.getBoundingClientRect();
+        const threshold = rect.height * 0.4;
+        const shouldDismiss = my > threshold || (vy > 0.5 && my > 30);
+
+        if (shouldDismiss) {
           dialog.style.transition = spring;
           dialog.style.transform = 'translateY(100%)';
-          setTimeout(() => onCloseEvent(), 220);
+          setTimeout(() => onCloseEvent(), 260);
         } else {
           dialog.style.transition = spring;
           dialog.style.transform = '';
-          setTimeout(() => { dialog.style.transition = ''; }, 280);
+          setTimeout(() => { dialog.style.transition = ''; }, 300);
           if (backdropRef.current) backdropRef.current.style.opacity = '';
         }
       }
@@ -110,6 +115,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
       axis: 'y',
       filterTaps: true,
       pointer: { touch: true, mouse: false },
+      rubberband: 0.1,
     }
   );
 
