@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase/client';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { persistEntry, loadPersistedEntries, clearPersistentCache } from './persistent-cache';
 
 type CacheEntry = { value: any; expiresAt: number; staleAt: number };
@@ -152,20 +153,23 @@ function getUpcomingBirthdays(staff: any[], limit = 3, windowDays = 45) {
   return items.slice(0, limit);
 }
 
-export async function getClients() {
-  return cachedQuery(cacheKey('clients'), 15_000, async () => {
-    const { data, error } = await supabase.from('clients').select('*').order('name');
+export async function getClients(client?: SupabaseClient<any>) {
+  const db = client ?? supabase;
+  const fetcher = async () => {
+    const { data, error } = await db.from('clients').select('*').order('name');
     if (error) throw error;
-    const { data: stats } = await supabase.from('client_stats').select('*');
+    const { data: stats } = await db.from('client_stats').select('*');
     if (stats) {
       const statsMap = new Map(stats.map((s: any) => [s.id, s]));
       data?.forEach((c: any) => { c.client_stats = statsMap.get(c.id); });
     }
     return data;
-  });
+  };
+  if (client) return fetcher();
+  return cachedQuery(cacheKey('clients'), 15_000, fetcher);
 }
 
-export async function getClientById(id: string) {
+export async function getClientById(id: string, client?: SupabaseClient<any>) {
   if (!id || id === 'undefined' || id === 'null') {
     console.warn('getClientById: invalid id', id);
     return null;
@@ -175,20 +179,23 @@ export async function getClientById(id: string) {
     console.warn('getClientById: not a valid UUID:', id);
     return null;
   }
-  return cachedQuery(cacheKey('client', id), 15_000, async () => {
+  const db = client ?? supabase;
+  const fetcher = async () => {
     try {
-      const { data, error } = await supabase.from('clients').select('*').eq('id', id).maybeSingle();
+      const { data, error } = await db.from('clients').select('*').eq('id', id).maybeSingle();
       if (error && error.code !== 'PGRST116') throw error;
       if (!data) return null;
-      
-      const { data: stats } = await supabase.from('client_stats').select('*').eq('id', id).maybeSingle();
+
+      const { data: stats } = await db.from('client_stats').select('*').eq('id', id).maybeSingle();
       if (stats) (data as any).client_stats = stats;
       return data;
     } catch (e) {
       console.error('getClientById error:', (e as any).message || e);
       return null;
     }
-  });
+  };
+  if (client) return fetcher();
+  return cachedQuery(cacheKey('client', id), 15_000, fetcher);
 }
 
 export async function createClient(input: any) {
@@ -244,10 +251,11 @@ export async function promoteClientOnCompletion(clientId: string | null): Promis
 
 // ─── CATEGORIES ─────────────────────────────────────────────────────────────
 
-export async function getCategories(activeOnly = true) {
-  return cachedQuery(cacheKey('categories', activeOnly), 60_000, async () => {
+export async function getCategories(activeOnly = true, client?: SupabaseClient<any>) {
+  const db = client ?? supabase;
+  const fetcher = async () => {
     try {
-      let q = supabase.from('categories').select('*').order('sort_order').order('name');
+      let q = db.from('categories').select('*').order('sort_order').order('name');
       if (activeOnly) q = q.eq('active', true);
       const { data, error } = await q;
       if (error) throw error;
@@ -256,31 +264,34 @@ export async function getCategories(activeOnly = true) {
       console.error('getCategories error:', e);
       return [];
     }
-  });
+  };
+  if (client) return fetcher();
+  return cachedQuery(cacheKey('categories', activeOnly), 60_000, fetcher);
 }
 
 // ─── SERVICES ───────────────────────────────────────────────────────────────
 
-export async function getServices(activeOnly = true) {
-  return cachedQuery(cacheKey('services', activeOnly), 60_000, async () => {
+export async function getServices(activeOnly = true, client?: SupabaseClient<any>) {
+  const db = client ?? supabase;
+  const fetcher = async () => {
     try {
-      let q = supabase.from('services').select(`
+      let q = db.from('services').select(`
         *,
         category:categories(*)
       `).order('category_id').order('name');
       if (activeOnly) q = q.eq('active', true);
       const { data: servicesData, error: servicesErr } = await q;
       if (servicesErr) throw servicesErr;
-      
+
       if (!servicesData || servicesData.length === 0) return [];
-      
+
       try {
         const serviceIds = servicesData.map((s: any) => s.id);
-        const { data: staffServicesData, error: ssErr } = await supabase
+        const { data: staffServicesData, error: ssErr } = await db
           .from('staff_services')
           .select('*')
           .in('service_id', serviceIds);
-        
+
         if (!ssErr && staffServicesData) {
           const ssMap = new Map<string, any[]>();
           for (const ss of staffServicesData) {
@@ -288,7 +299,7 @@ export async function getServices(activeOnly = true) {
             existing.push(ss);
             ssMap.set(ss.service_id, existing);
           }
-          
+
           return servicesData.map((svc: any) => ({
             ...svc,
             staff_services: ssMap.get(svc.id) || []
@@ -297,7 +308,7 @@ export async function getServices(activeOnly = true) {
       } catch (ssE) {
         console.log('staff_services table may not exist yet, skipping:', ssE);
       }
-      
+
       return servicesData.map((svc: any) => ({
         ...svc,
         staff_services: []
@@ -306,7 +317,9 @@ export async function getServices(activeOnly = true) {
       console.error('getServices error:', e);
       return [];
     }
-  });
+  };
+  if (client) return fetcher();
+  return cachedQuery(cacheKey('services', activeOnly), 60_000, fetcher);
 }
 
 export async function createService(input: any) {
@@ -421,10 +434,11 @@ async function getStaffForService(serviceId: string, categoryId?: string, active
   }
 }
 
-export async function getStaff(activeOnly = true) {
-  return cachedQuery(cacheKey('staff', activeOnly), 60_000, async () => {
+export async function getStaff(activeOnly = true, client?: SupabaseClient<any>) {
+  const db = client ?? supabase;
+  const fetcher = async () => {
     try {
-      let q = supabase.from('staff').select(`
+      let q = db.from('staff').select(`
         *,
         role:roles(name, color),
         staff_specialties(
@@ -435,7 +449,7 @@ export async function getStaff(activeOnly = true) {
       if (activeOnly) q = q.eq('active', true);
       const { data, error } = await q;
       if (error) throw error;
-      const { data: stats } = await supabase.from('staff_stats').select('*');
+      const { data: stats } = await db.from('staff_stats').select('*');
       if (stats) {
         const statsMap = new Map(stats.map((s: any) => [s.id, s]));
         data?.forEach((s: any) => { s.staff_stats = statsMap.get(s.id); });
@@ -445,14 +459,17 @@ export async function getStaff(activeOnly = true) {
       console.error('getStaff error:', e);
       return [];
     }
-  });
+  };
+  if (client) return fetcher();
+  return cachedQuery(cacheKey('staff', activeOnly), 60_000, fetcher);
 }
 
-export async function getStaffById(id: string) {
+export async function getStaffById(id: string, client?: SupabaseClient<any>) {
   if (!id || id === 'undefined' || id === 'null') return null;
-  return cachedQuery(cacheKey('staffById', id), 15_000, async () => {
+  const db = client ?? supabase;
+  const fetcher = async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('staff')
         .select(`
           *,
@@ -463,14 +480,16 @@ export async function getStaffById(id: string) {
         .maybeSingle();
       if (error) throw error;
       if (!data) return null;
-      const { data: stats } = await supabase.from('staff_stats').select('*').eq('id', id).maybeSingle();
+      const { data: stats } = await db.from('staff_stats').select('*').eq('id', id).maybeSingle();
       if (stats) (data as any).staff_stats = stats;
       return data;
     } catch (e) {
       console.error('getStaffById error:', e);
       return null;
     }
-  });
+  };
+  if (client) return fetcher();
+  return cachedQuery(cacheKey('staffById', id), 15_000, fetcher);
 }
 
 export async function updateStaffSpecialties(staffId: string, categoryIds: string[]) {
@@ -511,10 +530,11 @@ export async function deleteStaff(id: string) {
 
 // ─── ROLES ──────────────────────────────────────────────────────────────────
 
-export async function getRoles(activeOnly = true) {
-  return cachedQuery(cacheKey('roles', activeOnly), 60_000, async () => {
+export async function getRoles(activeOnly = true, client?: SupabaseClient<any>) {
+  const db = client ?? supabase;
+  const fetcher = async () => {
     try {
-      let q = supabase.from('roles').select('*').order('name');
+      let q = db.from('roles').select('*').order('name');
       if (activeOnly) q = q.eq('active', true);
       const { data, error } = await q;
       if (error) throw error;
@@ -523,14 +543,17 @@ export async function getRoles(activeOnly = true) {
       console.error('getRoles error:', e);
       return [];
     }
-  });
+  };
+  if (client) return fetcher();
+  return cachedQuery(cacheKey('roles', activeOnly), 60_000, fetcher);
 }
 
-export async function getAppointments(filters?: any) {
-  return cachedQuery(cacheKey('appointments', filters || {}), 30_000, async () => {
+export async function getAppointments(filters?: any, client?: SupabaseClient<any>) {
+  const db = client ?? supabase;
+  const fetcher = async () => {
     try {
-      
-      let q = supabase.from('appointments').select(`
+
+      let q = db.from('appointments').select(`
         *,
         client:clients(name, phone, instagram),
         artist:staff(name, photo_url, role:roles(name, color))
@@ -559,15 +582,15 @@ export async function getAppointments(filters?: any) {
           const apptIds = filtered.map(a => a.id);
 
           const [svcResult, commData, balanceData] = await Promise.all([
-            supabase
+            db
               .from('appointment_services')
               .select('id, appointment_id, service_id, artist_id, service_price, service:services(name, price, duration_min, category_id, category:categories(*)), artist:staff(name, photo_url)')
               .in('appointment_id', apptIds),
-            supabase
+            db
               .from('commission_details')
               .select('*')
               .in('appointment_id', apptIds),
-            supabase
+            db
               .from('appointment_balance')
               .select('*')
               .in('id', apptIds),
@@ -630,7 +653,9 @@ export async function getAppointments(filters?: any) {
        console.error('getAppointments error:', e);
        return [];
      }
-  });
+  };
+  if (client) return fetcher();
+  return cachedQuery(cacheKey('appointments', filters || {}), 30_000, fetcher);
 }
 
 export async function createAppointment(input: any) {
@@ -686,11 +711,11 @@ export async function checkOverlap(artistId: string, startTime: string, endTime:
   return data;
 }
 
-export async function getPayments(filters?: any) {
-  return cachedQuery(cacheKey('payments', filters || {}), 10_000, async () => {
+export async function getPayments(filters?: any, client?: SupabaseClient<any>) {
+  const db = client ?? supabase;
+  const fetcher = async () => {
     try {
-      
-      let q = supabase.from('payments').select('*').order('date', { ascending: false });
+      let q = db.from('payments').select('*').order('date', { ascending: false });
       if (filters?.dateFrom) q = q.gte('date', filters.dateFrom);
       if (filters?.dateTo) q = q.lte('date', filters.dateTo);
       if (filters?.type) q = q.eq('type', filters.type);
@@ -701,8 +726,8 @@ export async function getPayments(filters?: any) {
         const clientIds = [...new Set(data.flatMap(p => p.client_id ? [p.client_id] : []))];
         const apptIds = [...new Set(data.flatMap(p => p.appointment_id ? [p.appointment_id] : []))];
         const [clients, appts] = await Promise.all([
-          clientIds.length > 0 ? supabase.from('clients').select('id, name').in('id', clientIds) : { data: [] },
-          apptIds.length > 0 ? supabase.from('appointments').select('id, title, start_time').in('id', apptIds) : { data: [] },
+          clientIds.length > 0 ? db.from('clients').select('id, name').in('id', clientIds) : { data: [] },
+          apptIds.length > 0 ? db.from('appointments').select('id, title, start_time').in('id', apptIds) : { data: [] },
         ]);
         const clientMap = new Map(clients.data?.map((c: any) => [c.id, c.name]) || []);
         const apptMap = new Map(appts.data?.map((a: any) => [a.id, { title: a.title, start_time: a.start_time }]) || []);
@@ -716,7 +741,9 @@ export async function getPayments(filters?: any) {
       console.error('getPayments error:', e);
       return [];
     }
-  });
+  };
+  if (client) return fetcher();
+  return cachedQuery(cacheKey('payments', filters || {}), 10_000, fetcher);
 }
 
 export async function createPayment(input: any) {
@@ -726,8 +753,9 @@ export async function createPayment(input: any) {
   return data;
 }
 
-export async function getDashboardMetrics() {
-  return cachedQuery(cacheKey('dashboard'), 30_000, async () => {
+export async function getDashboardMetrics(client?: SupabaseClient<any>) {
+  const db = client ?? supabase;
+  const fetcher = async () => {
     const now = new Date();
     const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
@@ -739,21 +767,21 @@ export async function getDashboardMetrics() {
     const twoWeeksAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 14).toISOString();
 
     const [todayAppts, monthIncome, monthExpenses, weekIncome, lastWeekIncome, weekExpensesR, lastWeekExpensesR, activeClients, toReactivates, completedAppts, staffData] = await Promise.all([
-      supabase.from('appointments').select(`
+      db.from('appointments').select(`
         *,
         client:clients(name),
         artist:staff(name, role:roles(name))
       `).gte('start_time', todayStart).lt('start_time', todayEnd).order('start_time'),
-      supabase.from('payments').select('amount, date').eq('type', 'ingreso').gte('date', firstOfMonth).lte('date', endOfMonth),
-      supabase.from('payments').select('amount').eq('type', 'egreso').gte('date', firstOfMonth).lte('date', endOfMonth),
-      supabase.from('payments').select('amount').eq('type', 'ingreso').gte('date', weekAgo).lte('date', now.toISOString()),
-      supabase.from('payments').select('amount').eq('type', 'ingreso').gte('date', twoWeeksAgo).lte('date', weekAgo),
-      supabase.from('payments').select('amount').eq('type', 'egreso').gte('date', weekAgo).lte('date', now.toISOString()),
-      supabase.from('payments').select('amount').eq('type', 'egreso').gte('date', twoWeeksAgo).lte('date', weekAgo),
-      supabase.from('clients').select('id', { count: 'exact', head: true }).eq('status', 'activa'),
-      supabase.from('clients').select('id, name, phone, instagram, email').eq('status', 'inactiva'),
-      supabase.from('appointments').select('id, title, total_price, client_id').eq('status', 'completada'),
-      supabase.from('staff').select('id, name, birthday_date'),
+      db.from('payments').select('amount, date').eq('type', 'ingreso').gte('date', firstOfMonth).lte('date', endOfMonth),
+      db.from('payments').select('amount').eq('type', 'egreso').gte('date', firstOfMonth).lte('date', endOfMonth),
+      db.from('payments').select('amount').eq('type', 'ingreso').gte('date', weekAgo).lte('date', now.toISOString()),
+      db.from('payments').select('amount').eq('type', 'ingreso').gte('date', twoWeeksAgo).lte('date', weekAgo),
+      db.from('payments').select('amount').eq('type', 'egreso').gte('date', weekAgo).lte('date', now.toISOString()),
+      db.from('payments').select('amount').eq('type', 'egreso').gte('date', twoWeeksAgo).lte('date', weekAgo),
+      db.from('clients').select('id', { count: 'exact', head: true }).eq('status', 'activa'),
+      db.from('clients').select('id, name, phone, instagram, email').eq('status', 'inactiva'),
+      db.from('appointments').select('id, title, total_price, client_id').eq('status', 'completada'),
+      db.from('staff').select('id, name, birthday_date'),
     ]);
 
     if (todayAppts.error) throw todayAppts.error;
@@ -765,8 +793,8 @@ export async function getDashboardMetrics() {
       const clientIds = [...new Set(completedAppts.data.flatMap((a: any) => a.client_id ? [a.client_id] : []))];
       if (clientIds.length > 0) {
         const [clients, incomePayments] = await Promise.all([
-          supabase.from('clients').select('id, name').in('id', clientIds),
-          supabase.from('payments').select('appointment_id, amount').eq('type', 'ingreso').in('appointment_id', completedAppts.data.map((appt: any) => appt.id)),
+          db.from('clients').select('id, name').in('id', clientIds),
+          db.from('payments').select('appointment_id, amount').eq('type', 'ingreso').in('appointment_id', completedAppts.data.map((appt: any) => appt.id)),
         ]);
         const clientMap = new Map(clients.data?.map((c: any) => [c.id, c.name]) || []);
         const paymentMap = new Map<string, number>();
@@ -796,8 +824,8 @@ export async function getDashboardMetrics() {
     const staffOccupancy = getStaffTodayOccupancy(todayAppts.data || [], staffData.data || []);
 
     // Recent activity
-    const recentActivity = await getRecentActivity();
-    
+    const recentActivity = await getRecentActivity(db);
+
     return {
       todayAppointments: todayAppts.data || [],
       monthIncome: totalIncome,
@@ -816,7 +844,9 @@ export async function getDashboardMetrics() {
       recentActivity,
       totalAppointmentsToday: todayAppts.data?.length || 0,
     };
-  });
+  };
+  if (client) return fetcher();
+  return cachedQuery(cacheKey('dashboard'), 30_000, fetcher);
 }
 
 function getWeekTrend(payments: any[]) {
@@ -866,14 +896,14 @@ function getStaffTodayOccupancy(appointments: any[], staff: any[]) {
   }, [] as Array<{ id: string; name: string; appointmentCount: number; totalDurationMin: number; capacityPercent: number; color: string }>).sort((a: { capacityPercent: number }, b: { capacityPercent: number }) => b.capacityPercent - a.capacityPercent);
 }
 
-async function getRecentActivity() {
+async function getRecentActivity(db = supabase) {
   try {
     const [recentAppts, recentPayments] = await Promise.all([
-      supabase.from('appointments').select(`
+      db.from('appointments').select(`
         id, title, status, created_at, start_time,
         client:clients(name)
       `).order('created_at', { ascending: false }).limit(3),
-      supabase.from('payments').select(`
+      db.from('payments').select(`
         id, amount, type, date, created_at,
         client:clients(name)
       `).order('created_at', { ascending: false }).limit(2),
@@ -1264,14 +1294,14 @@ export async function getStaffAppointments(staffId: string, dateFrom: string, da
   });
 }
 
-async function getIncomeByMethod(dateFrom: string, dateTo: string) {
+async function getIncomeByMethod(dateFrom: string, dateTo: string, db = supabase) {
   const key = cacheKey('incomeByMethod', { dateFrom, dateTo });
-  return cachedQuery(key, 30_000, async () => {
+  const fetcher = async () => {
     try {
       const endOfTo = new Date(dateTo);
       endOfTo.setHours(23, 59, 59, 999);
 
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('payments')
         .select('payment_method, amount')
         .eq('type', 'ingreso')
@@ -1294,17 +1324,19 @@ async function getIncomeByMethod(dateFrom: string, dateTo: string) {
       console.error('getIncomeByMethod error:', e);
       return [];
     }
-  });
+  };
+  if (db !== supabase) return fetcher();
+  return cachedQuery(key, 30_000, fetcher);
 }
 
-async function getExpensesByCategory(dateFrom: string, dateTo: string) {
+async function getExpensesByCategory(dateFrom: string, dateTo: string, db = supabase) {
   const key = cacheKey('expensesByCategory', { dateFrom, dateTo });
-  return cachedQuery(key, 30_000, async () => {
+  const fetcher = async () => {
     try {
       const endOfTo = new Date(dateTo);
       endOfTo.setHours(23, 59, 59, 999);
 
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('payments')
         .select('category, amount')
         .eq('type', 'egreso')
@@ -1326,38 +1358,41 @@ async function getExpensesByCategory(dateFrom: string, dateTo: string) {
       console.error('getExpensesByCategory error:', e);
       return [];
     }
-  });
+  };
+  if (db !== supabase) return fetcher();
+  return cachedQuery(key, 30_000, fetcher);
 }
 
 // ─── HU-22: MONTHLY REPORT ─────────────────────────────────────────────────
 
-export async function getMonthlyReport(year: number, month: number) {
+export async function getMonthlyReport(year: number, month: number, client?: SupabaseClient<any>) {
+  const db = client ?? supabase;
   const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
   const endDate = new Date(year, month, 0, 23, 59, 59).toISOString();
   const key = cacheKey('monthlyReport', { year, month });
 
-  return cachedQuery(key, 30_000, async () => {
+  const fetcher = async () => {
     try {
       const [apptsResult, paymentsResult, clientsResult, topSvcResult, topArtResult, incomeByMethod, expensesByCategory] = await Promise.all([
-        supabase
+        db
           .from('appointments')
           .select('id, total_price, status', { count: 'exact' })
           .gte('start_time', startDate)
           .lte('start_time', endDate),
-        supabase
+        db
           .from('payments')
           .select('type, amount')
           .gte('date', startDate)
           .lte('date', endDate),
-        supabase
+        db
           .from('clients')
           .select('id, name, phone, status, created_at')
           .gte('created_at', startDate)
           .lte('created_at', endDate),
-        getTopServices(startDate, endDate),
-        getTopArtistsByRevenue(startDate, endDate),
-        getIncomeByMethod(startDate, endDate),
-        getExpensesByCategory(startDate, endDate),
+        getTopServices(startDate, endDate, db),
+        getTopArtistsByRevenue(startDate, endDate, db),
+        getIncomeByMethod(startDate, endDate, db),
+        getExpensesByCategory(startDate, endDate, db),
       ]);
 
       if (apptsResult.error) throw apptsResult.error;
@@ -1371,7 +1406,7 @@ export async function getMonthlyReport(year: number, month: number) {
         .filter(p => p.type === 'egreso')
         .reduce((sum, p) => sum + Number(p.amount), 0);
 
-      const inactiveData = await getInactiveClients(60);
+      const inactiveData = await getInactiveClients(60, db);
 
       return {
         completedAppointments: completedAppts.length,
@@ -1390,17 +1425,19 @@ export async function getMonthlyReport(year: number, month: number) {
       console.error('getMonthlyReport error:', e);
       return null;
     }
-  });
+  };
+  if (client) return fetcher();
+  return cachedQuery(key, 30_000, fetcher);
 }
 
-async function getTopServices(dateFrom: string, dateTo: string, limit = 5) {
+async function getTopServices(dateFrom: string, dateTo: string, db = supabase, limit = 5) {
   const key = cacheKey('topServices', { dateFrom, dateTo, limit });
-  return cachedQuery(key, 30_000, async () => {
+  const fetcher = async () => {
     try {
       const endOfTo = new Date(dateTo);
       endOfTo.setHours(23, 59, 59, 999);
 
-      const { data: apptIds } = await supabase
+      const { data: apptIds } = await db
         .from('appointments')
         .select('id')
         .eq('status', 'completada')
@@ -1409,7 +1446,7 @@ async function getTopServices(dateFrom: string, dateTo: string, limit = 5) {
 
       if (!apptIds || apptIds.length === 0) return [];
 
-      const { data: svcData } = await supabase
+      const { data: svcData } = await db
         .from('appointment_services')
         .select(`
           service_id,
@@ -1437,17 +1474,19 @@ async function getTopServices(dateFrom: string, dateTo: string, limit = 5) {
       console.error('getTopServices error:', e);
       return [];
     }
-  });
+  };
+  if (db !== supabase) return fetcher();
+  return cachedQuery(key, 30_000, fetcher);
 }
 
-async function getTopArtistsByRevenue(dateFrom: string, dateTo: string, limit = 5) {
+async function getTopArtistsByRevenue(dateFrom: string, dateTo: string, db = supabase, limit = 5) {
   const key = cacheKey('topArtistsByRevenue', { dateFrom, dateTo, limit });
-  return cachedQuery(key, 30_000, async () => {
+  const fetcher = async () => {
     try {
       const endOfTo = new Date(dateTo);
       endOfTo.setHours(23, 59, 59, 999);
 
-      const { data: apptIds } = await supabase
+      const { data: apptIds } = await db
         .from('appointments')
         .select('id, artist_id')
         .eq('status', 'completada')
@@ -1456,7 +1495,7 @@ async function getTopArtistsByRevenue(dateFrom: string, dateTo: string, limit = 
 
       if (!apptIds || apptIds.length === 0) return [];
 
-      const { data: svcData } = await supabase
+      const { data: svcData } = await db
         .from('commission_details')
         .select('artist_id, artist_name, service_price, artist_commission')
         .in('appointment_id', apptIds.map(a => a.id));
@@ -1486,7 +1525,9 @@ async function getTopArtistsByRevenue(dateFrom: string, dateTo: string, limit = 
       console.error('getTopArtistsByRevenue error:', e);
       return [];
     }
-  });
+  };
+  if (db !== supabase) return fetcher();
+  return cachedQuery(key, 30_000, fetcher);
 }
 
 async function getNewClients(dateFrom: string, dateTo: string) {
@@ -1512,14 +1553,14 @@ async function getNewClients(dateFrom: string, dateTo: string) {
   });
 }
 
-async function getInactiveClients(daysThreshold = 60) {
+async function getInactiveClients(daysThreshold = 60, db = supabase) {
   const key = cacheKey('inactiveClients', daysThreshold);
-  return cachedQuery(key, 30_000, async () => {
+  const fetcher = async () => {
     try {
       const thresholdDate = new Date();
       thresholdDate.setDate(thresholdDate.getDate() - daysThreshold);
 
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('clients')
         .select('id, name, phone, instagram, email, status')
         .eq('status', 'activa');
@@ -1528,7 +1569,7 @@ async function getInactiveClients(daysThreshold = 60) {
       if (!data || data.length === 0) return [];
 
       const clientIds = data.map(c => c.id);
-      const { data: stats } = await supabase
+      const { data: stats } = await db
         .from('client_stats')
         .select('*')
         .in('id', clientIds);
@@ -1550,12 +1591,14 @@ async function getInactiveClients(daysThreshold = 60) {
         }
         return acc;
       }, [] as Array<{ id: any; name: any; phone: any; instagram: any; email: any; last_visit: any }>).slice(0, 20);
-     } catch (e) {
-       console.error('getInactiveClients error:', e);
-       return [];
-     }
-   });
- }
+    } catch (e) {
+      console.error('getInactiveClients error:', e);
+      return [];
+    }
+  };
+  if (db !== supabase) return fetcher();
+  return cachedQuery(key, 30_000, fetcher);
+}
 
 export async function getAppointmentById(id: string) {
   if (!id || id === 'undefined' || id === 'null') {

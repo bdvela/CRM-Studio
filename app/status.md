@@ -125,6 +125,17 @@
 
 ## Changelog Reciente
 
+### [16 Mayo 2026 — Supabase SSR Auth Fix]
+
+#### Bug Fix: Data no aparecía en prod hasta 60s
+- **Root cause**: Server Components usaban Supabase anon client sin cookie de auth → RLS retornaba vacío → `initialMetrics` llegaba truthy-pero-vacío → cliente skipeaba refetch → esperaba el auto-refresh de 60s
+- **Fix**: `@supabase/ssr` instalado, server client con cookies, proxy.ts para refresh de sesión
+- `src/lib/supabase/server.ts` — `createClient()` con `cookies()` de Next.js
+- `src/proxy.ts` — Proxy (Next.js 16: renombrado de middleware → proxy, export `proxy` function)
+- `queries.ts` — Todas las funciones exportadas aceptan `client?: SupabaseClient`; server path bypasea cache
+- Todos los `page.tsx` actualizados para usar server client con auth real
+- **Resultado**: Data renderiza correctamente desde primera carga, sin espera
+
 ### [16 Mayo 2026 — Auth + PWA + React Doctor]
 
 #### Autenticación (HU-33)
