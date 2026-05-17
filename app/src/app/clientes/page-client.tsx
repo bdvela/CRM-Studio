@@ -132,6 +132,7 @@ export default function ClientesPage({ initialClients }: { initialClients?: Clie
       })
       .catch(() => {
         dispatch({ type: 'SET_APPOINTMENTS_LOADING', loading: false });
+        toast.error('Error al cargar detalle de clienta');
       });
   }, []);
 
@@ -270,7 +271,7 @@ export default function ClientesPage({ initialClients }: { initialClients?: Clie
           onStatusFilterChange={handleStatusFilterChange}
         />
 
-        <div aria-live="polite">
+        <div aria-live="polite" aria-busy={ui.loading}>
           <ClientListContent
             loading={ui.loading}
             clients={filteredClients}

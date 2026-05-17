@@ -1,5 +1,27 @@
 import { supabase } from '@/lib/supabase/client';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { CACHE_TTL } from '@/lib/constants';
+import type {
+  ClientInsert,
+  ServiceInsert,
+  StaffMemberInsert,
+  AppointmentInsert,
+  PaymentInsert,
+} from '@/types/database';
+
+type AppointmentServiceInput = {
+  service_id: string;
+  artist_id?: string | null;
+  service_price?: number | null;
+};
+type AppointmentCreate = AppointmentInsert & {
+  serviceIds?: string[];
+  services?: AppointmentServiceInput[];
+};
+type AppointmentUpdate = Partial<AppointmentInsert> & {
+  serviceIds?: string[];
+  services?: AppointmentServiceInput[];
+};
 import { persistEntry, loadPersistedEntries, clearPersistentCache } from './persistent-cache';
 
 type CacheEntry = { value: any; expiresAt: number; staleAt: number };
@@ -166,7 +188,7 @@ export async function getClients(client?: SupabaseClient<any>) {
     return data;
   };
   if (client) return fetcher();
-  return cachedQuery(cacheKey('clients'), 15_000, fetcher);
+  return cachedQuery(cacheKey('clients'), CACHE_TTL.CLIENTS, fetcher);
 }
 
 export async function getClientById(id: string, client?: SupabaseClient<any>) {
@@ -195,27 +217,34 @@ export async function getClientById(id: string, client?: SupabaseClient<any>) {
     }
   };
   if (client) return fetcher();
-  return cachedQuery(cacheKey('client', id), 15_000, fetcher);
+  return cachedQuery(cacheKey('client', id), CACHE_TTL.CLIENTS, fetcher);
 }
 
-export async function createClient(input: any) {
+export async function createClient(input: ClientInsert) {
   const { data, error } = await supabase.from('clients').insert(input).select().single();
   if (error) throw error;
-  clearQueryCache();
+  clearQueryCache('clients');
+  clearQueryCache('dashboard');
+  clearQueryCache('inactiveClients');
+  clearQueryCache('newClients');
   return data;
 }
 
-export async function updateClient(id: string, input: any) {
+export async function updateClient(id: string, input: Partial<ClientInsert>) {
   const { data, error } = await supabase.from('clients').update(input).eq('id', id).select().single();
   if (error) throw error;
-  clearQueryCache();
+  clearQueryCache('clients');
+  clearQueryCache('dashboard');
+  clearQueryCache('inactiveClients');
   return data;
 }
 
 export async function deleteClient(id: string) {
   const { error } = await supabase.from('clients').delete().eq('id', id);
   if (error) throw error;
-  clearQueryCache();
+  clearQueryCache('clients');
+  clearQueryCache('dashboard');
+  clearQueryCache('inactiveClients');
   return true;
 }
 
@@ -266,7 +295,7 @@ export async function getCategories(activeOnly = true, client?: SupabaseClient<a
     }
   };
   if (client) return fetcher();
-  return cachedQuery(cacheKey('categories', activeOnly), 60_000, fetcher);
+  return cachedQuery(cacheKey('categories', activeOnly), CACHE_TTL.CATEGORIES, fetcher);
 }
 
 // ─── SERVICES ───────────────────────────────────────────────────────────────
@@ -319,20 +348,20 @@ export async function getServices(activeOnly = true, client?: SupabaseClient<any
     }
   };
   if (client) return fetcher();
-  return cachedQuery(cacheKey('services', activeOnly), 60_000, fetcher);
+  return cachedQuery(cacheKey('services', activeOnly), CACHE_TTL.SERVICES, fetcher);
 }
 
-export async function createService(input: any) {
+export async function createService(input: ServiceInsert) {
   const { data, error } = await supabase.from('services').insert(input).select().single();
   if (error) throw error;
-  clearQueryCache();
+  clearQueryCache('services');
   return data;
 }
 
-export async function updateService(id: string, input: any) {
+export async function updateService(id: string, input: Partial<ServiceInsert>) {
   const { data, error } = await supabase.from('services').update(input).eq('id', id).select().single();
   if (error) throw error;
-  clearQueryCache();
+  clearQueryCache('services');
   return data;
 }
 
@@ -345,7 +374,9 @@ export async function deleteService(id: string) {
   await supabase.from('appointment_services').delete().eq('service_id', id);
   const { error } = await supabase.from('services').delete().eq('id', id);
   if (error) throw error;
-  clearQueryCache();
+  clearQueryCache('services');
+  clearQueryCache('topServices');
+  clearQueryCache('staffTopServices');
   return true;
 }
 
@@ -356,6 +387,7 @@ export async function updateStaffServices(serviceId: string, staffIds: string[])
       const rows = staffIds.map(sid => ({ service_id: serviceId, staff_id: sid }));
       await supabase.from('staff_services').insert(rows);
     }
+    clearQueryCache('services');
     return true;
   } catch (e) {
     console.log('updateStaffServices (table may not exist yet):', e);
@@ -461,7 +493,7 @@ export async function getStaff(activeOnly = true, client?: SupabaseClient<any>) 
     }
   };
   if (client) return fetcher();
-  return cachedQuery(cacheKey('staff', activeOnly), 60_000, fetcher);
+  return cachedQuery(cacheKey('staff', activeOnly), CACHE_TTL.STAFF, fetcher);
 }
 
 export async function getStaffById(id: string, client?: SupabaseClient<any>) {
@@ -489,7 +521,7 @@ export async function getStaffById(id: string, client?: SupabaseClient<any>) {
     }
   };
   if (client) return fetcher();
-  return cachedQuery(cacheKey('staffById', id), 15_000, fetcher);
+  return cachedQuery(cacheKey('staffById', id), CACHE_TTL.CLIENTS, fetcher);
 }
 
 export async function updateStaffSpecialties(staffId: string, categoryIds: string[]) {
@@ -499,7 +531,7 @@ export async function updateStaffSpecialties(staffId: string, categoryIds: strin
       const rows = categoryIds.map(cid => ({ staff_id: staffId, category_id: cid }));
       await supabase.from('staff_specialties').insert(rows);
     }
-    clearQueryCache();
+    clearQueryCache('staff');
     return true;
   } catch (e) {
     console.error('updateStaffSpecialties error:', e);
@@ -507,24 +539,28 @@ export async function updateStaffSpecialties(staffId: string, categoryIds: strin
   }
 }
 
-export async function createStaff(input: any) {
+export async function createStaff(input: StaffMemberInsert) {
   const { data, error } = await supabase.from('staff').insert(input).select().single();
   if (error) throw error;
-  clearQueryCache();
+  clearQueryCache('staff');
+  clearQueryCache('dashboard');
   return data;
 }
 
-export async function updateStaff(id: string, input: any) {
+export async function updateStaff(id: string, input: Partial<StaffMemberInsert>) {
   const { data, error } = await supabase.from('staff').update(input).eq('id', id).select().single();
   if (error) throw error;
-  clearQueryCache();
+  clearQueryCache('staff');
+  clearQueryCache('commissionReport');
   return data;
 }
 
 export async function deleteStaff(id: string) {
   const { error } = await supabase.from('staff').delete().eq('id', id);
   if (error) throw error;
-  clearQueryCache();
+  clearQueryCache('staff');
+  clearQueryCache('dashboard');
+  clearQueryCache('commissionReport');
   return true;
 }
 
@@ -545,7 +581,7 @@ export async function getRoles(activeOnly = true, client?: SupabaseClient<any>) 
     }
   };
   if (client) return fetcher();
-  return cachedQuery(cacheKey('roles', activeOnly), 60_000, fetcher);
+  return cachedQuery(cacheKey('roles', activeOnly), CACHE_TTL.ROLES, fetcher);
 }
 
 export async function getAppointments(filters?: any, client?: SupabaseClient<any>) {
@@ -655,10 +691,10 @@ export async function getAppointments(filters?: any, client?: SupabaseClient<any
      }
   };
   if (client) return fetcher();
-  return cachedQuery(cacheKey('appointments', filters || {}), 30_000, fetcher);
+  return cachedQuery(cacheKey('appointments', filters || {}), CACHE_TTL.APPOINTMENTS, fetcher);
 }
 
-export async function createAppointment(input: any) {
+export async function createAppointment(input: AppointmentCreate) {
   const { serviceIds, services, ...apptData } = input;
   const { data, error } = await supabase.from('appointments').insert(apptData).select().single();
   if (error) throw error;
@@ -674,11 +710,20 @@ export async function createAppointment(input: any) {
       const { error: svcErr } = await supabase.from('appointment_services').insert(svcRows);
       if (svcErr) throw svcErr;
   }
-  clearQueryCache();
+  clearQueryCache('appointments');
+  clearQueryCache('appointment:');
+  clearQueryCache('dashboard');
+  clearQueryCache('clients');
+  clearQueryCache('commissionReport');
+  clearQueryCache('monthlyReport');
+  clearQueryCache('staffPerformance');
+  clearQueryCache('staffAppointments');
+  clearQueryCache('topServices');
+  clearQueryCache('topArtistsByRevenue');
   return data;
 }
 
-export async function updateAppointment(id: string, input: any) {
+export async function updateAppointment(id: string, input: AppointmentUpdate) {
   const { serviceIds, services, ...rest } = input;
   const { data, error } = await supabase.from('appointments').update(rest).eq('id', id).select().single();
   if (error) throw error;
@@ -699,7 +744,16 @@ export async function updateAppointment(id: string, input: any) {
       }
     }
 
-  clearQueryCache();
+  clearQueryCache('appointments');
+  clearQueryCache('appointment:');
+  clearQueryCache('dashboard');
+  clearQueryCache('clients');
+  clearQueryCache('commissionReport');
+  clearQueryCache('monthlyReport');
+  clearQueryCache('staffPerformance');
+  clearQueryCache('staffAppointments');
+  clearQueryCache('topServices');
+  clearQueryCache('topArtistsByRevenue');
   return data;
 }
 
@@ -743,13 +797,19 @@ export async function getPayments(filters?: any, client?: SupabaseClient<any>) {
     }
   };
   if (client) return fetcher();
-  return cachedQuery(cacheKey('payments', filters || {}), 10_000, fetcher);
+  return cachedQuery(cacheKey('payments', filters || {}), CACHE_TTL.PAYMENTS, fetcher);
 }
 
-export async function createPayment(input: any) {
+export async function createPayment(input: PaymentInsert) {
   const { data, error } = await supabase.from('payments').insert(input).select().single();
   if (error) throw error;
-  clearQueryCache();
+  clearQueryCache('payments');
+  clearQueryCache('dashboard');
+  clearQueryCache('commissionReport');
+  clearQueryCache('monthlyReport');
+  clearQueryCache('incomeByMethod');
+  clearQueryCache('expensesByCategory');
+  clearQueryCache('topArtistsByRevenue');
   return data;
 }
 
@@ -846,7 +906,7 @@ export async function getDashboardMetrics(client?: SupabaseClient<any>) {
     };
   };
   if (client) return fetcher();
-  return cachedQuery(cacheKey('dashboard'), 30_000, fetcher);
+  return cachedQuery(cacheKey('dashboard'), CACHE_TTL.DASHBOARD, fetcher);
 }
 
 function getWeekTrend(payments: any[]) {
@@ -1004,7 +1064,7 @@ export async function deleteCommissionOverride(staffId: string, serviceId: strin
 // ─── COMMISSION REPORT ──────────────────────────────────────────────────────
 
 export async function getCommissionReport(dateFrom: string, dateTo: string) {
-  return cachedQuery(cacheKey('commissionReport', { dateFrom, dateTo }), 15_000, async () => {
+  return cachedQuery(cacheKey('commissionReport', { dateFrom, dateTo }), CACHE_TTL.COMMISSION_REPORT, async () => {
     try {
       const endOfTo = new Date(dateTo);
       endOfTo.setHours(23, 59, 59, 999);
@@ -1130,7 +1190,7 @@ export async function getCommissionReport(dateFrom: string, dateTo: string) {
 
 export async function getStaffPerformance(staffId: string, dateFrom: string, dateTo: string) {
   const key = cacheKey('staffPerformance', { staffId, dateFrom, dateTo });
-  return cachedQuery(key, 15_000, async () => {
+  return cachedQuery(key, CACHE_TTL.STAFF_PERFORMANCE, async () => {
     try {
       const endOfTo = new Date(dateTo);
       endOfTo.setHours(23, 59, 59, 999);
@@ -1185,7 +1245,7 @@ export async function getStaffPerformance(staffId: string, dateFrom: string, dat
 
 export async function getStaffTopServices(staffId: string, dateFrom: string, dateTo: string) {
   const key = cacheKey('staffTopServices', { staffId, dateFrom, dateTo });
-  return cachedQuery(key, 30_000, async () => {
+  return cachedQuery(key, CACHE_TTL.STAFF_TOP_SERVICES, async () => {
     try {
       const endOfTo = new Date(dateTo);
       endOfTo.setHours(23, 59, 59, 999);
@@ -1236,7 +1296,7 @@ export async function getStaffTopServices(staffId: string, dateFrom: string, dat
 
 export async function getStaffAppointments(staffId: string, dateFrom: string, dateTo: string, limit = 20) {
   const key = cacheKey('staffAppointments', { staffId, dateFrom, dateTo, limit });
-  return cachedQuery(key, 15_000, async () => {
+  return cachedQuery(key, CACHE_TTL.STAFF_APPOINTMENTS, async () => {
     try {
       const endOfTo = new Date(dateTo);
       endOfTo.setHours(23, 59, 59, 999);
@@ -1326,7 +1386,7 @@ async function getIncomeByMethod(dateFrom: string, dateTo: string, db = supabase
     }
   };
   if (db !== supabase) return fetcher();
-  return cachedQuery(key, 30_000, fetcher);
+  return cachedQuery(key, CACHE_TTL.INCOME_BY_METHOD, fetcher);
 }
 
 async function getExpensesByCategory(dateFrom: string, dateTo: string, db = supabase) {
@@ -1360,7 +1420,7 @@ async function getExpensesByCategory(dateFrom: string, dateTo: string, db = supa
     }
   };
   if (db !== supabase) return fetcher();
-  return cachedQuery(key, 30_000, fetcher);
+  return cachedQuery(key, CACHE_TTL.EXPENSES_BY_CATEGORY, fetcher);
 }
 
 // ─── HU-22: MONTHLY REPORT ─────────────────────────────────────────────────
@@ -1427,7 +1487,7 @@ export async function getMonthlyReport(year: number, month: number, client?: Sup
     }
   };
   if (client) return fetcher();
-  return cachedQuery(key, 30_000, fetcher);
+  return cachedQuery(key, CACHE_TTL.MONTHLY_REPORT, fetcher);
 }
 
 async function getTopServices(dateFrom: string, dateTo: string, db = supabase, limit = 5) {
@@ -1476,7 +1536,7 @@ async function getTopServices(dateFrom: string, dateTo: string, db = supabase, l
     }
   };
   if (db !== supabase) return fetcher();
-  return cachedQuery(key, 30_000, fetcher);
+  return cachedQuery(key, CACHE_TTL.TOP_SERVICES, fetcher);
 }
 
 async function getTopArtistsByRevenue(dateFrom: string, dateTo: string, db = supabase, limit = 5) {
@@ -1527,12 +1587,12 @@ async function getTopArtistsByRevenue(dateFrom: string, dateTo: string, db = sup
     }
   };
   if (db !== supabase) return fetcher();
-  return cachedQuery(key, 30_000, fetcher);
+  return cachedQuery(key, CACHE_TTL.TOP_ARTISTS, fetcher);
 }
 
 async function getNewClients(dateFrom: string, dateTo: string) {
   const key = cacheKey('newClients', { dateFrom, dateTo });
-  return cachedQuery(key, 30_000, async () => {
+  return cachedQuery(key, CACHE_TTL.NEW_CLIENTS, async () => {
     try {
       const endOfTo = new Date(dateTo);
       endOfTo.setHours(23, 59, 59, 999);
@@ -1597,7 +1657,7 @@ async function getInactiveClients(daysThreshold = 60, db = supabase) {
     }
   };
   if (db !== supabase) return fetcher();
-  return cachedQuery(key, 30_000, fetcher);
+  return cachedQuery(key, CACHE_TTL.INACTIVE_CLIENTS, fetcher);
 }
 
 export async function getAppointmentById(id: string) {
@@ -1610,7 +1670,7 @@ export async function getAppointmentById(id: string) {
     console.warn('getAppointmentById: not a valid UUID:', id);
     return null;
   }
-  return cachedQuery(cacheKey('appointment', id), 10_000, async () => {
+  return cachedQuery(cacheKey('appointment', id), CACHE_TTL.APPOINTMENT, async () => {
     try {
       const { data: appt, error } = await supabase
         .from('appointments')

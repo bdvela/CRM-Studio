@@ -76,7 +76,15 @@ export interface Client {
   };
 }
 
-export type ClientInsert = Omit<Client, 'id' | 'created_at' | 'updated_at' | 'client_stats'>;
+export type ClientInsert = {
+  name: string;
+  status: ClientStatus;
+  phone?: string | null;
+  email?: string | null;
+  instagram?: string | null;
+  notes?: string | null;
+  photo_url?: string | null;
+};
 
 export type PriceType = 'fixed' | 'variable';
 
@@ -222,7 +230,19 @@ export interface Payment {
   appointment?: { title: string };
 }
 
-export type PaymentInsert = Omit<Payment, 'id' | 'created_at' | 'updated_at'>;
+export type PaymentInsert = {
+  concept: string;
+  date: string;
+  amount: number;
+  type: PaymentType;
+  category: PaymentCategory;
+  payment_kind?: PaymentKind | null;
+  payment_method?: PaymentMethod | null;
+  appointment_id?: string | null;
+  client_id?: string | null;
+  receipt_url?: string | null;
+  paid?: boolean;
+};
 
 export function getCategoryName(service: Service | null | undefined): string {
   return service?.category?.name || 'Sin categoría';

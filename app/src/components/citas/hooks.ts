@@ -1,6 +1,6 @@
 'use client';
 
-import type { StaffMember, Service, AppointmentInsert } from '@/types/database';
+import type { StaffMember, Service, AppointmentInsert, AppointmentStatus } from '@/types/database';
 import { APPOINTMENT_STATUS_LABELS } from '@/types/database';
 import { formatCurrency } from '@/lib/utils';
 import { generateAppointmentTitle, toLocalISO } from './helpers';
@@ -171,6 +171,7 @@ export function useCitasHandlers(ctx: {
         if (advancePaid) {
           await createPayment({
             concept: 'Adelanto de cita', amount: DEPOSIT_AMOUNT, type: 'ingreso', category: 'servicio',
+            date: new Date().toISOString().split('T')[0],
             payment_kind: 'reserva', appointment_id: newAppt.id, client_id: form.client_id || null,
           });
         }
@@ -258,7 +259,7 @@ export function useCitasHandlers(ctx: {
   }
 
   async function advanceStatus(appt: AppointmentWithDetails) {
-    const nextStatus: Record<string, string> = { 'programada': 'en_curso', 'en_curso': 'completada' };
+    const nextStatus: Record<string, AppointmentStatus> = { 'programada': 'en_curso', 'en_curso': 'completada' };
     const newStatus = nextStatus[appt.status];
     if (!newStatus) return;
     if (newStatus === 'en_curso') {
@@ -283,7 +284,7 @@ export function useCitasHandlers(ctx: {
       if (newStatus === 'completada') {
         const pendingBalance = Number(appt.appointment_balance?.pending_balance || 0);
         if (pendingBalance > 0) {
-          await createPayment({ concept: 'Saldo de cita', amount: pendingBalance, type: 'ingreso', category: 'servicio', payment_kind: 'pago_final', appointment_id: appt.id, client_id: appt.client_id || null });
+          await createPayment({ concept: 'Saldo de cita', amount: pendingBalance, type: 'ingreso', category: 'servicio', date: new Date().toISOString().split('T')[0], payment_kind: 'pago_final', appointment_id: appt.id, client_id: appt.client_id || null });
         }
       }
       const statusLabel = APPOINTMENT_STATUS_LABELS[newStatus as keyof typeof APPOINTMENT_STATUS_LABELS];

@@ -17,6 +17,7 @@ import { useCitasHandlers } from '@/components/citas/hooks';
 import { dataReducer, uiReducer, initialUiState } from '@/components/citas/reducers';
 import type { AppointmentFormData, ViewMode, AppointmentWithDetails, ListFilter } from '@/components/citas/types';
 import { cn, startOfToday } from '@/lib/utils';
+import { toast } from 'sonner';
 import { CalendarDays, Plus } from 'lucide-react';
 import { useConfirm } from '@/context/confirm-context';
 
@@ -194,6 +195,7 @@ export default function CitasPage({ initialData }: { initialData?: InitialData }
       dispatchData({ type: 'SET_APPOINTMENTS', appointments: appts as AppointmentWithDetails[] });
     } catch (e) {
       console.error(e);
+      toast.error('Error al cargar citas');
     }
   }, []);
 

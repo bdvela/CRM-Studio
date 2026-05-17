@@ -99,7 +99,8 @@ async function replayMutation(m: QueuedMutation): Promise<boolean> {
       default:
         return false;
     }
-  } catch {
+  } catch (error) {
+    console.error(`[offline-queue] replay failed — table: ${m.table}, method: ${m.method}`, error);
     return false;
   }
 }

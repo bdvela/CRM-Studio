@@ -56,7 +56,8 @@ export function Input({
   const maxLengthAttr = maxLength || undefined;
   
   const currentValue = value ?? '';
-  
+  const errorId = id ? `${id}-error` : undefined;
+
   return (
     <div className="space-y-1.5">
       {label && (
@@ -82,6 +83,8 @@ export function Input({
                 inputMode={inputMode}
                 pattern={pattern}
                 maxLength={maxLengthAttr}
+                aria-invalid={!!displayError || undefined}
+                aria-describedby={displayError && errorId ? errorId : undefined}
                 {...props}
               />
           </div>
@@ -101,10 +104,12 @@ export function Input({
              inputMode={inputMode}
              pattern={pattern}
              maxLength={maxLengthAttr}
+             aria-invalid={!!displayError || undefined}
+             aria-describedby={displayError && errorId ? errorId : undefined}
              {...props}
            />
          )}
-      {displayError && <p className="text-xs text-red-600">{displayError}</p>}
+      {displayError && <p id={errorId} className="text-xs text-red-600" role="alert">{displayError}</p>}
     </div>
   );
 }

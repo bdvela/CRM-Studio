@@ -67,6 +67,7 @@ export default function PagosPage({ initialData }: {
       setClientsData(c);
     } catch (e) {
       console.error(e);
+      toast.error('Error al cargar datos de pagos');
     } finally {
       setUI({ loading: false });
     }
