@@ -1,8 +1,8 @@
 # Estado del Proyecto: CRM Studio de Belleza
 
-> Fecha: 16 Mayo 2026
+> Fecha: 17 Mayo 2026
 > Rama: `main`
-> Estado: Proyecto consolidado. Todas las HU implementadas. Auth + PWA completados.
+> Estado: Proyecto consolidado. Todas las HU implementadas. Auth + PWA + Auditoría completados.
 
 ---
 
@@ -20,7 +20,7 @@
 ## Resumen General
 
 ### Estado del Proyecto
-**~98% completado — Auth + PWA implementados. Faltan Tests.**
+**~99% completado — Auth + PWA + Auditoría de seguridad/calidad completados. Faltan Tests E2E.**
 
 ### Stack
 - **Framework**: Next.js 16.2.6 (App Router)
@@ -124,6 +124,36 @@
 ---
 
 ## Changelog Reciente
+
+### [17 Mayo 2026 — Auditoría General + Icono PWA]
+
+#### Seguridad
+- **proxy.ts**: redirige usuarios no-auth al server antes de renderizar rutas protegidas
+- **.gitignore**: añadido `.env.local` y `.env.*.local`
+
+#### Cache (granularidad)
+- `clearQueryCache()` global reemplazado por prefijos de dominio en todas las mutations
+- Clientes, servicios, staff, citas, pagos invalidan solo sus caches relevantes
+- `CACHE_TTL` constantes nombradas en `lib/constants.ts` (documentan rationale de cada TTL)
+
+#### Error Handling
+- `citas/page-client.tsx`, `clientes/page-client.tsx`, `pagos/page-client.tsx`: toasts de error en load failures (antes solo `console.error`)
+- `offline-queue.ts`: loggea table + method en replay failures
+
+#### TypeScript (bugs reales descubiertos)
+- Mutations tipadas con tipos existentes: `ClientInsert`, `ServiceInsert`, `StaffMemberInsert`, `AppointmentCreate`, `AppointmentUpdate`, `PaymentInsert`
+- **Bug real**: `createPayment` en `citas/hooks.ts` no enviaba `date` — pagos de reserva/saldo sin fecha
+- **Bug real**: `nextStatus` tipado como `string` en lugar de `AppointmentStatus`
+- `ClientInsert` y `PaymentInsert` refactorizados con campos opcionales correctos
+
+#### Accesibilidad
+- `input.tsx`: `aria-invalid`, `aria-describedby`, `role="alert"` en mensajes de error
+- `clientes/page-client.tsx`: `aria-busy` en lista durante loading
+
+#### Icono PWA
+- `icon-512.png`, `icon-192.png`, `apple-touch-icon.png` reemplazados por flor de cerezo generada programáticamente
+- Fondo degradado rosa→morado (salon-500 → accent-600), 5 pétalos, centro amarillo
+- Consistente con emoji 🌸 del sidebar
 
 ### [16 Mayo 2026 — Supabase SSR Auth Fix]
 
