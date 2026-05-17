@@ -164,13 +164,13 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
         aria-modal="true"
         aria-label={title || 'Dialog'}
       >
-        {/* Drag handle */}
-        <div className="sm:hidden flex justify-center pt-3 pb-1 flex-shrink-0 select-none" aria-hidden="true">
+        {/* Drag handle — touch-action:none overrides html{manipulation} so browser yields gesture to JS */}
+        <div className="sm:hidden flex justify-center pt-3 pb-1 flex-shrink-0 select-none" aria-hidden="true" style={{ touchAction: 'none' }}>
           <div className="w-10 h-1 rounded-full bg-zinc-300" />
         </div>
 
-        {/* Header */}
-        <div className="flex-shrink-0 bg-white border-b border-zinc-100 px-4 sm:px-6 py-4 flex items-center justify-between rounded-t-3xl sm:rounded-t-2xl">
+        {/* Header — also draggable zone, same override */}
+        <div className="flex-shrink-0 bg-white border-b border-zinc-100 px-4 sm:px-6 py-4 flex items-center justify-between rounded-t-3xl sm:rounded-t-2xl" style={{ touchAction: 'none' }}>
           {title ? (
             <h2 className="text-lg font-semibold text-zinc-900 truncate pr-4">{title}</h2>
           ) : (
