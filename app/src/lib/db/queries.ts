@@ -155,7 +155,8 @@ function getUpcomingBirthdays(staff: any[], limit = 3, windowDays = 45) {
   
   for (const member of staff) {
     if (!member.birthday_date) continue;
-    const birthday = new Date(member.birthday_date);
+    const [bY, bM, bD] = member.birthday_date.split('T')[0].split('-').map(Number);
+    const birthday = new Date(bY, bM - 1, bD);
     const next = new Date(start.getFullYear(), birthday.getMonth(), birthday.getDate());
     if (next < start) next.setFullYear(next.getFullYear() + 1);
     const daysLeft = Math.ceil((next.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));

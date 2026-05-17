@@ -25,7 +25,8 @@ interface StaffDetailModalProps {
 
 function birthdayLabel(birthdayDate: string | null): { label: string; isSoon: boolean } | null {
   if (!birthdayDate) return null;
-  const bd = new Date(birthdayDate);
+  const [bY, bM, bD] = birthdayDate.split('T')[0].split('-').map(Number);
+  const bd = new Date(bY, bM - 1, bD);
   const now = new Date();
   const thisYearBd = new Date(now.getFullYear(), bd.getMonth(), bd.getDate());
   if (thisYearBd < now) thisYearBd.setFullYear(thisYearBd.getFullYear() + 1);

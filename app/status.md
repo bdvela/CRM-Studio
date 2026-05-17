@@ -125,6 +125,18 @@
 
 ## Changelog Reciente
 
+### [17 Mayo 2026 — Bug fix cumpleaños + nombre PWA]
+
+#### Bug fix: cumpleaños se mostraba un día antes
+- **Root cause**: `new Date("YYYY-MM-DD")` parsea como UTC midnight → en Perú (UTC-5) se muestra día anterior
+- **Fix**: `parseLocalDate()` en `utils.ts` — split manual `YYYY-MM-DD` → `new Date(y, m-1, d)` (local)
+- Afectaba: `formatDate()` (utils.ts), `birthdayLabel()` (StaffDetailModal), `getUpcomingBirthdays()` (queries.ts)
+
+#### Nombre PWA: "AZ Studio"
+- `manifest.json`: `name` y `short_name` → "AZ Studio"
+- `layout.tsx`: metadata title y appleWebApp.title → "AZ Studio"
+- Nombre que aparece al instalar como PWA / iOS home screen
+
 ### [17 Mayo 2026 — Auditoría General + Icono PWA]
 
 #### Seguridad

@@ -7,15 +7,15 @@ import { SerwistProvider } from '@serwist/turbopack/react';
 
 export const metadata: Metadata = {
   title: {
-    default: 'Ara Zevallos Studio',
-    template: '%s | Ara Zevallos Studio',
+    default: 'AZ Studio',
+    template: '%s | AZ Studio',
   },
   description: 'Gestión integral para studio de belleza',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Ara Zevallos Studio',
+    title: 'AZ Studio',
   },
   formatDetection: {
     telephone: false,

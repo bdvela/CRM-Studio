@@ -29,8 +29,14 @@ export function formatServicePrice(params: {
   return `${formatCurrency(price_from)} - ${formatCurrency(price_to)}`;
 }
 
+// Parse YYYY-MM-DD as local date to avoid UTC→local timezone shift
+function parseLocalDate(date: string): Date {
+  const [y, m, d] = date.split('T')[0].split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
 export function formatDate(date: string) {
-  return new Date(date).toLocaleDateString('es-PE', {
+  return parseLocalDate(date).toLocaleDateString('es-PE', {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
