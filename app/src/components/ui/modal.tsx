@@ -13,11 +13,15 @@ interface ModalProps {
 export function Modal({ open, onClose, title, children }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
-  const dragZoneRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const onCloseEvent = useEffectEvent(onClose);
   const [modalState, setModalState] = useState<'closed' | 'open' | 'exiting'>(open ? 'open' : 'closed');
   const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Drag state — refs to avoid re-renders during gesture
+  const dragActive = useRef(false);
+  const dragStartY = useRef(0);
+  const dragCurrentDY = useRef(0);
 
   useEffect(() => {
     startTransition(() => {
@@ -35,7 +39,6 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
     return () => { if (exitTimerRef.current) clearTimeout(exitTimerRef.current); };
   }, [modalState]);
 
-  // Lock body scroll while open
   useEffect(() => {
     if (modalState !== 'open') return;
     const prev = document.body.style.overflow;
@@ -79,69 +82,55 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
     };
   }, [modalState]);
 
-  // ─── Swipe-to-dismiss via Pointer Events + setPointerCapture ─────────────────
-  // setPointerCapture() routes all subsequent pointer events to dragZone,
-  // bypassing touch-action and passive listener restrictions entirely.
-  useEffect(() => {
-    if (modalState !== 'open') return;
-    const dragZone = dragZoneRef.current;
-    const dialog = dialogRef.current as HTMLDivElement;
-    if (!dragZone || !dialog) return;
+  // ─── Gesture handlers (React synthetic events — no useEffect timing issues) ──
 
-    let startY = 0;
-    let currentDY = 0;
-    let active = false;
+  function onDragDown(e: React.PointerEvent<HTMLDivElement>) {
+    if (e.pointerType === 'mouse') return;
+    dragActive.current = true;
+    dragStartY.current = e.clientY;
+    dragCurrentDY.current = 0;
+    if (dialogRef.current) dialogRef.current.style.transition = 'none';
+    // Capture: ALL subsequent pointer events route to this element
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }
 
-    function onDown(e: PointerEvent) {
-      if (e.pointerType === 'mouse') return;
-      active = true;
-      startY = e.clientY;
-      currentDY = 0;
-      dialog.style.transition = 'none';
-      dragZone!.setPointerCapture(e.pointerId);
+  function onDragMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (!dragActive.current) return;
+    const dy = Math.max(0, e.clientY - dragStartY.current);
+    dragCurrentDY.current = dy;
+    if (dialogRef.current) dialogRef.current.style.transform = `translateY(${dy}px)`;
+    if (backdropRef.current) {
+      backdropRef.current.style.opacity = String(Math.max(0, 1 - dy / 250));
     }
+  }
 
-    function onMove(e: PointerEvent) {
-      if (!active) return;
-      const dy = Math.max(0, e.clientY - startY);
-      currentDY = dy;
-      dialog.style.transform = `translateY(${dy}px)`;
-      if (backdropRef.current) {
-        backdropRef.current.style.opacity = String(Math.max(0, 1 - dy / 250));
-      }
+  function onDragEnd() {
+    if (!dragActive.current) return;
+    dragActive.current = false;
+    const dy = dragCurrentDY.current;
+    const spring = 'transform 280ms cubic-bezier(0.23,1,0.32,1)';
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (dy > 120) {
+      dialog.style.transition = spring;
+      dialog.style.transform = 'translateY(100%)';
+      setTimeout(() => onCloseEvent(), 220);
+    } else {
+      dialog.style.transition = spring;
+      dialog.style.transform = '';
+      setTimeout(() => { dialog.style.transition = ''; }, 280);
+      if (backdropRef.current) backdropRef.current.style.opacity = '';
     }
-
-    function onUp() {
-      if (!active) return;
-      active = false;
-      const dy = currentDY;
-      const spring = 'transform 280ms cubic-bezier(0.23,1,0.32,1)';
-      if (dy > 120) {
-        dialog.style.transition = spring;
-        dialog.style.transform = 'translateY(100%)';
-        setTimeout(() => onCloseEvent(), 220);
-      } else {
-        dialog.style.transition = spring;
-        dialog.style.transform = '';
-        setTimeout(() => { dialog.style.transition = ''; }, 280);
-        if (backdropRef.current) backdropRef.current.style.opacity = '';
-      }
-    }
-
-    dragZone.addEventListener('pointerdown', onDown);
-    dragZone.addEventListener('pointermove', onMove);
-    dragZone.addEventListener('pointerup', onUp);
-    dragZone.addEventListener('pointercancel', onUp);
-
-    return () => {
-      dragZone.removeEventListener('pointerdown', onDown);
-      dragZone.removeEventListener('pointermove', onMove);
-      dragZone.removeEventListener('pointerup', onUp);
-      dragZone.removeEventListener('pointercancel', onUp);
-    };
-  }, [modalState]);
+  }
 
   if (modalState === 'closed') return null;
+
+  const dragHandlers = {
+    onPointerDown: onDragDown,
+    onPointerMove: onDragMove,
+    onPointerUp: onDragEnd,
+    onPointerCancel: onDragEnd,
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
@@ -167,14 +156,20 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
         aria-modal="true"
         aria-label={title || 'Dialog'}
       >
-        {/* Drag zone: handle bar + header, captured by Pointer Events */}
-        <div ref={dragZoneRef} className="sm:hidden flex-shrink-0 cursor-grab active:cursor-grabbing select-none">
-          <div className="flex justify-center pt-3 pb-1" aria-hidden="true">
+        {/* ── Mobile: drag zone (handle + header) ── */}
+        <div
+          {...dragHandlers}
+          className="sm:hidden flex-shrink-0 select-none touch-none cursor-grab"
+          aria-hidden="true"
+        >
+          {/* Handle bar */}
+          <div className="flex justify-center pt-3 pb-1">
             <div className="w-10 h-1 rounded-full bg-zinc-300" />
           </div>
+          {/* Header inside drag zone on mobile */}
           <div className="bg-white border-b border-zinc-100 px-4 py-4 flex items-center justify-between rounded-t-3xl">
             {title ? (
-              <h2 className="text-lg font-semibold text-zinc-900 truncate pr-4">{title}</h2>
+              <span className="text-lg font-semibold text-zinc-900 truncate pr-4">{title}</span>
             ) : (
               <div />
             )}
@@ -191,7 +186,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
           </div>
         </div>
 
-        {/* Desktop header (sm+) */}
+        {/* ── Desktop header (sm+) ── */}
         <div className="hidden sm:flex flex-shrink-0 bg-white border-b border-zinc-100 px-6 py-4 items-center justify-between rounded-t-2xl">
           {title ? (
             <h2 className="text-lg font-semibold text-zinc-900 truncate pr-4">{title}</h2>
@@ -209,7 +204,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
           </button>
         </div>
 
-        {/* Scrollable content */}
+        {/* ── Scrollable content ── */}
         <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-4 sm:py-6">
           {children}
         </div>
