@@ -80,7 +80,12 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
     didDrag.current   = false;
     startY.current    = e.clientY;
     currentDY.current = 0;
-    if (dialogRef.current) dialogRef.current.style.transition = 'none';
+    if (dialogRef.current) {
+      // Stop CSS animation — animations override inline style.transform,
+      // so dialog.style.transform would have no visual effect without this.
+      dialogRef.current.style.animation = 'none';
+      dialogRef.current.style.transition = 'none';
+    }
     e.currentTarget.setPointerCapture(e.pointerId);
   }
 
