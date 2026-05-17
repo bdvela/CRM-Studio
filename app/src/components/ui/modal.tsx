@@ -14,16 +14,12 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
   const dialogRef   = useRef<HTMLDivElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
   const contentRef  = useRef<HTMLDivElement>(null);
+  const dragZoneRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const onCloseEvent = useEffectEvent(onClose);
   const [modalState, setModalState] = useState<'closed' | 'open' | 'exiting'>(open ? 'open' : 'closed');
   const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const dragging          = useRef(false);
-  const startY            = useRef(0);
-  const currentDY         = useRef(0);
-  const didDrag           = useRef(false);
-  const startedInContent  = useRef(false);
+  const didDrag = useRef(false);
 
   useEffect(() => {
     startTransition(() => {
@@ -48,95 +44,35 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
   useEffect(() => {
     if (modalState !== 'open') return;
     previousFocusRef.current = document.activeElement as HTMLElement;
-    const handleEscape = (e: KeyboardEvent) => { if (e.key === 'Escape') onCloseEvent(); };
-    const handleTab = (e: KeyboardEvent) => {
+    const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') onCloseEvent(); };
+    const onTab = (e: KeyboardEvent) => {
       if (e.key !== 'Tab' || !dialogRef.current) return;
-      const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+      const els = dialogRef.current.querySelectorAll<HTMLElement>(
         'button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])'
       );
-      if (!focusable.length) return;
-      const first = focusable[0], last = focusable[focusable.length - 1];
+      if (!els.length) return;
+      const first = els[0], last = els[els.length - 1];
       if (e.shiftKey) { if (document.activeElement === first) { e.preventDefault(); last.focus(); } }
       else            { if (document.activeElement === last)  { e.preventDefault(); first.focus(); } }
     };
-    document.addEventListener('keydown', handleEscape);
-    document.addEventListener('keydown', handleTab);
-    requestAnimationFrame(() => {
+    document.addEventListener('keydown', onEsc);
+    document.addEventListener('keydown', onTab);
+    requestAnimationFrame(() =>
       dialogRef.current?.querySelector<HTMLElement>(
         'button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])'
-      )?.focus();
-    });
+      )?.focus()
+    );
     return () => {
-      document.removeEventListener('keydown', handleEscape);
-      document.removeEventListener('keydown', handleTab);
+      document.removeEventListener('keydown', onEsc);
+      document.removeEventListener('keydown', onTab);
       previousFocusRef.current?.focus();
     };
   }, [modalState]);
 
-  /* ─── drag — whole dialog, content-aware ────────────────────────────────── */
-
-  function onDown(e: React.PointerEvent<HTMLDivElement>) {
-    if (e.pointerType === 'mouse') return;
-
-    const content = contentRef.current;
-    const inContent = content
-      ? e.clientY >= content.getBoundingClientRect().top
-      : false;
-
-    // If touch starts inside scrolled content, let it scroll — don't capture
-    if (inContent && content && content.scrollTop > 0) return;
-
-    startedInContent.current = inContent;
-    dragging.current  = true;
-    didDrag.current   = false;
-    startY.current    = e.clientY;
-    currentDY.current = 0;
-
-    if (dialogRef.current) {
-      dialogRef.current.style.animation  = 'none';
-      dialogRef.current.style.transition = 'none';
-    }
-    e.currentTarget.setPointerCapture(e.pointerId);
-  }
-
-  function onMove(e: React.PointerEvent<HTMLDivElement>) {
-    if (!dragging.current) return;
-
-    // If started in content and it has scrolled since drag began, cancel dismiss
-    const content = contentRef.current;
-    if (startedInContent.current && content && content.scrollTop > 0) {
-      dragging.current = false;
-      const dialog = dialogRef.current;
-      if (dialog) {
-        dialog.style.transition = 'transform 200ms ease-out';
-        dialog.style.transform  = '';
-        setTimeout(() => { if (dialog) dialog.style.transition = ''; }, 200);
-      }
-      return;
-    }
-
-    const dy = Math.max(0, e.clientY - startY.current);
-    currentDY.current = dy;
-    if (dy > 5) didDrag.current = true;
-
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-    dialog.style.transform = `translateY(${dy}px)`;
-    if (backdropRef.current) {
-      backdropRef.current.style.opacity = String(Math.max(0, 1 - dy / 300));
-    }
-  }
-
-  function onUp() {
-    if (!dragging.current) return;
-    dragging.current = false;
-    const dy     = currentDY.current;
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-
-    const spring    = 'transform 300ms cubic-bezier(0.32,0.72,0,1)';
-    const threshold = dialog.getBoundingClientRect().height * 0.35;
-
+  // ─── Shared dismiss logic ────────────────────────────────────────────────────
+  function applyDismiss(dy: number, dialog: HTMLDivElement) {
+    const spring     = 'transform 300ms cubic-bezier(0.32,0.72,0,1)';
+    const threshold  = dialog.getBoundingClientRect().height * 0.35;
     if (dy > threshold) {
       dialog.style.transition = spring;
       dialog.style.transform  = 'translateY(100%)';
@@ -149,19 +85,120 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
     }
   }
 
+  // ─── Drag zone (handle + header) — pointer events, reliable ─────────────────
+  useEffect(() => {
+    if (modalState !== 'open') return;
+    const zone   = dragZoneRef.current;
+    const dialog = dialogRef.current as HTMLDivElement;
+    if (!zone || !dialog) return;
+
+    let startY = 0;
+    let dy     = 0;
+    let active = false;
+
+    function onDown(e: PointerEvent) {
+      if (e.pointerType === 'mouse') return;
+      active = true;
+      startY = e.clientY;
+      dy     = 0;
+      didDrag.current = false;
+      dialog.style.animation  = 'none';
+      dialog.style.transition = 'none';
+      zone!.setPointerCapture(e.pointerId);
+    }
+    function onMove(e: PointerEvent) {
+      if (!active) return;
+      dy = Math.max(0, e.clientY - startY);
+      if (dy > 5) didDrag.current = true;
+      dialog.style.transform = `translateY(${dy}px)`;
+      if (backdropRef.current)
+        backdropRef.current.style.opacity = String(Math.max(0, 1 - dy / 300));
+    }
+    function onUp() {
+      if (!active) return;
+      active = false;
+      applyDismiss(dy, dialog);
+    }
+
+    zone.addEventListener('pointerdown',   onDown);
+    zone.addEventListener('pointermove',   onMove);
+    zone.addEventListener('pointerup',     onUp);
+    zone.addEventListener('pointercancel', onUp);
+    return () => {
+      zone.removeEventListener('pointerdown',   onDown);
+      zone.removeEventListener('pointermove',   onMove);
+      zone.removeEventListener('pointerup',     onUp);
+      zone.removeEventListener('pointercancel', onUp);
+    };
+  }, [modalState]);
+
+  // ─── Content area — native touch, activates only when scrolled to top ────────
+  useEffect(() => {
+    if (modalState !== 'open') return;
+    const content = contentRef.current;
+    const dialog  = dialogRef.current as HTMLDivElement;
+    if (!content || !dialog) return;
+
+    let startY        = 0;
+    let startScrollTop = 0;
+    let dismissing    = false;
+    let dy            = 0;
+
+    // Dynamically toggle touch-action so preventDefault works when at top
+    function syncTouchAction() {
+      if (!content) return;
+      content.style.touchAction = content.scrollTop <= 0 ? 'none' : 'pan-y';
+    }
+    syncTouchAction();
+    content.addEventListener('scroll', syncTouchAction, { passive: true });
+
+    function onStart(e: TouchEvent) {
+      startY         = e.touches[0].clientY;
+      startScrollTop = content?.scrollTop ?? 0;
+      dismissing     = false;
+      dy             = 0;
+    }
+    function onMove(e: TouchEvent) {
+      const deltaY = e.touches[0].clientY - startY;
+      // Only dismiss: started at top AND moving down
+      if (startScrollTop <= 0 && deltaY > 0) {
+        dismissing = true;
+        dy = deltaY;
+        e.preventDefault();
+        dialog.style.animation  = 'none';
+        dialog.style.transition = 'none';
+        dialog.style.transform  = `translateY(${dy}px)`;
+        if (backdropRef.current)
+          backdropRef.current.style.opacity = String(Math.max(0, 1 - dy / 300));
+        didDrag.current = dy > 5;
+      }
+    }
+    function onEnd() {
+      if (!dismissing) return;
+      dismissing = false;
+      applyDismiss(dy, dialog);
+    }
+
+    content.addEventListener('touchstart', onStart,  { passive: true });
+    content.addEventListener('touchmove',  onMove,   { passive: false });
+    content.addEventListener('touchend',   onEnd,    { passive: true });
+    content.addEventListener('touchcancel', onEnd,   { passive: true });
+
+    return () => {
+      content.removeEventListener('scroll',      syncTouchAction);
+      content.removeEventListener('touchstart',  onStart);
+      content.removeEventListener('touchmove',   onMove);
+      content.removeEventListener('touchend',    onEnd);
+      content.removeEventListener('touchcancel', onEnd);
+    };
+  }, [modalState]);
+
   function onBackdropClick() {
     if (didDrag.current) { didDrag.current = false; return; }
     onClose();
   }
 
   if (modalState === 'closed') return null;
-
-  const dragHandlers = {
-    onPointerDown: onDown,
-    onPointerMove: onMove,
-    onPointerUp:   onUp,
-    onPointerCancel: onUp,
-  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
@@ -175,17 +212,10 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
         role="presentation"
         style={{ background: 'rgba(0,0,0,0.4)' }}
       />
-      {/*
-        Dialog:
-        - touch-none on whole dialog so pointer events aren't stolen by browser scroll
-        - max-h-[92vh] on mobile (more breathing room), 85vh on desktop
-        - h-auto (flex-col without explicit height = auto height up to max-h)
-      */}
       <div
-        {...dragHandlers}
         ref={dialogRef}
         className={cn(
-          'relative w-full sm:max-w-lg md:max-w-xl lg:max-w-2xl bg-white rounded-t-3xl sm:rounded-2xl shadow-xl max-h-[92vh] sm:max-h-[85vh] flex flex-col touch-none',
+          'relative w-full sm:max-w-lg md:max-w-xl lg:max-w-2xl bg-white rounded-t-3xl sm:rounded-2xl shadow-xl max-h-[92vh] sm:max-h-[85vh] flex flex-col',
           modalState === 'exiting'
             ? 'animate-[zoomOut95_150ms_cubic-bezier(0.23,1,0.32,1)_forwards]'
             : 'animate-in zoom-in-95'
@@ -194,34 +224,30 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
         aria-modal="true"
         aria-label={title || 'Dialog'}
       >
-        {/* Handle bar — compact, visual affordance only */}
-        <div className="sm:hidden flex justify-center pt-2 pb-0 flex-shrink-0 select-none" aria-hidden="true">
-          <div className="w-9 h-1 rounded-full bg-zinc-300" />
+        {/* Drag zone: handle bar + header — touch-none so pointer events work */}
+        <div ref={dragZoneRef} className="flex-shrink-0 select-none touch-none" aria-hidden="true">
+          <div className="sm:hidden flex justify-center pt-2 pb-0">
+            <div className="w-9 h-1 rounded-full bg-zinc-300" />
+          </div>
+          <div className="bg-white border-b border-zinc-100 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between rounded-t-3xl sm:rounded-t-2xl">
+            {title
+              ? <span className="text-base sm:text-lg font-semibold text-zinc-900 truncate">{title}</span>
+              : <div />}
+            <button
+              onPointerDownCapture={e => e.stopPropagation()}
+              onClick={onClose}
+              className="hidden sm:flex p-2 rounded-lg text-zinc-600 hover:bg-zinc-100 transition-colors flex-shrink-0"
+              aria-label="Cerrar"
+            >
+              <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
 
-        {/* Header */}
-        <div className="flex-shrink-0 bg-white border-b border-zinc-100 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between rounded-t-3xl sm:rounded-t-2xl">
-          {title ? (
-            <span className="text-base sm:text-lg font-semibold text-zinc-900 truncate">{title}</span>
-          ) : <div />}
-          {/* X — desktop only */}
-          <button
-            onPointerDownCapture={e => e.stopPropagation()}
-            onClick={onClose}
-            className="hidden sm:flex p-2 rounded-lg text-zinc-600 hover:bg-zinc-100 transition-colors flex-shrink-0"
-            aria-label="Cerrar"
-          >
-            <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        {/* Content — touch-auto restores scroll within the touch-none dialog */}
-        <div
-          ref={contentRef}
-          className="overflow-y-auto flex-1 px-4 sm:px-6 py-4 sm:py-6 touch-auto"
-        >
+        {/* Content — touch-action toggled by JS based on scrollTop */}
+        <div ref={contentRef} className="overflow-y-auto flex-1 px-4 sm:px-6 py-4 sm:py-6">
           {children}
         </div>
       </div>
