@@ -13,6 +13,7 @@ interface ModalProps {
 export function Modal({ open, onClose, title, children }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
+  const dragZoneRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const onCloseEvent = useEffectEvent(onClose);
   const [modalState, setModalState] = useState<'closed' | 'open' | 'exiting'>(open ? 'open' : 'closed');
@@ -78,19 +79,31 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
     };
   }, [modalState]);
 
-  // ─── Swipe-to-dismiss ─────────────────────────────────────────────────────
+  // ─── Swipe-to-dismiss via Pointer Events + setPointerCapture ─────────────────
+  // setPointerCapture() routes all subsequent pointer events to dragZone,
+  // bypassing touch-action and passive listener restrictions entirely.
   useEffect(() => {
     if (modalState !== 'open') return;
+    const dragZone = dragZoneRef.current;
     const dialog = dialogRef.current as HTMLDivElement;
-    if (!dialog) return;
+    if (!dragZone || !dialog) return;
 
-    let startY: number | null = null;
+    let startY = 0;
     let currentDY = 0;
+    let active = false;
 
-    function onMove(e: TouchEvent) {
-      if (startY === null) return;
-      e.preventDefault();
-      const dy = Math.max(0, e.touches[0].clientY - startY);
+    function onDown(e: PointerEvent) {
+      if (e.pointerType === 'mouse') return;
+      active = true;
+      startY = e.clientY;
+      currentDY = 0;
+      dialog.style.transition = 'none';
+      dragZone!.setPointerCapture(e.pointerId);
+    }
+
+    function onMove(e: PointerEvent) {
+      if (!active) return;
+      const dy = Math.max(0, e.clientY - startY);
       currentDY = dy;
       dialog.style.transform = `translateY(${dy}px)`;
       if (backdropRef.current) {
@@ -98,13 +111,10 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
       }
     }
 
-    function onEnd() {
-      document.removeEventListener('touchmove', onMove);
-      document.removeEventListener('touchend', onEnd);
-      if (startY === null) return;
+    function onUp() {
+      if (!active) return;
+      active = false;
       const dy = currentDY;
-      startY = null;
-      currentDY = 0;
       const spring = 'transform 280ms cubic-bezier(0.23,1,0.32,1)';
       if (dy > 120) {
         dialog.style.transition = spring;
@@ -118,23 +128,16 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
       }
     }
 
-    function onStart(e: TouchEvent) {
-      // Only drag if touch starts within top 80px of the modal (handle + header zone)
-      const rect = dialog.getBoundingClientRect();
-      if (e.touches[0].clientY - rect.top > 80) return;
+    dragZone.addEventListener('pointerdown', onDown);
+    dragZone.addEventListener('pointermove', onMove);
+    dragZone.addEventListener('pointerup', onUp);
+    dragZone.addEventListener('pointercancel', onUp);
 
-      startY = e.touches[0].clientY;
-      currentDY = 0;
-      dialog.style.transition = 'none';
-      document.addEventListener('touchmove', onMove, { passive: false });
-      document.addEventListener('touchend', onEnd, { passive: true });
-    }
-
-    dialog.addEventListener('touchstart', onStart, { passive: true });
     return () => {
-      dialog.removeEventListener('touchstart', onStart);
-      document.removeEventListener('touchmove', onMove);
-      document.removeEventListener('touchend', onEnd);
+      dragZone.removeEventListener('pointerdown', onDown);
+      dragZone.removeEventListener('pointermove', onMove);
+      dragZone.removeEventListener('pointerup', onUp);
+      dragZone.removeEventListener('pointercancel', onUp);
     };
   }, [modalState]);
 
@@ -163,15 +166,33 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
         role="dialog"
         aria-modal="true"
         aria-label={title || 'Dialog'}
-        style={{ touchAction: 'none' }}
       >
-        {/* Drag handle — touch-action:none overrides html{manipulation} so browser yields gesture to JS */}
-        <div className="sm:hidden flex justify-center pt-3 pb-1 flex-shrink-0 select-none" aria-hidden="true" style={{ touchAction: 'none' }}>
-          <div className="w-10 h-1 rounded-full bg-zinc-300" />
+        {/* Drag zone: handle bar + header, captured by Pointer Events */}
+        <div ref={dragZoneRef} className="sm:hidden flex-shrink-0 cursor-grab active:cursor-grabbing select-none">
+          <div className="flex justify-center pt-3 pb-1" aria-hidden="true">
+            <div className="w-10 h-1 rounded-full bg-zinc-300" />
+          </div>
+          <div className="bg-white border-b border-zinc-100 px-4 py-4 flex items-center justify-between rounded-t-3xl">
+            {title ? (
+              <h2 className="text-lg font-semibold text-zinc-900 truncate pr-4">{title}</h2>
+            ) : (
+              <div />
+            )}
+            <button
+              onPointerDown={e => e.stopPropagation()}
+              onClick={onClose}
+              className="p-2 rounded-lg hover:bg-zinc-100 transition-colors flex-shrink-0"
+              aria-label="Cerrar"
+            >
+              <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
 
-        {/* Header — also draggable zone, same override */}
-        <div className="flex-shrink-0 bg-white border-b border-zinc-100 px-4 sm:px-6 py-4 flex items-center justify-between rounded-t-3xl sm:rounded-t-2xl" style={{ touchAction: 'none' }}>
+        {/* Desktop header (sm+) */}
+        <div className="hidden sm:flex flex-shrink-0 bg-white border-b border-zinc-100 px-6 py-4 items-center justify-between rounded-t-2xl">
           {title ? (
             <h2 className="text-lg font-semibold text-zinc-900 truncate pr-4">{title}</h2>
           ) : (
@@ -188,8 +209,8 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
           </button>
         </div>
 
-        {/* Scrollable content — pan-y restores vertical scroll within the none container */}
-        <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-4 sm:py-6" style={{ touchAction: 'pan-y' }}>
+        {/* Scrollable content */}
+        <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-4 sm:py-6">
           {children}
         </div>
       </div>
