@@ -12,10 +12,15 @@ interface ModalProps {
 
 export function Modal({ open, onClose, title, children }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
+  const backdropRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const onCloseEvent = useEffectEvent(onClose);
   const [modalState, setModalState] = useState<'closed' | 'open' | 'exiting'>(open ? 'open' : 'closed');
   const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Swipe-to-dismiss state (refs to avoid re-renders during drag)
+  const dragStartY = useRef<number | null>(null);
+  const dragCurrentY = useRef(0);
 
   useEffect(() => {
     startTransition(() => {
@@ -86,11 +91,64 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
     };
   }, [modalState]);
 
+  // ─── Swipe handlers ──────────────────────────────────────────────────────────
+
+  function onDragStart(e: React.TouchEvent) {
+    dragStartY.current = e.touches[0].clientY;
+    dragCurrentY.current = 0;
+    if (dialogRef.current) dialogRef.current.style.transition = 'none';
+  }
+
+  function onDragMove(e: React.TouchEvent) {
+    if (dragStartY.current === null) return;
+    const dy = Math.max(0, e.touches[0].clientY - dragStartY.current);
+    dragCurrentY.current = dy;
+
+    if (dialogRef.current) {
+      dialogRef.current.style.transform = `translateY(${dy}px)`;
+    }
+    if (backdropRef.current) {
+      // Fade backdrop as modal slides away
+      backdropRef.current.style.opacity = String(Math.max(0, 1 - dy / 250));
+    }
+  }
+
+  function onDragEnd() {
+    if (dragStartY.current === null) return;
+    const dy = dragCurrentY.current;
+    dragStartY.current = null;
+    dragCurrentY.current = 0;
+
+    const spring = 'transform 280ms cubic-bezier(0.23,1,0.32,1)';
+
+    if (dy > 120) {
+      // Swipe far enough → dismiss
+      if (dialogRef.current) {
+        dialogRef.current.style.transition = spring;
+        dialogRef.current.style.transform = `translateY(100%)`;
+      }
+      setTimeout(() => onCloseEvent(), 220);
+    } else {
+      // Not far enough → snap back
+      if (dialogRef.current) {
+        dialogRef.current.style.transition = spring;
+        dialogRef.current.style.transform = '';
+        setTimeout(() => {
+          if (dialogRef.current) dialogRef.current.style.transition = '';
+        }, 280);
+      }
+      if (backdropRef.current) {
+        backdropRef.current.style.opacity = '';
+      }
+    }
+  }
+
   if (modalState === 'closed') return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div
+        ref={backdropRef}
         className={cn(
           'fixed inset-0',
           modalState === 'exiting' ? 'animate-[fadeOut_150ms_ease-out_forwards]' : 'animate-fadeIn'
@@ -111,10 +169,24 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
         aria-modal="true"
         aria-label={title || 'Dialog'}
       >
-        <div className="sm:hidden flex justify-center pt-3 pb-0" aria-hidden="true">
+        {/* Drag handle — touch-action:none prevents scroll conflict */}
+        <div
+          className="sm:hidden flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing"
+          aria-hidden="true"
+          style={{ touchAction: 'none' }}
+          onTouchStart={onDragStart}
+          onTouchMove={onDragMove}
+          onTouchEnd={onDragEnd}
+        >
           <div className="w-10 h-1 rounded-full bg-zinc-300" />
         </div>
-        <div className="sticky top-0 bg-white border-b border-zinc-100 px-4 sm:px-6 py-4 flex items-center justify-between rounded-t-3xl sm:rounded-t-2xl z-10">
+        <div
+          className="sticky top-0 bg-white border-b border-zinc-100 px-4 sm:px-6 py-4 flex items-center justify-between rounded-t-3xl sm:rounded-t-2xl z-10 sm:cursor-auto"
+          style={{ touchAction: 'none' }}
+          onTouchStart={onDragStart}
+          onTouchMove={onDragMove}
+          onTouchEnd={onDragEnd}
+        >
           {title ? (
             <h2 className="text-lg font-semibold text-zinc-900 truncate pr-4">{title}</h2>
           ) : (
