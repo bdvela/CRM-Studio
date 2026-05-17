@@ -18,8 +18,6 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
   const onCloseEvent = useEffectEvent(onClose);
   const [modalState, setModalState] = useState<'closed' | 'open' | 'exiting'>(open ? 'open' : 'closed');
   const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const dragStartY = useRef<number | null>(null);
-  const dragCurrentY = useRef(0);
 
   useEffect(() => {
     startTransition(() => {
@@ -37,8 +35,17 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
     return () => { if (exitTimerRef.current) clearTimeout(exitTimerRef.current); };
   }, [modalState]);
 
+  // Lock body scroll while modal is open
   useEffect(() => {
     if (modalState !== 'open') return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, [modalState]);
+
+  useEffect(() => {
+    if (modalState !== 'open') return;
+
     previousFocusRef.current = document.activeElement as HTMLElement;
 
     function handleEscape(e: KeyboardEvent) {
@@ -75,25 +82,22 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
     };
   }, [modalState]);
 
-  // ─── Swipe-to-dismiss — imperative non-passive listeners ─────────────────────
-  // Must be non-passive to call preventDefault() and stop scroll container
-  // from stealing the touch event.
+  // ─── Swipe-to-dismiss ────────────────────────────────────────────────────────
+  // touchstart → handle only (detect gesture origin)
+  // touchmove/touchend → document (follows finger regardless of position)
   useEffect(() => {
     if (modalState !== 'open') return;
     const handle = handleRef.current;
     if (!handle) return;
 
-    function start(e: TouchEvent) {
-      dragStartY.current = e.touches[0].clientY;
-      dragCurrentY.current = 0;
-      if (dialogRef.current) dialogRef.current.style.transition = 'none';
-    }
+    let startY: number | null = null;
+    let currentDY = 0;
 
-    function move(e: TouchEvent) {
-      if (dragStartY.current === null) return;
-      e.preventDefault();
-      const dy = Math.max(0, e.touches[0].clientY - dragStartY.current);
-      dragCurrentY.current = dy;
+    function onMove(e: TouchEvent) {
+      if (startY === null) return;
+      e.preventDefault(); // non-passive — stops body scroll during drag
+      const dy = Math.max(0, e.touches[0].clientY - startY);
+      currentDY = dy;
       if (dialogRef.current) {
         dialogRef.current.style.transform = `translateY(${dy}px)`;
       }
@@ -102,11 +106,13 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
       }
     }
 
-    function end() {
-      if (dragStartY.current === null) return;
-      const dy = dragCurrentY.current;
-      dragStartY.current = null;
-      dragCurrentY.current = 0;
+    function onEnd() {
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('touchend', onEnd);
+      if (startY === null) return;
+      const dy = currentDY;
+      startY = null;
+      currentDY = 0;
       const spring = 'transform 280ms cubic-bezier(0.23,1,0.32,1)';
 
       if (dy > 120) {
@@ -125,14 +131,21 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
       }
     }
 
-    handle.addEventListener('touchstart', start, { passive: true });
-    handle.addEventListener('touchmove', move, { passive: false });
-    handle.addEventListener('touchend', end, { passive: true });
+    function onStart(e: TouchEvent) {
+      startY = e.touches[0].clientY;
+      currentDY = 0;
+      if (dialogRef.current) dialogRef.current.style.transition = 'none';
+      // Attach move/end to document so they follow the finger everywhere
+      document.addEventListener('touchmove', onMove, { passive: false });
+      document.addEventListener('touchend', onEnd, { passive: true });
+    }
+
+    handle.addEventListener('touchstart', onStart, { passive: true });
 
     return () => {
-      handle.removeEventListener('touchstart', start);
-      handle.removeEventListener('touchmove', move);
-      handle.removeEventListener('touchend', end);
+      handle.removeEventListener('touchstart', onStart);
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('touchend', onEnd);
     };
   }, [modalState]);
 
@@ -150,7 +163,6 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
         role="presentation"
         style={{ background: 'rgba(0,0,0,0.4)' }}
       />
-      {/* flex-col so handle+header are outside the scroll area */}
       <div
         ref={dialogRef}
         className={cn(
@@ -163,10 +175,10 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
         aria-modal="true"
         aria-label={title || 'Dialog'}
       >
-        {/* Drag handle — outside overflow-y-auto so touch events aren't intercepted */}
+        {/* Drag handle — outside scroll area, touchstart fires onStart */}
         <div
           ref={handleRef}
-          className="sm:hidden flex justify-center pt-3 pb-1 flex-shrink-0 cursor-grab active:cursor-grabbing select-none"
+          className="sm:hidden flex justify-center pt-3 pb-1 flex-shrink-0 select-none"
           aria-hidden="true"
         >
           <div className="w-10 h-1 rounded-full bg-zinc-300" />
