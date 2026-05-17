@@ -26,7 +26,7 @@ export function RecentActivity({ activities }: Props) {
       <div className="px-6 py-4 border-b border-zinc-50">
         <h2 className="text-base font-semibold text-zinc-900">Actividad reciente</h2>
       </div>
-      <div className="p-4 space-y-1">
+      <div className="p-4 space-y-2">
         {activities.map((activity, idx) => {
           const config = activityConfig[activity.type];
           const Icon = config.icon;

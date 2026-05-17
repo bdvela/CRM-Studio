@@ -99,13 +99,13 @@ export function TodayAppointments({ appointments, onNavigate }: Props) {
                   role="button"
                   tabIndex={0}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onNavigate('/citas'); }}
-                  className="flex items-center gap-4 p-3 rounded-xl hover:bg-zinc-50 transition-colors cursor-pointer group active:scale-[0.99]"
+                  className="flex items-center gap-4 p-3 rounded-xl hover:bg-zinc-50 transition-colors cursor-pointer group active:scale-[0.98]"
                 >
                   <div className="text-center w-14 flex-shrink-0">
                     <p className="text-sm font-bold text-zinc-900">{formatTime(appt.start_time)}</p>
                     <p className="text-xs text-zinc-400">{appt.total_duration_min} min</p>
                   </div>
-                  <div className="w-px h-10 bg-zinc-100" />
+                  <div className="w-px h-10 bg-zinc-200" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <div className={`size-7 rounded-full bg-gradient-to-br ${getAvatarColor(appt.client?.name || '?')} flex items-center justify-center text-white text-xs font-bold flex-shrink-0`}>

@@ -3,7 +3,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 export function DashboardSkeleton() {
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8">
-      <Skeleton className="h-40 md:h-48 rounded-3xl w-full" />
+      <Skeleton className="h-40 md:h-48 rounded-2xl w-full" />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[1, 2, 3, 4].map((n) => (

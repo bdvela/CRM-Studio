@@ -125,6 +125,21 @@
 
 ## Changelog Reciente
 
+### [17 Mayo 2026 — Auditoría de diseño + consistencia visual]
+
+#### Auditoría de diseño (8 fixes de consistencia)
+- **`active:scale`**: unificado a `active:scale-[0.98]` en Button, DashboardStatCard, TodayAppointments, ClientCard (antes mezclaba 0.97/0.98/0.99)
+- **Modal**: botón cerrar `rounded-full` → `rounded-lg`; padding asimétrico `pt-4 pb-2` → `py-4 sm:py-6`
+- **WelcomeBanner + DashboardSkeleton**: `rounded-3xl` → `rounded-2xl` (consistente con sistema de 3 niveles)
+- **RecentActivity**: `space-y-1` → `space-y-2` (mejor legibilidad entre items)
+- **TodayAppointments**: separador `bg-zinc-100` → `bg-zinc-200` (más visible)
+- **Sistema de border-radius**: lg=inputs/iconos, xl=botones/cards pequeños, 2xl=cards/modales, full=badges/avatares
+
+#### Issues detectados (no implementados, mayor complejidad)
+- Sin dark mode (toda la app es light-only)
+- Input prefix variant padding distinto al input estándar
+- Icon sizes dispersos (size-3 a size-9 sin patrón documentado)
+
 ### [17 Mayo 2026 — Bug fix cumpleaños + nombre PWA]
 
 #### Bug fix: cumpleaños se mostraba un día antes

@@ -34,7 +34,7 @@ export function Button({ variant = 'primary', size = 'md', className, children, 
   return (
     <button
       className={cn(
-        'inline-flex items-center justify-center rounded-xl font-medium transition-colors transition-transform duration-100 active:scale-[0.97] disabled:opacity-50 disabled:pointer-events-none whitespace-nowrap',
+        'inline-flex items-center justify-center rounded-xl font-medium transition-colors transition-transform duration-100 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none whitespace-nowrap',
         variants[variant],
         sizes[size],
         className

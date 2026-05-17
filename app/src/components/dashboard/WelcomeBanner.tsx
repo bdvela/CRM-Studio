@@ -39,7 +39,7 @@ export function WelcomeBanner({ todayAppointments }: { todayAppointments: { tota
   }, [todayAppointments]);
 
   return (
-    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-salon-600 via-salon-700 to-accent-800 p-6 md:p-8 text-white">
+    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-salon-600 via-salon-700 to-accent-800 p-6 md:p-8 text-white">
       <div className="absolute top-0 right-0 size-64 bg-white/5 rounded-full -translate-y-32 translate-x-32" />
       <div className="absolute bottom-0 left-0 size-48 bg-white/5 rounded-full translate-y-24 -translate-x-24" />
       <div className="relative">

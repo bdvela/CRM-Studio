@@ -122,7 +122,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
           )}
           <button
             onClick={onClose}
-            className="p-2 rounded-full hover:bg-zinc-100 transition-colors flex-shrink-0"
+            className="p-2 rounded-lg hover:bg-zinc-100 transition-colors flex-shrink-0"
             aria-label="Cerrar"
           >
             <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -130,7 +130,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
             </svg>
           </button>
         </div>
-        <div className="px-4 pt-4 pb-2 sm:p-6">{children}</div>
+        <div className="px-4 sm:px-6 py-4 sm:py-6">{children}</div>
       </div>
     </div>
   );
