@@ -163,6 +163,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
         role="dialog"
         aria-modal="true"
         aria-label={title || 'Dialog'}
+        style={{ touchAction: 'none' }}
       >
         {/* Drag handle — touch-action:none overrides html{manipulation} so browser yields gesture to JS */}
         <div className="sm:hidden flex justify-center pt-3 pb-1 flex-shrink-0 select-none" aria-hidden="true" style={{ touchAction: 'none' }}>
@@ -187,8 +188,8 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
           </button>
         </div>
 
-        {/* Scrollable content */}
-        <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-4 sm:py-6">
+        {/* Scrollable content — pan-y restores vertical scroll within the none container */}
+        <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-4 sm:py-6" style={{ touchAction: 'pan-y' }}>
           {children}
         </div>
       </div>
