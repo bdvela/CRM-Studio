@@ -244,6 +244,22 @@ export type PaymentInsert = {
   paid?: boolean;
 };
 
+export type AppointmentFilter = {
+  dateFrom?: string;
+  dateTo?: string;
+  status?: AppointmentStatus;
+  artistId?: string;
+  clientId?: string;
+  clientSearch?: string;
+};
+
+export type PaymentFilter = {
+  dateFrom?: string;
+  dateTo?: string;
+  type?: PaymentType;
+  category?: PaymentCategory;
+};
+
 export function getCategoryName(service: Service | null | undefined): string {
   return service?.category?.name || 'Sin categoría';
 }

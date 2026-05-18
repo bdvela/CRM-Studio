@@ -16,6 +16,7 @@ import { MonthlyReport } from '@/components/dashboard/MonthlyReport';
 import { IncomeSparkline } from '@/components/dashboard/IncomeSparkline';
 import { StaffOccupancy } from '@/components/dashboard/StaffOccupancy';
 import { RecentActivity } from '@/components/dashboard/RecentActivity';
+import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { formatCurrency } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { RefreshCw, DollarSign, TrendingDown, TrendingUp, Users } from 'lucide-react';
@@ -209,40 +210,56 @@ export default function DashboardPage({ initialMetrics, initialMonthlyReport }: 
 
         {/* Main Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <TodayAppointments appointments={metrics.todayAppointments} onNavigate={(path) => push(path)} />
+          <ErrorBoundary>
+            <TodayAppointments appointments={metrics.todayAppointments} onNavigate={(path) => push(path)} />
+          </ErrorBoundary>
 
           {/* Right Column */}
           <div className="space-y-6">
             <QuickActions />
 
             {metrics.weekTrend.length > 0 && (
-              <div className="rounded-2xl bg-white border border-zinc-100 shadow-sm overflow-hidden p-5">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-semibold text-zinc-900">Tendencia semanal</h3>
-                  <DollarSign className="size-4 text-emerald-500" />
+              <ErrorBoundary>
+                <div className="rounded-2xl bg-white border border-zinc-100 shadow-sm overflow-hidden p-5">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-sm font-semibold text-zinc-900">Tendencia semanal</h3>
+                    <DollarSign className="size-4 text-emerald-500" />
+                  </div>
+                  <IncomeSparkline data={metrics.weekTrend} />
+                  <div className="flex items-center justify-between mt-2 text-xs text-zinc-400">
+                    <span>{metrics.weekTrend[0]?.date?.slice(5) || ''}</span>
+                    <span>{metrics.weekTrend[metrics.weekTrend.length - 1]?.date?.slice(5) || ''}</span>
+                  </div>
                 </div>
-                <IncomeSparkline data={metrics.weekTrend} />
-                <div className="flex items-center justify-between mt-2 text-xs text-zinc-400">
-                  <span>{metrics.weekTrend[0]?.date?.slice(5) || ''}</span>
-                  <span>{metrics.weekTrend[metrics.weekTrend.length - 1]?.date?.slice(5) || ''}</span>
-                </div>
-              </div>
+              </ErrorBoundary>
             )}
 
-            <StaffOccupancy staff={metrics.staffOccupancy} />
+            <ErrorBoundary>
+              <StaffOccupancy staff={metrics.staffOccupancy} />
+            </ErrorBoundary>
 
-            <UpcomingBirthdays birthdays={metrics.upcomingBirthdays || []} />
+            <ErrorBoundary>
+              <UpcomingBirthdays birthdays={metrics.upcomingBirthdays || []} />
+            </ErrorBoundary>
 
-            <PendingPaymentsWidget payments={metrics.pendingPayments} />
+            <ErrorBoundary>
+              <PendingPaymentsWidget payments={metrics.pendingPayments} />
+            </ErrorBoundary>
 
-            <ReactivationWidget clients={metrics.toReactivates} />
+            <ErrorBoundary>
+              <ReactivationWidget clients={metrics.toReactivates} />
+            </ErrorBoundary>
 
-            <RecentActivity activities={metrics.recentActivity} />
+            <ErrorBoundary>
+              <RecentActivity activities={metrics.recentActivity} />
+            </ErrorBoundary>
           </div>
         </div>
 
         {/* Monthly Report */}
-        <MonthlyReport report={monthlyReport} loading={loadingReport} />
+        <ErrorBoundary>
+          <MonthlyReport report={monthlyReport} loading={loadingReport} />
+        </ErrorBoundary>
       </div>
     </>
   );

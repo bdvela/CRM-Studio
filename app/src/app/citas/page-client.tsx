@@ -20,6 +20,7 @@ import { cn, startOfToday } from '@/lib/utils';
 import { toast } from 'sonner';
 import { CalendarDays, Plus } from 'lucide-react';
 import { useConfirm } from '@/context/confirm-context';
+import { ModalFallback } from '@/components/ui/modal-fallback';
 
 const AppointmentFormModalContent = lazy(() =>
   import('@/components/citas/AppointmentFormModal').then(m => ({ default: m.AppointmentFormModalContent }))
@@ -30,14 +31,6 @@ const ServiceConfigModalContent = lazy(() =>
 const ServiceSelectorModalContent = lazy(() =>
   import('@/components/citas/ServiceSelectorModal').then(m => ({ default: m.ServiceSelectorModalContent }))
 );
-
-function ModalFallback() {
-  return (
-    <div className="p-8 flex items-center justify-center">
-      <div className="size-8 rounded-full border-2 border-salon-300 border-t-transparent animate-spin" />
-    </div>
-  );
-}
 
 function MobileViewTabs({ viewMode, onViewModeChange }: { viewMode: ViewMode; onViewModeChange: (mode: ViewMode) => void }) {
   return (

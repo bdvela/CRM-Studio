@@ -3,6 +3,9 @@ import { supabase } from './supabase/client';
 
 const QUEUE_KEY = 'offline-mutation-queue';
 
+const RETRY_DELAYS_MS = [5_000, 15_000, 60_000] as const;
+const MAX_ATTEMPTS = RETRY_DELAYS_MS.length;
+
 export interface QueuedMutation {
   id: string;
   table: string;
@@ -11,6 +14,7 @@ export interface QueuedMutation {
   data: Record<string, unknown>;
   attempts: number;
   createdAt: number;
+  nextRetryAt?: number;
 }
 
 async function loadQueue(): Promise<QueuedMutation[]> {
@@ -32,11 +36,22 @@ export async function enqueue(mutation: {
   data?: Record<string, unknown>;
 }): Promise<void> {
   const queue = await loadQueue();
+  const filters = mutation.filters || {};
+
+  // Dedup: skip if identical (table + method + filters) already queued
+  const isDuplicate = queue.some(
+    (m) =>
+      m.table === mutation.table &&
+      m.method === mutation.method &&
+      JSON.stringify(m.filters) === JSON.stringify(filters)
+  );
+  if (isDuplicate) return;
+
   queue.push({
     id: crypto.randomUUID(),
     table: mutation.table,
     method: mutation.method,
-    filters: mutation.filters || {},
+    filters,
     data: mutation.data || {},
     attempts: 0,
     createdAt: Date.now(),
@@ -72,6 +87,12 @@ function isNetworkError(error: unknown): boolean {
 
 async function replayMutation(m: QueuedMutation): Promise<boolean> {
   try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      console.warn('[offline-queue] session expired — skipping replay, will retry after login');
+      return false;
+    }
+
     switch (m.method) {
       case 'insert': {
         const { error } = await supabase.from(m.table).insert(m.data).select().single();
@@ -105,17 +126,24 @@ async function replayMutation(m: QueuedMutation): Promise<boolean> {
   }
 }
 
-export async function processQueue(): Promise<{ synced: number; failed: number }> {
+export async function processQueue(): Promise<{ synced: number; failed: number; skipped: number }> {
   const queue = await loadQueue();
-  if (queue.length === 0) return { synced: 0, failed: 0 };
+  if (queue.length === 0) return { synced: 0, failed: 0, skipped: 0 };
 
   let synced = 0;
   let failed = 0;
+  let skipped = 0;
+  const now = Date.now();
 
   for (const m of queue) {
-    if (m.attempts >= 3) {
+    if (m.attempts >= MAX_ATTEMPTS) {
       failed++;
       await dequeue(m.id);
+      continue;
+    }
+
+    if (m.nextRetryAt && now < m.nextRetryAt) {
+      skipped++;
       continue;
     }
 
@@ -127,11 +155,12 @@ export async function processQueue(): Promise<{ synced: number; failed: number }
     } else {
       failed++;
       m.attempts++;
+      m.nextRetryAt = now + (RETRY_DELAYS_MS[m.attempts - 1] ?? RETRY_DELAYS_MS[RETRY_DELAYS_MS.length - 1]);
       await saveQueue(queue);
     }
   }
 
-  return { synced, failed };
+  return { synced, failed, skipped };
 }
 
 export async function tryMutation<T>(

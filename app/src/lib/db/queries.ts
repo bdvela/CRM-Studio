@@ -4,9 +4,12 @@ import { CACHE_TTL } from '@/lib/constants';
 import type {
   ClientInsert,
   ServiceInsert,
+  StaffMember,
   StaffMemberInsert,
   AppointmentInsert,
+  AppointmentFilter,
   PaymentInsert,
+  PaymentFilter,
 } from '@/types/database';
 
 type AppointmentServiceInput = {
@@ -24,7 +27,15 @@ type AppointmentUpdate = Partial<AppointmentInsert> & {
 };
 import { persistEntry, loadPersistedEntries, clearPersistentCache } from './persistent-cache';
 
-type CacheEntry = { value: any; expiresAt: number; staleAt: number };
+const STAFF_WITH_ROLE_QUERY = `*, role:roles(name, color), staff_specialties(*, category:categories(*))` as const;
+
+function toEndOfDay(dateStr: string): string {
+  const d = new Date(dateStr);
+  d.setHours(23, 59, 59, 999);
+  return d.toISOString();
+}
+
+type CacheEntry = { value: unknown; expiresAt: number; staleAt: number };
 const queryCache = new Map<string, CacheEntry>();
 const pendingQueries = new Map<string, Promise<any>>();
 const lastErrors = new Map<string, string | null>();
@@ -52,8 +63,18 @@ function persist(key: string, value: unknown, expiresAt: number, staleAt: number
   persistEntry(key, { value, expiresAt, staleAt });
 }
 
-function cacheKey(name: string, params?: unknown) {
-  return params === undefined ? name : `${name}:${JSON.stringify(params)}`;
+function cacheKey(name: string, params?: unknown): string {
+  if (params === undefined) return name;
+  if (params !== null && typeof params === 'object') {
+    const sorted = Object.keys(params as object)
+      .sort()
+      .reduce<Record<string, unknown>>((acc, k) => {
+        acc[k] = (params as Record<string, unknown>)[k];
+        return acc;
+      }, {});
+    return `${name}:${JSON.stringify(sorted)}`;
+  }
+  return `${name}:${JSON.stringify(params)}`;
 }
 
 function clearQueryCache(prefix?: string) {
@@ -148,7 +169,7 @@ export function removeCacheRefresh(key: string, cb: () => void) {
   staleCallbacks.get(key)?.delete(cb);
 }
 
-function getUpcomingBirthdays(staff: any[], limit = 3, windowDays = 45) {
+function getUpcomingBirthdays(staff: Pick<StaffMember, 'id' | 'name' | 'birthday_date'>[], limit = 3, windowDays = 45) {
   const today = new Date();
   const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   const items: Array<{ id: string; name: string; birthday_date: string; next_birthday: string; days_left: number; is_today: boolean }> = [];
@@ -356,6 +377,8 @@ export async function createService(input: ServiceInsert) {
   const { data, error } = await supabase.from('services').insert(input).select().single();
   if (error) throw error;
   clearQueryCache('services');
+  clearQueryCache('topServices');
+  clearQueryCache('staffTopServices');
   return data;
 }
 
@@ -363,6 +386,8 @@ export async function updateService(id: string, input: Partial<ServiceInsert>) {
   const { data, error } = await supabase.from('services').update(input).eq('id', id).select().single();
   if (error) throw error;
   clearQueryCache('services');
+  clearQueryCache('topServices');
+  clearQueryCache('staffTopServices');
   return data;
 }
 
@@ -419,11 +444,7 @@ async function getStaffForService(serviceId: string, categoryId?: string, active
     }
     
     if (hasExplicitAssignments && assignedStaffIds.length > 0) {
-      let q = supabase.from('staff').select(`
-        *,
-        role:roles(name, color),
-        staff_specialties(*, category:categories(*))
-      `).order('name').in('id', assignedStaffIds);
+      let q = supabase.from('staff').select(STAFF_WITH_ROLE_QUERY).order('name').in('id', assignedStaffIds);
       if (activeOnly) q = q.eq('active', true);
       const { data, error } = await q;
       if (error) throw error;
@@ -440,23 +461,15 @@ async function getStaffForService(serviceId: string, categoryId?: string, active
       
       if (specialtyStaffIds && specialtyStaffIds.length > 0) {
         const staffIds = specialtyStaffIds.map(s => s.staff_id);
-        let q = supabase.from('staff').select(`
-          *,
-          role:roles(name, color),
-          staff_specialties(*, category:categories(*))
-        `).order('name').in('id', staffIds);
+        let q = supabase.from('staff').select(STAFF_WITH_ROLE_QUERY).order('name').in('id', staffIds);
         if (activeOnly) q = q.eq('active', true);
         const { data, error } = await q;
         if (error) throw error;
         return data || [];
       }
     }
-    
-    let q = supabase.from('staff').select(`
-      *,
-      role:roles(name, color),
-      staff_specialties(*, category:categories(*))
-    `).order('name');
+
+    let q = supabase.from('staff').select(STAFF_WITH_ROLE_QUERY).order('name');
     if (activeOnly) q = q.eq('active', true);
     const { data, error } = await q;
     if (error) throw error;
@@ -471,14 +484,7 @@ export async function getStaff(activeOnly = true, client?: SupabaseClient<any>) 
   const db = client ?? supabase;
   const fetcher = async () => {
     try {
-      let q = db.from('staff').select(`
-        *,
-        role:roles(name, color),
-        staff_specialties(
-          *,
-          category:categories(*)
-        )
-      `).order('name');
+      let q = db.from('staff').select(STAFF_WITH_ROLE_QUERY).order('name');
       if (activeOnly) q = q.eq('active', true);
       const { data, error } = await q;
       if (error) throw error;
@@ -504,11 +510,7 @@ export async function getStaffById(id: string, client?: SupabaseClient<any>) {
     try {
       const { data, error } = await db
         .from('staff')
-        .select(`
-          *,
-          role:roles(name, color),
-          staff_specialties(*, category:categories(*))
-        `)
+        .select(STAFF_WITH_ROLE_QUERY)
         .eq('id', id)
         .maybeSingle();
       if (error) throw error;
@@ -585,7 +587,7 @@ export async function getRoles(activeOnly = true, client?: SupabaseClient<any>) 
   return cachedQuery(cacheKey('roles', activeOnly), CACHE_TTL.ROLES, fetcher);
 }
 
-export async function getAppointments(filters?: any, client?: SupabaseClient<any>) {
+export async function getAppointments(filters?: AppointmentFilter, client?: SupabaseClient<any>) {
   const db = client ?? supabase;
   const fetcher = async () => {
     try {
@@ -597,9 +599,7 @@ export async function getAppointments(filters?: any, client?: SupabaseClient<any
       `).order('start_time', { ascending: true });
       if (filters?.dateFrom) q = q.gte('start_time', filters.dateFrom);
       if (filters?.dateTo) {
-        const endOfDay = new Date(filters.dateTo);
-        endOfDay.setHours(23, 59, 59, 999);
-        q = q.lte('start_time', endOfDay.toISOString());
+        q = q.lte('start_time', toEndOfDay(filters.dateTo));
       }
       if (filters?.status) q = q.eq('status', filters.status);
       if (filters?.artistId) q = q.eq('artist_id', filters.artistId);
@@ -766,7 +766,7 @@ export async function checkOverlap(artistId: string, startTime: string, endTime:
   return data;
 }
 
-export async function getPayments(filters?: any, client?: SupabaseClient<any>) {
+export async function getPayments(filters?: PaymentFilter, client?: SupabaseClient<any>) {
   const db = client ?? supabase;
   const fetcher = async () => {
     try {
@@ -1067,9 +1067,6 @@ export async function deleteCommissionOverride(staffId: string, serviceId: strin
 export async function getCommissionReport(dateFrom: string, dateTo: string) {
   return cachedQuery(cacheKey('commissionReport', { dateFrom, dateTo }), CACHE_TTL.COMMISSION_REPORT, async () => {
     try {
-      const endOfTo = new Date(dateTo);
-      endOfTo.setHours(23, 59, 59, 999);
-
       const map = new Map<string, {
         artist_id: string | null;
         artist_name: string | null;
@@ -1086,7 +1083,7 @@ export async function getCommissionReport(dateFrom: string, dateTo: string) {
         .from('appointments')
         .select('id')
         .gte('start_time', dateFrom)
-        .lte('start_time', endOfTo.toISOString())
+        .lte('start_time', toEndOfDay(dateTo))
         .eq('status', 'completada');
 
       if (apptErr) throw apptErr;
@@ -1193,8 +1190,6 @@ export async function getStaffPerformance(staffId: string, dateFrom: string, dat
   const key = cacheKey('staffPerformance', { staffId, dateFrom, dateTo });
   return cachedQuery(key, CACHE_TTL.STAFF_PERFORMANCE, async () => {
     try {
-      const endOfTo = new Date(dateTo);
-      endOfTo.setHours(23, 59, 59, 999);
 
       const [appointmentsResult, commissionResult] = await Promise.all([
         supabase
@@ -1203,7 +1198,7 @@ export async function getStaffPerformance(staffId: string, dateFrom: string, dat
           .eq('artist_id', staffId)
           .eq('status', 'completada')
           .gte('start_time', dateFrom)
-          .lte('start_time', endOfTo.toISOString()),
+          .lte('start_time', toEndOfDay(dateTo)),
         supabase
           .from('commission_details')
           .select('*')
@@ -1248,8 +1243,6 @@ export async function getStaffTopServices(staffId: string, dateFrom: string, dat
   const key = cacheKey('staffTopServices', { staffId, dateFrom, dateTo });
   return cachedQuery(key, CACHE_TTL.STAFF_TOP_SERVICES, async () => {
     try {
-      const endOfTo = new Date(dateTo);
-      endOfTo.setHours(23, 59, 59, 999);
 
       const { data: apptIds, error: apptErr } = await supabase
         .from('appointments')
@@ -1257,7 +1250,7 @@ export async function getStaffTopServices(staffId: string, dateFrom: string, dat
         .eq('artist_id', staffId)
         .eq('status', 'completada')
         .gte('start_time', dateFrom)
-        .lte('start_time', endOfTo.toISOString());
+        .lte('start_time', toEndOfDay(dateTo));
 
       if (apptErr) throw apptErr;
       if (!apptIds || apptIds.length === 0) return [];
@@ -1299,8 +1292,6 @@ export async function getStaffAppointments(staffId: string, dateFrom: string, da
   const key = cacheKey('staffAppointments', { staffId, dateFrom, dateTo, limit });
   return cachedQuery(key, CACHE_TTL.STAFF_APPOINTMENTS, async () => {
     try {
-      const endOfTo = new Date(dateTo);
-      endOfTo.setHours(23, 59, 59, 999);
 
       const { data, error } = await supabase
         .from('appointments')
@@ -1311,7 +1302,7 @@ export async function getStaffAppointments(staffId: string, dateFrom: string, da
         .eq('artist_id', staffId)
         .order('start_time', { ascending: false })
         .gte('start_time', dateFrom)
-        .lte('start_time', endOfTo.toISOString())
+        .lte('start_time', toEndOfDay(dateTo))
         .limit(limit);
 
       if (error) throw error;
@@ -1359,15 +1350,13 @@ async function getIncomeByMethod(dateFrom: string, dateTo: string, db = supabase
   const key = cacheKey('incomeByMethod', { dateFrom, dateTo });
   const fetcher = async () => {
     try {
-      const endOfTo = new Date(dateTo);
-      endOfTo.setHours(23, 59, 59, 999);
 
       const { data, error } = await db
         .from('payments')
         .select('payment_method, amount')
         .eq('type', 'ingreso')
         .gte('date', dateFrom)
-        .lte('date', endOfTo.toISOString().split('T')[0]);
+        .lte('date', toEndOfDay(dateTo).split('T')[0]);
 
       if (error) throw error;
       if (!data) return [];
@@ -1394,15 +1383,13 @@ async function getExpensesByCategory(dateFrom: string, dateTo: string, db = supa
   const key = cacheKey('expensesByCategory', { dateFrom, dateTo });
   const fetcher = async () => {
     try {
-      const endOfTo = new Date(dateTo);
-      endOfTo.setHours(23, 59, 59, 999);
 
       const { data, error } = await db
         .from('payments')
         .select('category, amount')
         .eq('type', 'egreso')
         .gte('date', dateFrom)
-        .lte('date', endOfTo.toISOString().split('T')[0]);
+        .lte('date', toEndOfDay(dateTo).split('T')[0]);
 
       if (error) throw error;
       if (!data) return [];
@@ -1495,15 +1482,13 @@ async function getTopServices(dateFrom: string, dateTo: string, db = supabase, l
   const key = cacheKey('topServices', { dateFrom, dateTo, limit });
   const fetcher = async () => {
     try {
-      const endOfTo = new Date(dateTo);
-      endOfTo.setHours(23, 59, 59, 999);
 
       const { data: apptIds } = await db
         .from('appointments')
         .select('id')
         .eq('status', 'completada')
         .gte('start_time', dateFrom)
-        .lte('start_time', endOfTo.toISOString());
+        .lte('start_time', toEndOfDay(dateTo));
 
       if (!apptIds || apptIds.length === 0) return [];
 
@@ -1544,15 +1529,13 @@ async function getTopArtistsByRevenue(dateFrom: string, dateTo: string, db = sup
   const key = cacheKey('topArtistsByRevenue', { dateFrom, dateTo, limit });
   const fetcher = async () => {
     try {
-      const endOfTo = new Date(dateTo);
-      endOfTo.setHours(23, 59, 59, 999);
 
       const { data: apptIds } = await db
         .from('appointments')
         .select('id, artist_id')
         .eq('status', 'completada')
         .gte('start_time', dateFrom)
-        .lte('start_time', endOfTo.toISOString());
+        .lte('start_time', toEndOfDay(dateTo));
 
       if (!apptIds || apptIds.length === 0) return [];
 
@@ -1595,14 +1578,12 @@ async function getNewClients(dateFrom: string, dateTo: string) {
   const key = cacheKey('newClients', { dateFrom, dateTo });
   return cachedQuery(key, CACHE_TTL.NEW_CLIENTS, async () => {
     try {
-      const endOfTo = new Date(dateTo);
-      endOfTo.setHours(23, 59, 59, 999);
 
       const { data, error } = await supabase
         .from('clients')
         .select('id, name, phone, instagram, created_at')
         .gte('created_at', dateFrom)
-        .lte('created_at', endOfTo.toISOString())
+        .lte('created_at', toEndOfDay(dateTo))
         .order('created_at', { ascending: false });
 
       if (error) throw error;
