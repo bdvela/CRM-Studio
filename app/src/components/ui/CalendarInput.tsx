@@ -14,6 +14,7 @@ interface CalendarInputProps {
   label?: string;
   placeholder?: string;
   portalContainer?: HTMLElement;
+  scrollContainer?: HTMLElement | null;
 }
 
 export function CalendarInput({
@@ -22,6 +23,7 @@ export function CalendarInput({
   label,
   placeholder = 'Seleccionar fecha',
   portalContainer,
+  scrollContainer,
 }: CalendarInputProps) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -58,9 +60,10 @@ export function CalendarInput({
     if (left + popoverW > viewW - 16) left = viewW - popoverW - 16;
     if (left < 16) left = 16;
 
+    // Use actual rendered height; fall back to estimate only if not yet in DOM
+    const popoverH = popoverRef.current?.getBoundingClientRect().height || 390;
     let top = rect.bottom + 8;
-    const estimatedH = 390;
-    if (top + estimatedH > viewH - 16) top = rect.top - estimatedH - 8;
+    if (top + popoverH > viewH - 16) top = rect.top - popoverH - 8;
     if (top < 8) top = 8;
 
     setPopoverStyle({
@@ -108,13 +111,15 @@ export function CalendarInput({
       calcPosition();
       window.addEventListener('resize', calcPosition);
       window.addEventListener('scroll', calcPosition, true);
+      scrollContainer?.addEventListener('scroll', calcPosition, { passive: true });
     });
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener('resize', calcPosition);
       window.removeEventListener('scroll', calcPosition, true);
+      scrollContainer?.removeEventListener('scroll', calcPosition);
     };
-  }, [open]);
+  }, [open, scrollContainer]);
 
   return (
     <div className="space-y-1.5">
