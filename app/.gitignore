@@ -1,3 +1,7 @@
+# Project docs (internal only)
+status.md
+system-design.md
+
 .vercel
 coverage/
 playwright-report/
