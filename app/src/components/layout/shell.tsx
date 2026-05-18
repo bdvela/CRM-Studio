@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import {
   LayoutDashboard, Users, Palette, UserRound,
   CalendarDays, DollarSign, ChevronLeft, ChevronRight,
-  Menu, X,
+  Menu, X, UsersRound,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/auth-context';
@@ -14,13 +14,19 @@ import { useOnlineStatus } from '@/context/online-context';
 import { getQueueLength, isSyncing } from '@/lib/offline-queue';
 import { Cloud, CloudOff, RefreshCw } from 'lucide-react';
 
-const mainNav = [
+const ownerAdminNav = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/citas', label: 'Citas', icon: CalendarDays },
   { href: '/servicios', label: 'Servicios', icon: Palette },
   { href: '/clientes', label: 'Clientas', icon: Users },
   { href: '/staff', label: 'Staff', icon: UserRound },
   { href: '/pagos', label: 'Pagos', icon: DollarSign },
+  { href: '/team', label: 'Equipo', icon: UsersRound, ownerOnly: true },
+] as const;
+
+const staffNav = [
+  { href: '/mis-citas', label: 'Mis Citas', icon: CalendarDays },
+  { href: '/mis-comisiones', label: 'Mis Comisiones', icon: DollarSign },
 ];
 
 const mobileNavItems = [
@@ -31,12 +37,15 @@ const mobileNavItems = [
   { href: '/pagos', label: 'Pagos', icon: DollarSign },
 ];
 
-function SidebarNav({ collapsed, onNavClick }: { collapsed: boolean; onNavClick?: () => void }) {
+function SidebarNav({ collapsed, onNavClick, isStaff, memberRole }: { collapsed: boolean; onNavClick?: () => void; isStaff?: boolean; memberRole?: string | null }) {
   const pathname = usePathname();
+  const baseNav = isStaff ? staffNav : ownerAdminNav;
+  const nav = (baseNav as readonly { href: string; label: string; icon: React.ElementType; ownerOnly?: boolean }[])
+    .filter(item => !item.ownerOnly || memberRole === 'owner');
 
   return (
     <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
-      {mainNav.map((item) => {
+      {nav.map((item) => {
         const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href + '/'));
         return (
           <Link
@@ -62,7 +71,8 @@ function SidebarNav({ collapsed, onNavClick }: { collapsed: boolean; onNavClick?
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { user, loading, signOut } = useAuth();
+  const { user, business, memberRole, loading, signOut } = useAuth();
+  const isStaff = memberRole === 'staff';
   const { isOnline } = useOnlineStatus();
   const [tabletMenuOpen, setTabletMenuOpen] = useState(false);
   const [userCollapsed, setUserCollapsed] = useState(false);
@@ -115,17 +125,17 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       )}>
         <div className="flex items-center gap-3 p-5 border-b border-zinc-100">
           <div className="size-10 rounded-xl bg-gradient-to-br from-salon-500 to-accent-600 flex items-center justify-center flex-shrink-0">
-            <span className="text-white text-lg">🌸</span>
+            <span className="text-white text-lg">{business?.logo_emoji ?? '🌸'}</span>
           </div>
           {!sidebarCollapsed && (
             <div className="overflow-hidden">
-              <h1 className="text-base font-semibold text-zinc-900 leading-tight">Ara Zevallos Studio</h1>
+              <h1 className="text-base font-semibold text-zinc-900 leading-tight">{business?.name ?? 'CRM Studio'}</h1>
               <p className="text-xs text-zinc-400">Gestión integral</p>
             </div>
           )}
         </div>
 
-        <SidebarNav collapsed={sidebarCollapsed} />
+        <SidebarNav collapsed={sidebarCollapsed} isStaff={isStaff} memberRole={memberRole} />
 
         <div className="p-3 border-t border-zinc-100 space-y-1">
           <button
@@ -182,8 +192,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <span className="text-white text-lg">🌸</span>
               </div>
               <div>
-                <h1 className="text-sm font-semibold text-zinc-900 leading-tight">Ara Zevallos</h1>
-                <p className="text-xs text-zinc-400">Studio</p>
+                <h1 className="text-sm font-semibold text-zinc-900 leading-tight">{business?.short_name ?? business?.name ?? 'CRM Studio'}</h1>
+                <p className="text-xs text-zinc-400">Gestión integral</p>
               </div>
             </div>
             <button onClick={() => setTabletMenuOpen(false)} className="p-2 rounded-lg hover:bg-zinc-100">
@@ -191,7 +201,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </button>
           </div>
 
-          <SidebarNav collapsed={false} onNavClick={() => setTabletMenuOpen(false)} />
+          <SidebarNav collapsed={false} isStaff={isStaff} memberRole={memberRole} onNavClick={() => setTabletMenuOpen(false)} />
         </aside>
       </>
 
