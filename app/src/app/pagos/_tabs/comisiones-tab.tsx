@@ -49,10 +49,9 @@ const ComisionesTab = memo(function ComisionesTab() {
   useEffect(() => { load(); }, [load]);
 
   const filtered = rows.filter((r) => (r.artist_name || '').toLowerCase().includes(search.toLowerCase()));
-  const isFounderRow = (r: CommissionReportRow) => r.artist_role_name === 'Dueña' || r.artist_role_name === 'Founder';
   const totalRevenue = rows.reduce((sum, r) => sum + r.total_service_revenue, 0);
-  const totalArtistCommission = rows.reduce((sum, r) => sum + (isFounderRow(r) ? 0 : r.total_artist_commission), 0);
-  const totalFounderShare = rows.reduce((sum, r) => sum + (isFounderRow(r) ? r.total_service_revenue : r.total_founder_share), 0);
+  const totalArtistCommission = rows.reduce((sum, r) => sum + (r.artist_is_owner ? 0 : r.total_artist_commission), 0);
+  const totalFounderShare = rows.reduce((sum, r) => sum + (r.artist_is_owner ? r.total_service_revenue : r.total_founder_share), 0);
   const totalServices = rows.reduce((sum, r) => sum + r.total_services, 0);
 
   const setQuickRange = useCallback((days: number) => {
@@ -180,9 +179,9 @@ const ComisionesTab = memo(function ComisionesTab() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4" aria-live="polite" role="list" aria-label="Comisiones por artista">
           {filtered.map((row, i) => {
-            const isFounder = row.artist_role_name === 'Dueña' || row.artist_role_name === 'Founder';
-            const displayCommission = isFounder ? 0 : row.total_artist_commission;
-            const displayStudio = isFounder ? row.total_service_revenue : row.total_founder_share;
+            const isOwner = row.artist_is_owner;
+            const displayCommission = isOwner ? 0 : row.total_artist_commission;
+            const displayStudio = isOwner ? row.total_service_revenue : row.total_founder_share;
             const handleKeyDown = (e: React.KeyboardEvent) => {
               if ((e.key === 'Enter' || e.key === ' ') && row.artist_id) {
                 e.preventDefault();
@@ -214,10 +213,10 @@ const ComisionesTab = memo(function ComisionesTab() {
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="font-semibold text-zinc-900 truncate max-w-[120px] sm:max-w-none">{row.artist_name || 'Sin artista'}</p>
-                          {isFounder ? (
+                          {isOwner ? (
                             <span className="px-2 py-0.5 rounded-full text-xs font-medium text-white"
                               style={{ backgroundColor: row.artist_role_color || '#EC4899' }}
-                            >Founder</span>
+                            >{row.artist_role_name || 'Dueño'}</span>
                           ) : row.artist_role_name ? (
                             <Badge variant="custom" color={row.artist_role_color || '#6B7280'} className="text-[10px] px-2 py-0.5">
                               {row.artist_role_name}
@@ -227,7 +226,7 @@ const ComisionesTab = memo(function ComisionesTab() {
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mt-3 sm:mt-4 text-xs sm:text-sm">
                           <div><p className="text-[11px] sm:text-xs text-zinc-400">Servicios</p><p className="font-semibold text-zinc-900">{row.total_services}</p></div>
                           <div><p className="text-[11px] sm:text-xs text-zinc-400">Ingreso</p><p className="font-semibold text-zinc-900 tabular-nums truncate">{formatCurrency(row.total_service_revenue)}</p></div>
-                          <div><p className="text-[11px] sm:text-xs text-zinc-400">Comisión</p><p className={`font-semibold tabular-nums truncate ${isFounder ? 'text-zinc-300' : 'text-accent-600'}`}>{formatCurrency(displayCommission)}</p></div>
+                          <div><p className="text-[11px] sm:text-xs text-zinc-400">Comisión</p><p className={`font-semibold tabular-nums truncate ${isOwner ? 'text-zinc-300' : 'text-accent-600'}`}>{formatCurrency(displayCommission)}</p></div>
                           <div><p className="text-[11px] sm:text-xs text-zinc-400">Studio</p><p className="font-semibold text-amber-600 tabular-nums truncate">{formatCurrency(displayStudio)}</p></div>
                         </div>
                       </div>

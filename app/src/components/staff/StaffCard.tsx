@@ -2,13 +2,12 @@
 
 import { memo } from 'react';
 import type { StaffCardProps } from './types';
-import { isOwnerMember } from './types';
 import { formatCurrency } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Phone, DollarSign } from 'lucide-react';
 
 export const StaffCard = memo(function StaffCard({ member, onView }: StaffCardProps) {
-  const isOwner = isOwnerMember(member);
+  const isOwner = member.is_owner ?? false;
   const roleColor = member.role?.color || '#6B7280';
 
   return (

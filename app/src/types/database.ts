@@ -145,6 +145,7 @@ export interface CommissionReportRow {
   artist_name: string | null;
   artist_role_name: string | null;
   artist_role_color: string | null;
+  artist_is_owner: boolean;
   total_services: number;
   total_service_revenue: number;
   total_artist_commission: number;

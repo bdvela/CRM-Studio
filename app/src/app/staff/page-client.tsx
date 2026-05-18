@@ -26,7 +26,7 @@ import { normalizePeruPhone, formatPeruPhoneForInput } from '@/lib/utils';
 import { useConfirm } from '@/context/confirm-context';
 
 import type { StaffModalTab, StaffWithDetails, StaffFormState, FormAction } from '@/components/staff/types';
-import { FORM_INIT, formReducer, isOwnerMember, isOwnerRoleName } from '@/components/staff/types';
+import { FORM_INIT, formReducer } from '@/components/staff/types';
 import { StaffFilters } from '@/components/staff/StaffFilters';
 import { StaffListContent } from '@/components/staff/StaffListContent';
 
@@ -205,7 +205,7 @@ export default function StaffPage({ initialData }: {
       if (ui.editingMember) {
         staffId = ui.editingMember.id;
         let formToSaveProtected = { ...formToSave };
-        if (isOwnerMember(ui.editingMember)) {
+        if (ui.editingMember?.is_owner) {
           formToSaveProtected = {
             ...formToSaveProtected,
             role_id: ui.editingMember.role_id,
@@ -282,7 +282,7 @@ export default function StaffPage({ initialData }: {
   }, []);
 
   const openNew = useCallback(() => {
-    const activeRoles = data.roles.filter(r => r.active && !isOwnerRoleName(r.name));
+    const activeRoles = data.roles.filter(r => r.active);
     const firstRole = activeRoles[0];
     const emptyForm = { ...FORM_INIT, role_id: firstRole?.id || '' };
 
@@ -301,8 +301,8 @@ export default function StaffPage({ initialData }: {
   }, [data.roles]);
 
   const handleDelete = useCallback(async (member: StaffWithDetails) => {
-    if (isOwnerMember(member)) {
-      toast.error('No se puede eliminar a la Dueña');
+    if (member.is_owner) {
+      toast.error('No se puede eliminar al dueño del negocio');
       return;
     }
     if (ui.deletingId) return;
@@ -397,7 +397,6 @@ export default function StaffPage({ initialData }: {
         initialSpecialties={initialSpecialties}
         initialOverrides={initialOverrides}
         onSubmit={handleSubmit}
-        isOwner={isOwnerMember}
       />
       </Suspense>
     </>

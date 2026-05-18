@@ -488,11 +488,16 @@ export async function getStaff(activeOnly = true, client?: SupabaseClient<any>) 
       if (activeOnly) q = q.eq('active', true);
       const { data, error } = await q;
       if (error) throw error;
-      const { data: stats } = await db.from('staff_stats').select('*');
-      if (stats) {
-        const statsMap = new Map(stats.map((s: any) => [s.id, s]));
-        data?.forEach((s: any) => { s.staff_stats = statsMap.get(s.id); });
-      }
+      const [statsResult, ownerResult] = await Promise.all([
+        db.from('staff_stats').select('*'),
+        db.from('business_members').select('staff_id').eq('role', 'owner'),
+      ]);
+      const statsMap = new Map(statsResult.data?.map((s: any) => [s.id, s]) ?? []);
+      const ownerIds = new Set(ownerResult.data?.map((m: any) => m.staff_id).filter(Boolean) ?? []);
+      data?.forEach((s: any) => {
+        s.staff_stats = statsMap.get(s.id);
+        s.is_owner = ownerIds.has(s.id);
+      });
       return data;
     } catch (e) {
       console.error('getStaff error:', e);
@@ -515,8 +520,12 @@ export async function getStaffById(id: string, client?: SupabaseClient<any>) {
         .maybeSingle();
       if (error) throw error;
       if (!data) return null;
-      const { data: stats } = await db.from('staff_stats').select('*').eq('id', id).maybeSingle();
-      if (stats) (data as any).staff_stats = stats;
+      const [statsResult, ownerResult] = await Promise.all([
+        db.from('staff_stats').select('*').eq('id', id).maybeSingle(),
+        db.from('business_members').select('staff_id').eq('staff_id', id).eq('role', 'owner').maybeSingle(),
+      ]);
+      if (statsResult.data) (data as any).staff_stats = statsResult.data;
+      (data as any).is_owner = !!ownerResult.data;
       return data;
     } catch (e) {
       console.error('getStaffById error:', e);
@@ -1072,6 +1081,7 @@ export async function getCommissionReport(dateFrom: string, dateTo: string) {
         artist_name: string | null;
         artist_role_name: string | null;
         artist_role_color: string | null;
+        artist_is_owner: boolean;
         total_services: number;
         total_service_revenue: number;
         total_artist_commission: number;
@@ -1117,6 +1127,7 @@ export async function getCommissionReport(dateFrom: string, dateTo: string) {
               artist_name: d.artist_name || (d.artist_id ? null : 'Sin artista'),
               artist_role_name: role?.name || null,
               artist_role_color: role?.color || null,
+              artist_is_owner: !!(d as any).artist_is_owner,
               total_services: 0,
               total_service_revenue: 0,
               total_artist_commission: 0,
@@ -1132,11 +1143,14 @@ export async function getCommissionReport(dateFrom: string, dateTo: string) {
       }
 
       // Always fetch all active staff so artists without citas still appear
-      const { data: allStaff } = await supabase
-        .from('staff')
-        .select('id, name, role:roles(name, color)')
-        .eq('active', true)
-        .order('name');
+      const [allStaffResult, ownerMemberResult] = await Promise.all([
+        supabase.from('staff').select('id, name, role:roles(name, color)').eq('active', true).order('name'),
+        supabase.from('business_members').select('staff_id').eq('role', 'owner'),
+      ]);
+      const allStaff = allStaffResult.data;
+      const ownerStaffIds = new Set(
+        ownerMemberResult.data?.map((m: any) => m.staff_id).filter(Boolean) ?? []
+      );
 
       if (allStaff) {
         for (const s of allStaff) {
@@ -1147,6 +1161,7 @@ export async function getCommissionReport(dateFrom: string, dateTo: string) {
               artist_name: s.name,
               artist_role_name: role?.name || null,
               artist_role_color: role?.color || null,
+              artist_is_owner: ownerStaffIds.has(s.id),
               total_services: 0,
               total_service_revenue: 0,
               total_artist_commission: 0,

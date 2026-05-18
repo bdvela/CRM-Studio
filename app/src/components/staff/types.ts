@@ -21,7 +21,9 @@ export type FormAction =
   | { type: 'UPDATE'; payload: Partial<StaffFormState> }
   | { type: 'SET'; payload: StaffFormState };
 
-export interface StaffWithDetails extends StaffMember {}
+export interface StaffWithDetails extends StaffMember {
+  is_owner?: boolean;
+}
 
 export interface StaffPerformance {
   totalAppointments: number;
@@ -86,7 +88,6 @@ export interface StaffFormModalProps {
   initialSpecialties: string[];
   initialOverrides: Record<string, number | null>;
   onSubmit: (e: React.FormEvent) => Promise<void>;
-  isOwner: (member: StaffWithDetails | null) => boolean;
 }
 
 export interface StaffComisionesTabProps {
@@ -145,13 +146,3 @@ export function formReducer(state: StaffFormState, action: FormAction): StaffFor
   }
 }
 
-export function isOwnerRoleName(roleName: string | null | undefined): boolean {
-  if (!roleName) return false;
-  const normalized = roleName.toLowerCase().trim();
-  return normalized === 'dueña' || normalized === 'founder';
-}
-
-export function isOwnerMember(member: StaffWithDetails | null): boolean {
-  if (!member) return false;
-  return isOwnerRoleName(member.role?.name);
-}

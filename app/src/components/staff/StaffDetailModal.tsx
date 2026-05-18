@@ -2,7 +2,6 @@
 
 import { memo, useMemo } from 'react';
 import type { StaffWithDetails, StaffPerformance } from './types';
-import { isOwnerMember } from './types';
 import { Modal } from '@/components/ui/modal';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency, formatDate } from '@/lib/utils';
@@ -225,7 +224,7 @@ export const StaffDetailModal = memo(function StaffDetailModal({
 
         {/* ─── Actions ─── */}
         <div className="p-3 flex gap-3">
-          {!isOwnerMember(member) && (
+          {!member.is_owner && (
             <button
               type="button"
               onClick={() => onDelete?.(member)}

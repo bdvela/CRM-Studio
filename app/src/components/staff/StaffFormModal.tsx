@@ -41,10 +41,10 @@ export function StaffFormModal({
   submitting,
   activeTab, setActiveTab,
   initialForm, initialSpecialties, initialOverrides,
-  onSubmit, isOwner,
+  onSubmit,
 }: StaffFormModalProps) {
   const firstInputRef = useRef<HTMLInputElement>(null);
-  const isOwnerMember = isOwner(editingMember);
+  const isOwnerMember = editingMember?.is_owner ?? false;
 
   const hasChanges = useMemo(() => {
     if (!editingMember) return true;
@@ -65,7 +65,7 @@ export function StaffFormModal({
   }
 
   function resetStaffForm() {
-    const activeRoles = roles.filter(r => r.active && r.name.toLowerCase().trim() !== 'dueña' && r.name.toLowerCase().trim() !== 'founder');
+    const activeRoles = roles.filter(r => r.active);
     const firstRole = activeRoles[0];
     dispatch({ type: 'SET', payload: { ...FORM_INIT, role_id: firstRole?.id || '' } });
     setSpecialtySelections([]);
@@ -153,16 +153,11 @@ export function StaffFormModal({
                   value={form.role_id}
                   onChange={(value) => dispatch({ type: 'UPDATE', payload: { role_id: value } })}
                   disabled={isOwnerMember}
-                  options={roles.reduce<{ value: string; label: string }[]>((acc, r) => {
-                    if (r.active && (isOwnerMember || (r.name.toLowerCase().trim() !== 'dueña' && r.name.toLowerCase().trim() !== 'founder'))) {
-                      acc.push({ value: r.id, label: r.name });
-                    }
-                    return acc;
-                  }, [])}
+                  options={roles.filter(r => r.active).map(r => ({ value: r.id, label: r.name }))}
                 />
                 {isOwnerMember && (
                   <p className="text-xs text-zinc-500 mt-1">
-                    El rol de Dueña no se puede cambiar.
+                    El rol del dueño no se puede cambiar.
                   </p>
                 )}
               </div>
