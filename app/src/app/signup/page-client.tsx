@@ -66,8 +66,24 @@ export default function SignupClient() {
       const authErr = await signUp(email.trim(), password);
       if (authErr) { setError(authErr); return; }
 
-      // 2. Wait a moment for session to establish, then create business
-      await new Promise(r => setTimeout(r, 800));
+      // 2. Check if session was established (email confirmation might be required)
+      let attempts = 0;
+      let session = null;
+      while (attempts < 5 && !session) {
+        await new Promise(r => setTimeout(r, 600));
+        const { data } = await supabase.auth.getSession();
+        session = data.session;
+        attempts++;
+      }
+
+      if (!session) {
+        // Email confirmation required — show message
+        setError('Revisá tu email para confirmar tu cuenta, luego volvé a intentar.');
+        setSubmitting(false);
+        return;
+      }
+
+      // 3. Create business with confirmed session
       const { error: bizErr } = await supabase.rpc('create_business_with_owner', {
         p_slug: slug,
         p_name: name.trim(),
