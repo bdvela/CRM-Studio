@@ -84,6 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [memberRole, setMemberRole] = useState<MemberRole | null>(null);
   const [staffId, setStaffId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [membershipLoaded, setMembershipLoaded] = useState(false);
   const pathname = usePathname();
   const { push } = useRouter();
 
@@ -93,6 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setMemberRole(result.memberRole);
     setStaffId(result.staffId);
     setTenantContext(result.business);
+    setMembershipLoaded(true);
   }, []);
 
   useEffect(() => {
@@ -113,6 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setMemberRole(null);
         setStaffId(null);
         setTenantContext(null);
+        setMembershipLoaded(true);
       }
     });
 
@@ -124,10 +127,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const publicPaths = ['/login', '/signup', '/onboarding'];
     const isPublic = publicPaths.some(p => pathname === p || pathname.startsWith(p + '/'));
     if (!user && !isPublic) push('/login');
-    if (user && pathname === '/login') {
+    // Only redirect from login once membership is confirmed (memberRole !== null).
+    // If null after loading, user has no membership in this business — stay on login.
+    // membershipLoaded ensures we don't redirect before knowing if user belongs here
+    if (user && pathname === '/login' && membershipLoaded && memberRole !== null) {
       push(memberRole === 'staff' ? '/mis-citas' : '/');
     }
-  }, [user, loading, pathname, push, memberRole]);
+  }, [user, loading, pathname, push, memberRole, membershipLoaded]);
 
   const signIn = useCallback(async (email: string, password: string): Promise<string | null> => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
