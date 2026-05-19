@@ -166,8 +166,14 @@ ALTER TABLE businesses       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE business_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE invitations      ENABLE ROW LEVEL SECURITY;
 
--- businesses: members can read; owner/admin can update; INSERT via create_business_with_owner RPC
+-- businesses: public slug/branding readable by anon (middleware needs this without auth)
+CREATE POLICY biz_select_public ON businesses FOR SELECT
+  TO anon
+  USING (active = TRUE);
+
+-- authenticated members can read full business data
 CREATE POLICY biz_select ON businesses FOR SELECT
+  TO authenticated
   USING (is_member_of(id));
 
 CREATE POLICY biz_update ON businesses FOR UPDATE

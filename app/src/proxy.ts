@@ -44,10 +44,12 @@ export async function proxy(request: NextRequest) {
   }
 
   // ─── Subdomain — resolve business ────────────────────────────────────────────
+  // RLS note: businesses table allows anon SELECT via biz_select_public policy
   const { data: biz } = await supabase
     .from('businesses')
-    .select('id, active, name, theme_color')
+    .select('id, active')
     .eq('slug', slug)
+    .eq('active', true)
     .maybeSingle();
 
   if (!biz || !biz.active) {
