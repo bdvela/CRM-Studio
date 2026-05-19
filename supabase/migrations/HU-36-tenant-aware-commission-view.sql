@@ -8,7 +8,10 @@
 
 BEGIN;
 
-CREATE OR REPLACE VIEW commission_details AS
+-- DROP first: CREATE OR REPLACE can't add columns mid-view (shifts column positions)
+DROP VIEW IF EXISTS commission_details;
+
+CREATE VIEW commission_details AS
 SELECT
   asv.id                              AS appointment_service_id,
   asv.appointment_id,
