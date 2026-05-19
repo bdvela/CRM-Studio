@@ -1,6 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
-import { extractSlugFromHost } from '@/lib/tenant/resolve';
+import { extractSlugFromHost } from '@/lib/tenant/slug';
 
 const PUBLIC_PATHS = ['/login', '/signup', '/serwist', '/invite', '/tenant-not-found', '/manifest'];
 
