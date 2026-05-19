@@ -90,6 +90,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   }, []);
 
   const isLoginPage = pathname === '/login';
+  const isPublicPage = isLoginPage
+    || pathname === '/signup'
+    || pathname === '/onboarding'
+    || pathname === '/tenant-not-found'
+    || pathname.startsWith('/invite/');
 
   useEffect(() => {
     const noop = () => {};
@@ -105,7 +110,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (isLoginPage) {
+  if (isPublicPage) {
     return <>{children}</>;
   }
 
