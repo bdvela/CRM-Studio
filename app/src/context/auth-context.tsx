@@ -136,8 +136,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user, loading, pathname, push, memberRole, membershipLoaded]);
 
   const signIn = useCallback(async (email: string, password: string): Promise<string | null> => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return error?.message ?? null;
+    const { error, data } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) return error.message;
+
+    // Check membership before revealing auth success.
+    // If user belongs to a different business, sign them out and return
+    // the same generic error — never confirm that credentials are valid.
+    if (data.user) {
+      const result = await fetchMembership(data.user.id);
+      if (!result.memberRole) {
+        await supabase.auth.signOut();
+        return 'Email o contraseña incorrectos';
+      }
+      setBusiness(result.business);
+      setMemberRole(result.memberRole);
+      setStaffId(result.staffId);
+      setTenantContext(result.business);
+      setMembershipLoaded(true);
+    }
+
+    return null;
   }, []);
 
   const signUp = useCallback(async (email: string, password: string): Promise<string | null> => {

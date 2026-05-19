@@ -2,7 +2,7 @@
 
 import { useState, FormEvent, useEffect } from 'react';
 import { useAuth } from '@/context/auth-context';
-import { Mail, Lock, Eye, EyeOff, LogIn, AlertCircle } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, LogIn } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 
 interface Branding {
@@ -32,7 +32,7 @@ async function fetchBranding(): Promise<Branding | null> {
 }
 
 export default function LoginClient() {
-  const { signIn, signOut, user } = useAuth();
+  const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -79,23 +79,9 @@ export default function LoginClient() {
           <p className="text-sm text-zinc-500 mt-1">Inicia sesión para continuar</p>
         </div>
 
-        {/* No-access state: user logged in but not a member of this business */}
-        {user && error?.includes('acceso') && (
-          <div className="bg-white rounded-2xl shadow-sm border border-zinc-100 p-6 space-y-4 text-center">
-            <AlertCircle className="size-10 text-amber-500 mx-auto" />
-            <p className="text-sm text-zinc-700 font-medium">No tenés acceso a este negocio.</p>
-            <p className="text-xs text-zinc-500">Tu cuenta pertenece a otro negocio.</p>
-            <button onClick={signOut}
-              className="w-full py-2.5 rounded-xl border border-zinc-200 text-sm text-zinc-700 hover:bg-zinc-50 transition-colors">
-              Cerrar sesión
-            </button>
-          </div>
-        )}
-
         {/* Form */}
-        {(!user || !error?.includes('acceso')) && (
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border border-zinc-100 p-6 space-y-4">
-          {error && !error.includes('acceso') && (
+          {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3" role="alert">
               {error}
             </div>
@@ -158,7 +144,6 @@ export default function LoginClient() {
             {submitting ? 'Ingresando...' : 'Iniciar sesión'}
           </button>
         </form>
-        )}
 
         {!branding && (
           <p className="text-center text-xs text-zinc-400 mt-4">
